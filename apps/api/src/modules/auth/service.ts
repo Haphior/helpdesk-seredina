@@ -103,3 +103,13 @@ export async function getMe(tenantId: string, userId: string) {
     return user;
   });
 }
+
+/** Agents/admins in the tenant -- used by the web app's assignee picker. */
+export async function listUsers(tenantId: string) {
+  return withTenantTx(prisma, tenantId, async (tx) =>
+    tx.user.findMany({
+      select: { id: true, name: true, email: true, role: { select: { key: true } } },
+      orderBy: { name: 'asc' },
+    }),
+  );
+}

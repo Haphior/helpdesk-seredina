@@ -4,7 +4,8 @@ Open source, fully configurable, AI-agent-integrated helpdesk. Ships as a self-h
 Docker deployment (single tenant) and as a multi-tenant cloud service — same codebase,
 same containers, both modes.
 
-Status: Phase 0 (Foundations) — see [docs/ROADMAP.md](docs/ROADMAP.md).
+Status: Phase 1 in progress (ticketing core backend + agent console) — see
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Stack
 
@@ -45,6 +46,14 @@ shipping known-critical CVEs in the older `fastify`/`fast-jwt` majors).
 npm install
 docker compose -f infra/docker-compose.yml up -d postgres redis
 npm run dev:api
+
+# in a second terminal
+npm run dev --workspace=apps/web   # http://localhost:5173, expects the API on :4000
 ```
+
+The web app reads its API base URL from `VITE_API_URL` (`apps/web/.env.example`,
+default `http://localhost:4000`). The API allows cross-origin requests via
+`@fastify/cors`, configurable with `CORS_ORIGIN` (unset = allow-all, fine for local
+dev since auth is a Bearer token, never a cookie).
 
 See [docs/adr/](docs/adr/) for the reasoning behind the multi-tenancy and AI architecture.

@@ -64,13 +64,47 @@ key → list/get/reply/internal-note/patch → status-category-driven
 `resolvedAt`/`closedAt` stamping, plus 401/403/404 edge cases, against a real
 Postgres. `npm test` is 7/7 (5 Phase 0 + 2 new ticket-isolation tests).
 
+**Agent console ✅ (this pass).** `apps/web`: React + Vite + TS + Tailwind +
+react-router-dom. `AuthContext` (`src/auth/AuthContext.tsx`) holds the JWT in
+`localStorage` and decodes it client-side purely to drive UI (which nav items show,
+role labels) — the API re-checks authorization on every request regardless, the
+decoded payload is never trusted for anything security-relevant. Pages: `/register`,
+`/login`, `/tickets` (queue with status-category tabs), `/tickets/:id` (message
+thread, reply/internal-note composer, status/priority/team/assignee editors backed
+by `PATCH /tickets/:id`), `/api-keys` (issue + list, key shown once). Added two small
+backend endpoints this needed: `GET /users` (tenant-scoped, gated on `tickets:read`
+since any agent needs it for the assignee picker, not just admins) and
+`@fastify/cors` (`CORS_ORIGIN` env var) so the web origin can call the API in dev.
+
+Verified with a real headless-Chromium run (Playwright, downloaded ad hoc — no
+project skill or `chromium-cli` was available in this environment; recommend
+`/run-skill-generator` if this recurs) driving the full flow: register → land on
+empty `/tickets` → create an API key through the UI → use it to `POST /v1/tickets`
+exactly as an external integration would → confirm the ticket appears in the queue
+→ open it → send a public reply → add an internal note (visually distinct, amber) →
+change status via the dropdown → zero browser console errors throughout. Screenshots
+taken at each step but not committed (they're a point-in-time verification artifact,
+not living documentation). One real bug this caught **in the test, not the app**:
+an initial version of the driver script used a page-wide Playwright `text=` selector
+to detect "message sent," which also matches a `<textarea>`'s uncommitted value —
+false-positived on the reply composer's own draft text before it was cleared. Fixed
+by scoping assertions to the message list (`data-testid="message-list"` in
+`TicketDetail.tsx`) instead of the whole page.
+
+Also added `infra/docker/Dockerfile.web` (nginx serving the Vite build, SPA
+fallback routing) and the `web` compose service — `VITE_API_URL` is a Vite build-time
+constant, not read at container runtime, so a self-hosted operator changing the
+API's public URL needs `docker compose build web` again, not just a restart. This is
+a real limitation worth revisiting if it proves annoying in practice (options:
+inject the URL from index.html at container startup instead of at build time; not
+done here since it wasn't yet a real user complaint).
+
 **Deferred from this pass, still open for Phase 1:**
 - Email channel (IMAP/SMTP, threading) — needs real mail credentials to build against
   meaningfully; the `ChannelAdapter` interface it'll implement isn't written yet
   either, only the API channel exists concretely so far.
-- Web app (queue view, ticket detail, composer, team/user admin) — backend was
-  sequenced first on purpose; nothing here blocks starting it.
-- Realtime updates over WebSockets via Redis pub/sub.
+- Realtime updates over WebSockets via Redis pub/sub (the web app currently polls by
+  navigation/refetch-after-mutation only — no live push).
 - AI copilot v1 (reply suggestions, summarization, auto-classify).
 - Knowledge base CRUD + full-text search.
 - An endpoint to create additional users under a tenant (`registerTenant` only ever

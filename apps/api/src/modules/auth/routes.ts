@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { getMe, login, registerTenant } from './service';
+import { getMe, listUsers, login, registerTenant } from './service';
 
 const registerSchema = z.object({
   tenantSlug: z
@@ -66,11 +66,14 @@ export default async function authRoutes(app: FastifyInstance) {
     return reply.send(me);
   });
 
-  // Demonstrates the RBAC preHandler chain (auth then permission) -- the first real
-  // resource-protected route lands with the ticketing module in Phase 1.
+  // Gated on tickets:read, not users:manage -- any agent needs this to populate an
+  // assignee picker, not just admins.
   app.get(
-    '/auth/admin-ping',
-    { preHandler: [app.authenticate, requirePermission('users:manage')] },
-    async (_request, reply) => reply.send({ ok: true }),
+    '/users',
+    { preHandler: [app.authenticate, requirePermission('tickets:read')] },
+    async (request, reply) => {
+      const users = await listUsers(request.user.tenantId);
+      return reply.send({ users });
+    },
   );
 }

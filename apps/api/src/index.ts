@@ -1,4 +1,5 @@
 import Fastify, { type FastifyError } from 'fastify';
+import cors from '@fastify/cors';
 import jwtPlugin from './plugins/jwt';
 import apiKeyAuthPlugin from './plugins/apiKeyAuth';
 import authRoutes from './modules/auth/routes';
@@ -8,6 +9,13 @@ import teamRoutes from './modules/teams/routes';
 
 export function buildApp() {
   const app = Fastify({ logger: true });
+
+  // Auth here is a Bearer token (JWT or ApiKey), never a cookie, so there's no CSRF
+  // exposure to reflecting the origin -- CORS_ORIGIN lets an operator lock this down
+  // to their actual web origin(s) in production; unset defaults to allow-all for local
+  // dev, where the web app runs on a different Vite port than the API.
+  const corsOrigin = process.env.CORS_ORIGIN;
+  app.register(cors, { origin: corsOrigin ? corsOrigin.split(',') : true });
 
   app.register(jwtPlugin);
   app.register(apiKeyAuthPlugin);
