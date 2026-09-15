@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { prisma, uncheckedPrisma } from '../src/lib/prisma';
-import { withTenantTx } from '../src/lib/tenant-context';
+import { prisma, uncheckedPrisma, withTenantTx } from '@seredina/db';
 import { createTicketFromApi, seedDefaultTicketStatuses } from '../src/modules/tickets/service';
 
 /**

@@ -38,6 +38,9 @@ model Tenant {
   tickets         Ticket[]
   messages        Message[]
   apiKeys         ApiKey[]
+  assets          Asset[]
+  ticketAssets    TicketAsset[]
+  discoveryJobs   DiscoveryJob[]
 
   @@map("tenants")
 }
@@ -183,6 +186,7 @@ model Ticket {
   closedAt   DateTime?      @map("closed_at")
 
   messages Message[]
+  assets   TicketAsset[]
 
   @@unique([tenantId, number])
   @@map("tickets")
@@ -230,4 +234,102 @@ model ApiKey {
   lastUsedAt DateTime? @map("last_used_at")
 
   @@map("api_keys")
+}
+
+// ---------------------------------------------------------------------------
+// CMDB / asset management (agentless discovery) -- see docs/adr/0002-agentless-discovery.md
+// ---------------------------------------------------------------------------
+
+enum AssetType {
+  SERVER
+  WORKSTATION
+  NETWORK_DEVICE
+  PRINTER
+  MOBILE_DEVICE
+  OTHER
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  RETIRED
+}
+
+enum AssetDiscoverySource {
+  MANUAL
+  AGENTLESS_SCAN
+}
+
+// A best-effort seed record from network discovery (see apps/worker/src/discovery),
+// not a full fingerprinting engine -- classification is heuristic (SNMP sysDescr
+// substring matching), not authoritative. Operators correct/enrich records by hand;
+// nothing here blocks that (every field is editable, discoverySource is just
+// provenance, not a lock).
+model Asset {
+  id              String               @id @default(uuid()) @db.Uuid
+  tenantId        String               @map("tenant_id") @db.Uuid
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String
+  assetType       AssetType            @default(OTHER) @map("asset_type")
+  status          AssetStatus          @default(ACTIVE)
+  ipAddress       String?              @map("ip_address")
+  macAddress      String?              @map("mac_address")
+  hostname        String?
+  serialNumber    String?              @map("serial_number")
+  manufacturer    String?
+  model           String?
+  operatingSystem String?              @map("operating_system")
+  discoverySource AssetDiscoverySource @default(MANUAL) @map("discovery_source")
+  snmpSysDescr    String?              @map("snmp_sys_descr")
+  lastSeenAt      DateTime?            @map("last_seen_at")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  tickets TicketAsset[]
+
+  // Re-scanning the same range upserts by (tenantId, ipAddress) rather than
+  // duplicating -- imperfect under DHCP churn, a known v1 limitation (see ADR), not
+  // an oversight.
+  @@unique([tenantId, ipAddress])
+  @@map("assets")
+}
+
+// Lightweight CMDB linkage: "this ticket is about that asset." Deliberately just an
+// id pair, no extra metadata (no "relationship type" enum, no notes field) -- add
+// that only when a real use case needs it, not preemptively.
+model TicketAsset {
+  tenantId String @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ticketId String @map("ticket_id") @db.Uuid
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  assetId  String @map("asset_id") @db.Uuid
+  asset    Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@id([ticketId, assetId])
+  @@map("ticket_assets")
+}
+
+enum DiscoveryJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// One row per triggered scan (apps/worker/src/discovery/processor.ts owns the state
+// transitions) -- kept even after completion as an audit trail of what was scanned
+// and when, not just a transient job-queue artifact.
+model DiscoveryJob {
+  id              String             @id @default(uuid()) @db.Uuid
+  tenantId        String             @map("tenant_id") @db.Uuid
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cidrRange       String             @map("cidr_range")
+  status          DiscoveryJobStatus @default(PENDING)
+  discoveredCount Int                @default(0) @map("discovered_count")
+  errorMessage    String?            @map("error_message")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  startedAt       DateTime?          @map("started_at")
+  completedAt     DateTime?          @map("completed_at")
+
+  @@map("discovery_jobs")
 }

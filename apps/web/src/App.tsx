@@ -7,6 +7,7 @@ import { Register } from './pages/Register';
 import { TicketsQueue } from './pages/TicketsQueue';
 import { TicketDetail } from './pages/TicketDetail';
 import { ApiKeys } from './pages/ApiKeys';
+import { Assets } from './pages/Assets';
 
 export function App() {
   return (
@@ -20,6 +21,7 @@ export function App() {
             <Route path="/" element={<Navigate to="/tickets" replace />} />
             <Route path="/tickets" element={<TicketsQueue />} />
             <Route path="/tickets/:id" element={<TicketDetail />} />
+            <Route path="/assets" element={<Assets />} />
             <Route path="/api-keys" element={<ApiKeys />} />
           </Route>
         </Route>

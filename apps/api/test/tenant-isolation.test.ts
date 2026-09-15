@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { prisma, uncheckedPrisma } from '../src/lib/prisma';
-import { withTenantTx } from '../src/lib/tenant-context';
+import { prisma, uncheckedPrisma, withTenantTx, PrismaClient } from '@seredina/db';
 
 /**
  * The mandatory Phase 0 test (see docs/adr/0001-multi-tenancy-rls.md): proves cross

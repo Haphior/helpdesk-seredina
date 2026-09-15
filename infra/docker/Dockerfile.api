@@ -3,13 +3,16 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/db/package.json packages/db/package.json
 COPY packages/config/package.json packages/config/package.json
 RUN npm ci
 COPY packages/config packages/config
 COPY packages/shared packages/shared
+COPY packages/db packages/db
 COPY apps/api apps/api
 RUN npm run build --workspace=@seredina/shared \
- && npm run prisma:generate --workspace=@seredina/api \
+ && npm run prisma:generate --workspace=@seredina/db \
+ && npm run build --workspace=@seredina/db \
  && npm run build --workspace=@seredina/api
 
 FROM node:20-bookworm-slim AS runtime

@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
-import { apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
-import type { Team, TicketDetail as TicketDetailType, TicketPriority, TicketStatus, UserSummary } from '../lib/types';
+import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
+import type {
+  AssetSummary,
+  Team,
+  TicketDetail as TicketDetailType,
+  TicketPriority,
+  TicketStatus,
+  UserSummary,
+} from '../lib/types';
 import { Badge } from '../components/Badge';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
 
@@ -13,6 +20,8 @@ export function TicketDetail() {
   const [statuses, setStatuses] = useState<TicketStatus[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserSummary[]>([]);
+  const [allAssets, setAllAssets] = useState<AssetSummary[]>([]);
+  const [assetToLink, setAssetToLink] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const [reply, setReply] = useState('');
@@ -23,16 +32,18 @@ export function TicketDetail() {
     if (!id) return;
     setError(null);
     try {
-      const [t, s, tm, u] = await Promise.all([
+      const [t, s, tm, u, a] = await Promise.all([
         apiGet<TicketDetailType>(`/tickets/${id}`),
         apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses'),
         apiGet<{ teams: Team[] }>('/teams'),
         apiGet<{ users: UserSummary[] }>('/users'),
+        apiGet<{ assets: AssetSummary[] }>('/assets'),
       ]);
       setTicket(t);
       setStatuses(s.statuses);
       setTeams(tm.teams);
       setUsers(u.users);
+      setAllAssets(a.assets);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load ticket');
     }
@@ -49,6 +60,27 @@ export function TicketDetail() {
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Update failed');
+    }
+  }
+
+  async function linkAsset() {
+    if (!id || !assetToLink) return;
+    try {
+      await apiPost(`/tickets/${id}/assets`, { assetId: assetToLink });
+      setAssetToLink('');
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to link asset');
+    }
+  }
+
+  async function unlinkAsset(assetId: string) {
+    if (!id) return;
+    try {
+      await apiDelete(`/tickets/${id}/assets/${assetId}`);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to unlink asset');
     }
   }
 
@@ -191,6 +223,44 @@ export function TicketDetail() {
         <FieldGroup label="Contact">
           <p className="text-slate-700">{ticket.contact.name}</p>
           <p className="text-slate-500">{ticket.contact.email}</p>
+        </FieldGroup>
+
+        <FieldGroup label="Linked assets">
+          {ticket.assets.length === 0 && <p className="mb-2 text-slate-500">None linked.</p>}
+          {ticket.assets.map(({ asset }) => (
+            <div key={asset.id} className="mb-1 flex items-center justify-between rounded-md bg-slate-50 px-2 py-1">
+              <span className="text-slate-700">
+                {asset.name}
+                {asset.ipAddress && <span className="text-slate-400"> · {asset.ipAddress}</span>}
+              </span>
+              <button onClick={() => unlinkAsset(asset.id)} className="text-xs text-slate-400 hover:text-red-600">
+                remove
+              </button>
+            </div>
+          ))}
+          <div className="mt-2 flex gap-1">
+            <select
+              value={assetToLink}
+              onChange={(e) => setAssetToLink(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+            >
+              <option value="">Link an asset…</option>
+              {allAssets
+                .filter((a) => !ticket.assets.some((ta) => ta.assetId === a.id))
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+            </select>
+            <button
+              onClick={linkAsset}
+              disabled={!assetToLink}
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Link
+            </button>
+          </div>
         </FieldGroup>
       </aside>
     </div>

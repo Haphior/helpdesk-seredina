@@ -25,7 +25,8 @@ GRANT SELECT ON permissions TO app_tenant;
 -- Tenant-owned tables: full CRUD for the app, but every row is gated by RLS below.
 GRANT SELECT, INSERT, UPDATE, DELETE ON
   tenants, roles, role_permissions, users,
-  teams, contacts, ticket_statuses, tickets, messages, api_keys
+  teams, contacts, ticket_statuses, tickets, messages, api_keys,
+  assets, ticket_assets, discovery_jobs
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -39,7 +40,7 @@ CREATE POLICY tenant_isolation ON tenants
   WITH CHECK (id = current_setting('app.tenant_id', true)::uuid);
 
 -- Every other tenant-owned table shares the exact same tenant_id-based policy shape
--- (see lib/prisma.ts's TENANT_SCOPE_FIELD, which mirrors this table list) -- looped
+-- (see src/prisma.ts's TENANT_SCOPE_FIELD, which mirrors this table list) -- looped
 -- instead of repeated by hand so adding a table here can't accidentally drift from
 -- the shape above.
 DO $do$
@@ -48,7 +49,8 @@ DECLARE
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'roles', 'role_permissions', 'users',
-    'teams', 'contacts', 'ticket_statuses', 'tickets', 'messages', 'api_keys'
+    'teams', 'contacts', 'ticket_statuses', 'tickets', 'messages', 'api_keys',
+    'assets', 'ticket_assets', 'discovery_jobs'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);

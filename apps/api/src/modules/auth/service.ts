@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { DEFAULT_ROLES, type Permission } from '@seredina/shared';
-import { prisma } from '../../lib/prisma';
-import { withTenantTx } from '../../lib/tenant-context';
+import { prisma, withTenantTx } from '@seredina/db';
 import { resolveTenantIdBySlug } from '../tenants/service';
 import { seedDefaultTicketStatuses } from '../tickets/service';
 import { seedDefaultTeam } from '../teams/service';

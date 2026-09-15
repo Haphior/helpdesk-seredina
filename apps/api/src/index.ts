@@ -6,6 +6,8 @@ import authRoutes from './modules/auth/routes';
 import apiKeyRoutes from './modules/apikeys/routes';
 import ticketRoutes from './modules/tickets/routes';
 import teamRoutes from './modules/teams/routes';
+import assetRoutes from './modules/assets/routes';
+import discoveryRoutes from './modules/discovery/routes';
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -23,6 +25,8 @@ export function buildApp() {
   app.register(apiKeyRoutes);
   app.register(ticketRoutes);
   app.register(teamRoutes);
+  app.register(assetRoutes);
+  app.register(discoveryRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

@@ -1,10 +1,10 @@
-import { prisma } from '../../lib/prisma';
+import { prisma } from '@seredina/db';
 
 /**
  * Resolving "which tenant does this slug belong to" has no tenant context yet by
  * definition -- it's the discovery step that PRODUCES one (used by login and by
  * registration's slug-availability check). Every other tenant-scoped query in this
- * codebase requires a tenant context (see lib/prisma.ts); this is the one deliberate,
+ * codebase requires a tenant context (see packages/db/src/prisma.ts); this is the one deliberate,
  * narrow exception, and it does not go through the guarded Prisma client's model
  * layer at all -- it calls a Postgres SECURITY DEFINER function (see
  * prisma/rls/policies.sql) that exposes exactly one column (id) for exactly one input

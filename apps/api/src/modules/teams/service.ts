@@ -1,6 +1,4 @@
-import type { Prisma } from '@prisma/client';
-import { prisma } from '../../lib/prisma';
-import { withTenantTx } from '../../lib/tenant-context';
+import { prisma, withTenantTx, type Prisma } from '@seredina/db';
 
 export const DEFAULT_TEAM_NAME = 'General';
 

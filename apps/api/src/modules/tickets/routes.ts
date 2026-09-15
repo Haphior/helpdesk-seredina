@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
 import { addMessage, createTicketFromApi, getTicket, listTickets, listTicketStatuses, updateTicket } from './service';
+import { linkAssetToTicket, unlinkAssetFromTicket } from '../assets/service';
 
 const PRIORITY = z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']);
 const STATUS_CATEGORY = z.enum(['OPEN', 'PENDING', 'RESOLVED', 'CLOSED']);
@@ -25,6 +26,8 @@ const updateTicketSchema = z.object({
   priority: PRIORITY.optional(),
   teamId: z.string().uuid().nullable().optional(),
 });
+
+const linkAssetSchema = z.object({ assetId: z.string().uuid() });
 
 export default async function ticketRoutes(app: FastifyInstance) {
   // The API channel -- see plugins/apiKeyAuth.ts. Deliberately a different auth
@@ -106,6 +109,42 @@ export default async function ticketRoutes(app: FastifyInstance) {
         return reply.send(ticket);
       } catch {
         return reply.code(404).send({ error: 'ticket not found' });
+      }
+    },
+  );
+
+  // Lightweight CMDB linkage -- "this ticket is about that asset." See
+  // modules/assets/service.ts and schema.prisma's TicketAsset.
+  app.post(
+    '/tickets/:id/assets',
+    { preHandler: [app.authenticate, requirePermission('tickets:write')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = linkAssetSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.flatten() });
+      }
+      try {
+        await linkAssetToTicket(request.user.tenantId, id, parsed.data.assetId);
+        const ticket = await getTicket(request.user.tenantId, id);
+        return reply.code(201).send(ticket);
+      } catch (err) {
+        return reply.code(404).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.delete(
+    '/tickets/:id/assets/:assetId',
+    { preHandler: [app.authenticate, requirePermission('tickets:write')] },
+    async (request, reply) => {
+      const { id, assetId } = request.params as { id: string; assetId: string };
+      try {
+        await unlinkAssetFromTicket(request.user.tenantId, id, assetId);
+        const ticket = await getTicket(request.user.tenantId, id);
+        return reply.send(ticket);
+      } catch (err) {
+        return reply.code(404).send({ error: (err as Error).message });
       }
     },
   );

@@ -33,6 +33,9 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   Ticket: 'tenantId',
   Message: 'tenantId',
   ApiKey: 'tenantId',
+  Asset: 'tenantId',
+  TicketAsset: 'tenantId',
+  DiscoveryJob: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

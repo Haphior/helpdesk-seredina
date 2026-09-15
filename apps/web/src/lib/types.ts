@@ -1,4 +1,11 @@
-export type Permission = 'users:manage' | 'roles:manage' | 'tickets:read' | 'tickets:write' | 'tickets:manage_all';
+export type Permission =
+  | 'users:manage'
+  | 'roles:manage'
+  | 'tickets:read'
+  | 'tickets:write'
+  | 'tickets:manage_all'
+  | 'assets:read'
+  | 'assets:manage';
 
 export type TicketStatusCategory = 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
 export type TicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
@@ -60,8 +67,52 @@ export interface Ticket {
   closedAt: string | null;
 }
 
+export type AssetType = 'SERVER' | 'WORKSTATION' | 'NETWORK_DEVICE' | 'PRINTER' | 'MOBILE_DEVICE' | 'OTHER';
+export type AssetStatus = 'ACTIVE' | 'INACTIVE' | 'RETIRED';
+export type AssetDiscoverySource = 'MANUAL' | 'AGENTLESS_SCAN';
+
+export interface Asset {
+  id: string;
+  name: string;
+  assetType: AssetType;
+  status: AssetStatus;
+  ipAddress: string | null;
+  macAddress: string | null;
+  hostname: string | null;
+  serialNumber: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  operatingSystem: string | null;
+  discoverySource: AssetDiscoverySource;
+  snmpSysDescr: string | null;
+  lastSeenAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssetSummary {
+  id: string;
+  name: string;
+  ipAddress: string | null;
+  assetType: AssetType;
+}
+
+export type DiscoveryJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+
+export interface DiscoveryJob {
+  id: string;
+  cidrRange: string;
+  status: DiscoveryJobStatus;
+  discoveredCount: number;
+  errorMessage: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
 export interface TicketDetail extends Ticket {
   messages: Message[];
+  assets: { assetId: string; asset: AssetSummary }[];
 }
 
 export interface ApiKeySummary {

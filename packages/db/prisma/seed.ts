@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PERMISSIONS } from '@seredina/shared';
 
-// Permission is the one model with no tenant scope (see lib/prisma.ts) -- a plain,
+// Permission is the one model with no tenant scope (see src/prisma.ts) -- a plain,
 // unguarded client is correct here, not a workaround.
 const prisma = new PrismaClient();
 

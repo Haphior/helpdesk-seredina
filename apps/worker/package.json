@@ -2,5 +2,28 @@
   "name": "@seredina/worker",
   "private": true,
   "version": "0.0.0",
-  "description": "BullMQ background processors: email polling, AI jobs, SLA clocks, webhook delivery. Placeholder -- built out starting Phase 1 (see docs/ROADMAP.md)."
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@seredina/db": "*",
+    "@seredina/shared": "*",
+    "bullmq": "^6.3.6",
+    "ioredis": "^6.0.0",
+    "net-snmp": "^3.29.1"
+  },
+  "devDependencies": {
+    "@seredina/config": "*",
+    "@types/net-snmp": "^3.23.0",
+    "@types/node": "^20.16.10",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
 }

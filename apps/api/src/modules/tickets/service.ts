@@ -1,6 +1,4 @@
-import type { Prisma, TicketPriority, TicketStatusCategory } from '@prisma/client';
-import { prisma } from '../../lib/prisma';
-import { withTenantTx } from '../../lib/tenant-context';
+import { prisma, withTenantTx, type Prisma, type TicketPriority, type TicketStatusCategory } from '@seredina/db';
 
 const DEFAULT_TICKET_STATUSES: { key: string; label: string; category: TicketStatusCategory; sortOrder: number }[] = [
   { key: 'open', label: 'Open', category: 'OPEN', sortOrder: 0 },
@@ -91,6 +89,7 @@ export async function getTicket(tenantId: string, ticketId: string) {
         assignee: { select: { id: true, name: true } },
         team: true,
         messages: { orderBy: { createdAt: 'asc' }, include: { authorUser: { select: { id: true, name: true } } } },
+        assets: { include: { asset: { select: { id: true, name: true, ipAddress: true, assetType: true } } } },
       },
     });
     if (!ticket) throw new Error('ticket not found');
