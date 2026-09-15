@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { apiGet, apiPost, ApiError } from '../lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Asset, DiscoveryJob } from '../lib/types';
 import { Badge } from '../components/Badge';
+import { AssetFormModal, type AssetFormValues } from '../components/AssetFormModal';
 import { formatDateTime } from '../lib/format';
 
 const JOB_STATUS_TONE = {
@@ -17,6 +18,7 @@ export function Assets() {
   const [cidrRange, setCidrRange] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | 'new' | null>(null);
 
   function load() {
     apiGet<{ assets: Asset[] }>('/assets')
@@ -39,7 +41,7 @@ export function Assets() {
     return () => clearInterval(id);
   }, [jobs]);
 
-  async function onSubmit(e: FormEvent) {
+  async function onSubmitScan(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
@@ -54,15 +56,42 @@ export function Assets() {
     }
   }
 
+  async function saveAsset(values: AssetFormValues) {
+    if (editingAsset && editingAsset !== 'new') {
+      await apiPatch(`/assets/${editingAsset.id}`, values);
+    } else {
+      await apiPost('/assets', values);
+    }
+    load();
+  }
+
+  async function removeAsset(asset: Asset) {
+    if (!confirm(`Delete asset "${asset.name}"? This also removes it from any linked tickets.`)) return;
+    try {
+      await apiDelete(`/assets/${asset.id}`);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to delete asset');
+    }
+  }
+
   return (
     <div className="p-6">
-      <h1 className="mb-1 text-2xl font-semibold text-slate-900">Assets</h1>
+      <div className="mb-1 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-slate-900">Assets</h1>
+        <button
+          onClick={() => setEditingAsset('new')}
+          className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+        >
+          New asset
+        </button>
+      </div>
       <p className="mb-4 text-sm text-slate-500">
-        Discovered via agentless network scans (TCP liveness + SNMP), or add manually later. See
+        Discovered via agentless network scans (TCP liveness + SNMP), or added by hand. See
         docs/adr/0002-agentless-discovery.md for how classification works and its limits.
       </p>
 
-      <form onSubmit={onSubmit} className="mb-4 flex items-end gap-2">
+      <form onSubmit={onSubmitScan} className="mb-4 flex items-end gap-2">
         <label className="text-sm">
           <span className="mb-1 block font-medium text-slate-700">Scan a network range</span>
           <input
@@ -76,7 +105,7 @@ export function Assets() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
         >
           Start scan
         </button>
@@ -115,7 +144,7 @@ export function Assets() {
       )}
 
       {assets === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {assets?.length === 0 && <p className="text-sm text-slate-500">No assets yet — run a scan above.</p>}
+      {assets?.length === 0 && <p className="text-sm text-slate-500">No assets yet — add one or run a scan above.</p>}
 
       {assets && assets.length > 0 && (
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -124,10 +153,12 @@ export function Assets() {
               <tr>
                 <th className="px-4 py-2 font-medium">Name</th>
                 <th className="px-4 py-2 font-medium">Type</th>
+                <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">IP</th>
                 <th className="px-4 py-2 font-medium">Hostname</th>
                 <th className="px-4 py-2 font-medium">Source</th>
                 <th className="px-4 py-2 font-medium">Last seen</th>
+                <th className="px-4 py-2 font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -137,17 +168,38 @@ export function Assets() {
                   <td className="px-4 py-2">
                     <Badge tone="slate">{asset.assetType}</Badge>
                   </td>
+                  <td className="px-4 py-2">
+                    <Badge tone={asset.status === 'ACTIVE' ? 'green' : asset.status === 'RETIRED' ? 'slate' : 'amber'}>
+                      {asset.status}
+                    </Badge>
+                  </td>
                   <td className="px-4 py-2 text-slate-600">{asset.ipAddress ?? '—'}</td>
                   <td className="px-4 py-2 text-slate-600">{asset.hostname ?? '—'}</td>
                   <td className="px-4 py-2 text-slate-500">{asset.discoverySource}</td>
                   <td className="px-4 py-2 text-slate-500">
                     {asset.lastSeenAt ? formatDateTime(asset.lastSeenAt) : '—'}
                   </td>
+                  <td className="px-4 py-2 text-right text-xs">
+                    <button onClick={() => setEditingAsset(asset)} className="mr-3 text-slate-400 hover:text-indigo-600">
+                      edit
+                    </button>
+                    <button onClick={() => removeAsset(asset)} className="text-slate-400 hover:text-red-600">
+                      delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {editingAsset && (
+        <AssetFormModal
+          asset={editingAsset === 'new' ? undefined : editingAsset}
+          onClose={() => setEditingAsset(null)}
+          onSubmit={saveAsset}
+        />
       )}
     </div>
   );

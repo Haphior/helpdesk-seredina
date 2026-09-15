@@ -198,10 +198,34 @@ the compose service-name DNS that host networking bypasses).
   hand instead (`docker run` for postgres/redis, manual migrate+RLS+seed, `tsx` for
   api). Worth an actual `docker compose up` smoke test in an environment that has the
   plugin before calling Phase 1 done.
-- Manual `Asset` CRUD (create/edit an asset by hand, not just discovery-sourced) —
-  the schema and RLS support it already, only the API/UI for it don't exist yet.
 - MAC-address-based asset identity instead of (or alongside) IP-based upsert, to
   survive DHCP lease churn on re-scans — a known limitation, see the ADR.
+
+**Manual Asset CRUD ✅ (this pass).** `POST/PATCH/DELETE /assets` (`assets:manage`),
+zod-validated (`z.string().ip()` for `ipAddress`; nullable fields use `.nullish()` so
+PATCH can distinguish "don't touch this field" (`undefined`) from "clear it"
+(`null`) — plain `.optional()` can't express the second case). Hand-entered assets
+keep `discoverySource: MANUAL`, same table/RLS as scanner-discovered ones. Web:
+a reusable `Modal` (now `role="dialog"`/`aria-modal` for both real accessibility
+and reliable test targeting) + `AssetFormModal` shared between create and edit, a
+"New asset" button, and per-row edit/delete on `/assets`.
+
+Browser-verified end to end (fresh tenant per run, to avoid the same stale-DOM-match
+trap noted in Phase 1's frontend section) — create, edit, zod rejecting a malformed
+IP, delete, all through the actual UI. **This caught a real, previously-shipped bug**:
+`apiDelete` (`apps/web/src/lib/api.ts`) unconditionally set `Content-Type:
+application/json` even with no request body; Fastify's JSON body parser runs for any
+method that can carry a body (DELETE included) and rejects an empty one when the
+header claims JSON (`FST_ERR_CTP_EMPTY_JSON_BODY`). This silently broke **both**
+"delete asset" and the ticket detail "remove" (unlink asset) button from the moment
+they shipped — Phase 1's browser verification tested *linking* an asset but never
+*unlinking* one, so it went uncaught until this pass exercised it. Fixed generically
+in `apiFetch` (only set `Content-Type` when `options.body !== undefined`), which
+fixes both call sites from one change. Re-verified specifically: unlink now returns
+200 and the ticket refetches correctly (confirmed via server log, since the UI
+assertion itself needed care — the just-unlinked asset's name still appears as a
+now-available `<option>` in the "link another asset" dropdown, which a careless
+text-match assertion mistakes for "still linked").
 
 ## Phase 2 — Configurability, SLA, and ITSM/ITAM breadth (GLPI parity)
 

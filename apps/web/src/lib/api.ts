@@ -27,7 +27,10 @@ function extractErrorMessage(body: unknown, status: number): string {
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
-  headers.set('Content-Type', 'application/json');
+  // Only when there's an actual body -- Fastify's JSON body parser runs for any
+  // method that can carry one (DELETE included) and rejects an empty body if the
+  // Content-Type header claims JSON, which a bodyless DELETE would otherwise trigger.
+  if (options.body !== undefined) headers.set('Content-Type', 'application/json');
   const token = getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
