@@ -188,9 +188,6 @@ the compose service-name DNS that host networking bypasses).
   navigation/refetch-after-mutation only — no live push).
 - AI copilot v1 (reply suggestions, summarization, auto-classify).
 - Knowledge base CRUD + full-text search.
-- An endpoint to create additional users under a tenant (`registerTenant` only ever
-  creates the first admin) — needed before "Fixed Admin/Agent/TeamLead RBAC" is
-  actually exercisable by more than one person per tenant.
 - `SEREDINA_MODE=self_hosted` auto-bootstrapping a default tenant in the `migrate`
   container.
 - `infra/docker-compose.yml` has not been run as a single `docker compose up` in this
@@ -226,6 +223,28 @@ fixes both call sites from one change. Re-verified specifically: unlink now retu
 assertion itself needed care — the just-unlinked asset's name still appears as a
 now-available `<option>` in the "link another asset" dropdown, which a careless
 text-match assertion mistakes for "still linked").
+
+**Multi-user tenants ✅ (this pass).** `registerTenant` only ever created the first
+admin — until this pass there was no way to actually exercise the Admin/Agent/
+TeamLead RBAC with more than one person, so `agent`/`team_lead` were completely
+inert in practice. `POST /users` (`users:manage`) creates additional users with a
+role by key; `PATCH /users/:id` changes name/role; `GET /roles` lists the tenant's
+fixed three roles for pickers. No invite/email flow yet (no email sending exists) —
+an admin sets the initial password directly and shares it out of band, same
+trade-off `registerTenant` already made. Web: a `/users` page (nav item gated on
+`hasPermission('users:manage')` — the first real use of that helper beyond auth
+guarding) with a "New user" modal and an inline per-row role `<select>`.
+
+Verified with what this feature actually exists to prove — a **non-admin
+permission boundary**, for the first time in this project (every prior test used
+the single admin account `registerTenant` creates): registered a tenant, created an
+`agent` user through the API, logged in as them, decoded their JWT to confirm
+`permissions: ['tickets:read', 'tickets:write', 'assets:read']` (no `users:manage`,
+no `assets:manage`), confirmed they can `GET /tickets` (200) but are correctly
+rejected from `POST /users` (403) and `POST /discovery-jobs` (403), then promoted
+them to `team_lead` via `PATCH /users/:id` and confirmed the role stuck. Browser-
+verified the `/users` page end to end (create, inline role change), zero console
+errors.
 
 ## Phase 2 — Configurability, SLA, and ITSM/ITAM breadth (GLPI parity)
 

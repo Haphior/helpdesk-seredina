@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { getMe, listUsers, login, registerTenant } from './service';
+import { createUser, getMe, listRoles, listUsers, login, registerTenant, updateUser } from './service';
 
 const registerSchema = z.object({
   tenantSlug: z
@@ -19,6 +19,18 @@ const loginSchema = z.object({
   tenantSlug: z.string(),
   email: z.string().email(),
   password: z.string(),
+});
+
+const createUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+  password: z.string().min(8),
+  roleKey: z.string().min(1),
+});
+
+const updateUserSchema = z.object({
+  name: z.string().min(1).optional(),
+  roleKey: z.string().min(1).optional(),
 });
 
 export default async function authRoutes(app: FastifyInstance) {
@@ -74,6 +86,52 @@ export default async function authRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const users = await listUsers(request.user.tenantId);
       return reply.send({ users });
+    },
+  );
+
+  app.post(
+    '/users',
+    { preHandler: [app.authenticate, requirePermission('users:manage')] },
+    async (request, reply) => {
+      const parsed = createUserSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.flatten() });
+      }
+      try {
+        const user = await createUser(request.user.tenantId, parsed.data);
+        return reply.code(201).send(user);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.patch(
+    '/users/:id',
+    { preHandler: [app.authenticate, requirePermission('users:manage')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = updateUserSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.flatten() });
+      }
+      try {
+        const user = await updateUser(request.user.tenantId, id, parsed.data);
+        return reply.send(user);
+      } catch (err) {
+        return reply.code(404).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  // Gated on users:manage, not tickets:read -- unlike /users (identities, needed
+  // broadly for pickers), the role catalog is an admin/config concern.
+  app.get(
+    '/roles',
+    { preHandler: [app.authenticate, requirePermission('users:manage')] },
+    async (request, reply) => {
+      const roles = await listRoles(request.user.tenantId);
+      return reply.send({ roles });
     },
   );
 }

@@ -37,6 +37,12 @@ export interface UserSummary {
   role: { key: string } | null;
 }
 
+export interface Role {
+  id: string;
+  key: string;
+  name: string;
+}
+
 export interface Message {
   id: string;
   ticketId: string;

@@ -8,6 +8,7 @@ import { TicketsQueue } from './pages/TicketsQueue';
 import { TicketDetail } from './pages/TicketDetail';
 import { ApiKeys } from './pages/ApiKeys';
 import { Assets } from './pages/Assets';
+import { Users } from './pages/Users';
 
 export function App() {
   return (
@@ -23,6 +24,7 @@ export function App() {
             <Route path="/tickets/:id" element={<TicketDetail />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/api-keys" element={<ApiKeys />} />
+            <Route path="/users" element={<Users />} />
           </Route>
         </Route>
 

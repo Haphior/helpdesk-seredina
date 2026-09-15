@@ -112,3 +112,61 @@ export async function listUsers(tenantId: string) {
     }),
   );
 }
+
+/** The tenant's roles (fixed to admin/team_lead/agent for now -- see ROADMAP's "custom roles" backlog item). */
+export async function listRoles(tenantId: string) {
+  return withTenantTx(prisma, tenantId, async (tx) =>
+    tx.role.findMany({ select: { id: true, key: true, name: true }, orderBy: { key: 'asc' } }),
+  );
+}
+
+export interface CreateUserInput {
+  email: string;
+  name: string;
+  password: string;
+  roleKey: string;
+}
+
+/**
+ * registerTenant creates exactly one user (the first admin) -- this is how a tenant
+ * gets any OTHER user. No invite/email flow yet (apps/worker has no email sending
+ * built), so an admin sets the initial password directly and shares it out of band;
+ * see ROADMAP for that as a deferred follow-up once the email channel exists.
+ */
+export async function createUser(tenantId: string, input: CreateUserInput) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const role = await tx.role.findUnique({ where: { tenantId_key: { tenantId, key: input.roleKey } } });
+    if (!role) throw new Error('role not found');
+
+    const passwordHash = await bcrypt.hash(input.password, 12);
+    return tx.user.create({
+      data: { tenantId, email: input.email, name: input.name, passwordHash, roleId: role.id },
+      select: { id: true, name: true, email: true, role: { select: { key: true } } },
+    });
+  });
+}
+
+export interface UpdateUserInput {
+  name?: string;
+  roleKey?: string;
+}
+
+export async function updateUser(tenantId: string, userId: string, input: UpdateUserInput) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.user.findUnique({ where: { id: userId } });
+    if (!existing) throw new Error('user not found');
+
+    let roleId: string | undefined;
+    if (input.roleKey) {
+      const role = await tx.role.findUnique({ where: { tenantId_key: { tenantId, key: input.roleKey } } });
+      if (!role) throw new Error('role not found');
+      roleId = role.id;
+    }
+
+    return tx.user.update({
+      where: { id: userId },
+      data: { name: input.name, roleId },
+      select: { id: true, name: true, email: true, role: { select: { key: true } } },
+    });
+  });
+}
