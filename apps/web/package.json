@@ -1,0 +1,6 @@
+{
+  "name": "@seredina/web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Agent/admin console. Placeholder -- built out in Phase 1 (see docs/ROADMAP.md)."
+}

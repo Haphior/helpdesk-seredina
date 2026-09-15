@@ -1,0 +1,85 @@
+// Phase 0 schema: just enough to prove tenant isolation (RLS + Prisma) end to end.
+// Ticketing/KB/SLA/AI models land in later phases (see docs/ROADMAP.md).
+//
+// Every tenant-owned table carries an explicit tenant_id column (even join tables,
+// denormalized rather than derived via a join) so every RLS policy has the same
+// shape: `tenant_id = current_setting('app.tenant_id', true)`. All id/FK columns are
+// `@db.Uuid` (native Postgres uuid, not text) -- Prisma's `@default(uuid())` still
+// generates the value client-side as a string; Postgres accepts it into a uuid column
+// on insert, and this keeps RLS/index comparisons a native uuid=uuid comparison
+// instead of relying on a text cast everywhere a policy touches it.
+// `Permission` is the one deliberate exception: it's a fixed, global catalog of
+// resource:action strings, not tenant data, so it carries no tenant_id and no RLS.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  mode      String   @default("cloud") // 'self_hosted' | 'cloud'
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users           User[]
+  roles           Role[]
+  rolePermissions RolePermission[]
+
+  @@map("tenants")
+}
+
+model Role {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key      String // 'admin' | 'agent' | future custom roles
+  name     String
+
+  permissions RolePermission[]
+  users       User[]
+
+  @@unique([tenantId, key])
+  @@map("roles")
+}
+
+model Permission {
+  id  String @id @default(uuid()) @db.Uuid
+  key String @unique // e.g. 'users:manage' — see packages/shared/src/permissions.ts
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  tenantId     String     @map("tenant_id") @db.Uuid
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roleId       String     @map("role_id") @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String     @map("permission_id") @db.Uuid
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String
+  name         String
+  passwordHash String   @map("password_hash")
+  roleId       String?  @map("role_id") @db.Uuid
+  role         Role?    @relation(fields: [roleId], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, email])
+  @@map("users")
+}

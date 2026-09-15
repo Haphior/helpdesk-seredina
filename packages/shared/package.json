@@ -1,0 +1,14 @@
+{
+  "name": "@seredina/shared",
+  "private": true,
+  "version": "0.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@seredina/config": "*",
+    "typescript": "^5.6.3"
+  }
+}

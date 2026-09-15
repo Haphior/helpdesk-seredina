@@ -1,0 +1,6 @@
+{
+  "name": "@seredina/email-parser",
+  "private": true,
+  "version": "0.0.0",
+  "description": "MIME parsing/threading for the email channel adapter. Placeholder -- built out in Phase 1 (see docs/ROADMAP.md)."
+}

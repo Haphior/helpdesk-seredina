@@ -1,0 +1,6 @@
+{
+  "name": "@seredina/worker",
+  "private": true,
+  "version": "0.0.0",
+  "description": "BullMQ background processors: email polling, AI jobs, SLA clocks, webhook delivery. Placeholder -- built out starting Phase 1 (see docs/ROADMAP.md)."
+}

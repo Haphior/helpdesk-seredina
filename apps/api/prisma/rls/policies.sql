@@ -1,0 +1,80 @@
+-- Run once, after `prisma migrate deploy`, by the one-shot `migrate` service — never
+-- by the running api/worker processes. Idempotent: safe to re-run on every deploy.
+--
+-- Two roles, on purpose (see docs/adr/0001-multi-tenancy-rls.md):
+--   app_migrator — owns every table (whoever CREATEs a table owns it; Prisma migrate
+--                  connects as this role). Postgres table owners BYPASS RLS by
+--                  default, which is exactly why the running API must never connect
+--                  as this role.
+--   app_tenant   — non-owner, used by apps/api and apps/worker at runtime. RLS only
+--                  applies to non-owners, and FORCE ROW LEVEL SECURITY (below) closes
+--                  the one remaining gap: a superuser/owner override.
+--
+-- The app_tenant role itself is created/password-set by migrate-entrypoint.sh
+-- (via a plain shell heredoc, substituting APP_TENANT_DB_PASSWORD) BEFORE this file
+-- runs -- not here. psql's `:'var'` interpolation does not reach inside a
+-- dollar-quoted (`DO $$ ... $$`) body, so doing the idempotent create-or-alter
+-- dance in SQL with a parameterized password does not work; plain shell substitution
+-- has no such restriction, so that's where it belongs.
+
+GRANT USAGE ON SCHEMA public TO app_tenant;
+
+-- Global, non-tenant-owned catalog: runtime only ever reads it.
+GRANT SELECT ON permissions TO app_tenant;
+
+-- Tenant-owned tables: full CRUD for the app, but every row is gated by RLS below.
+GRANT SELECT, INSERT, UPDATE, DELETE ON tenants, roles, role_permissions, users TO app_tenant;
+
+-- tenants: a tenant-scoped session may see only its own row (defense against
+-- cross-tenant enumeration via the tenant registry itself).
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenants FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON tenants;
+CREATE POLICY tenant_isolation ON tenants
+  USING (id = current_setting('app.tenant_id', true)::uuid)
+  WITH CHECK (id = current_setting('app.tenant_id', true)::uuid);
+
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE roles FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON roles;
+CREATE POLICY tenant_isolation ON roles
+  USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
+  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);
+
+ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE role_permissions FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON role_permissions;
+CREATE POLICY tenant_isolation ON role_permissions
+  USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
+  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON users;
+CREATE POLICY tenant_isolation ON users
+  USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
+  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);
+
+-- current_setting(..., true) (missing_ok=true) returns NULL when unset rather than
+-- erroring, and NULL never equals a uuid — so a code path that forgets to open a
+-- tenant transaction fails CLOSED (zero rows / rejected write), never open.
+
+-- Deliberate, narrow exception: resolving "which tenant does this slug belong to"
+-- (login, registration's slug-availability check) has no tenant context yet — it's
+-- the discovery step that produces one, so it can't go through the RLS-gated table
+-- directly. SECURITY DEFINER runs this function's body with the OWNER's (app_migrator)
+-- privileges, bypassing the caller's RLS regardless of session variables — but it
+-- exposes exactly one column (id) for exactly one input (slug), nothing else about
+-- other tenants. This is the standard, safe Postgres pattern for a single controlled
+-- hole through RLS, not a general bypass.
+CREATE OR REPLACE FUNCTION public.resolve_tenant_id(p_slug text)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT id FROM tenants WHERE slug = p_slug;
+$$;
+
+REVOKE ALL ON FUNCTION public.resolve_tenant_id(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resolve_tenant_id(text) TO app_tenant;

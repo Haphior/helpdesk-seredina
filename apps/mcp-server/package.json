@@ -1,0 +1,6 @@
+{
+  "name": "@seredina/mcp-server",
+  "private": true,
+  "version": "0.0.0",
+  "description": "MCP server exposing the shared AI tool catalog over stdio + HTTP/SSE, per-tenant API-key auth. Placeholder -- built out in Phase 3 (see docs/ROADMAP.md)."
+}

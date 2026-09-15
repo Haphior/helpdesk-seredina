@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app_migrator}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-seredina}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app_migrator}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-seredina}
+      APP_TENANT_DB_PASSWORD: ${APP_TENANT_DB_PASSWORD:?set APP_TENANT_DB_PASSWORD in .env}
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://app_tenant:${APP_TENANT_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-seredina}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      SEREDINA_MODE: ${SEREDINA_MODE:-self_hosted}
+    ports:
+      - '${API_PORT:-4000}:4000'
+
+volumes:
+  postgres_data:

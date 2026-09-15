@@ -1,0 +1,6 @@
+{
+  "name": "@seredina/ai-adapters",
+  "private": true,
+  "version": "0.0.0",
+  "description": "LlmProviderAdapter interface + implementations (Anthropic first). Placeholder -- built out in Phase 1 (see docs/ROADMAP.md)."
+}
