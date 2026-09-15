@@ -61,6 +61,7 @@ export interface Ticket {
   contactId: string;
   contact: Contact;
   channel: string;
+  externalId: string | null;
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;

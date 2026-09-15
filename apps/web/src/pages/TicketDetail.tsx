@@ -107,9 +107,11 @@ export function TicketDetail() {
         <div className="mb-4">
           <span className="text-sm text-slate-500">#{ticket.number}</span>
           <h1 className="text-2xl font-semibold text-slate-900">{ticket.subject}</h1>
-          <div className="mt-1 flex gap-2">
+          <div className="mt-1 flex items-center gap-2">
             <Badge tone={STATUS_CATEGORY_TONE[ticket.status.category]}>{ticket.status.label}</Badge>
             <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
+            <Badge tone={ticket.channel === 'alert' ? 'red' : 'slate'}>{ticket.channel}</Badge>
+            {ticket.externalId && <span className="text-xs text-slate-400">ref: {ticket.externalId}</span>}
           </div>
         </div>
 

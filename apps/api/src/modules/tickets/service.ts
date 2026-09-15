@@ -61,6 +61,102 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
   });
 }
 
+export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
+
+const SEVERITY_TO_PRIORITY: Record<AlertSeverity, TicketPriority> = {
+  CRITICAL: 'URGENT',
+  HIGH: 'HIGH',
+  MEDIUM: 'NORMAL',
+  LOW: 'LOW',
+  INFO: 'LOW',
+};
+
+export interface IngestAlertInput {
+  source: string;
+  severity?: AlertSeverity;
+  title: string;
+  description?: string;
+  externalId?: string;
+}
+
+/**
+ * The NOC/SOC integration point: a monitoring or security tool (Zabbix, Wazuh,
+ * Grafana, ...) POSTs here -- same ApiKey as the ticket-creation API channel, see
+ * plugins/apiKeyAuth.ts -- and the alert becomes a Ticket. Deliberately reuses
+ * Ticket rather than a separate Incident model: see
+ * docs/adr/0003-alert-ingestion.md for why (the lifecycle and every mechanism that
+ * already exists for it -- RBAC, status categories, assignment -- is identical;
+ * duplicating all of that for a "different-looking" ticket would be two systems
+ * pretending to be one). Severity is a normalized 5-value scale, not any specific
+ * tool's native scheme (Zabbix's "Disaster".."Not classified", Wazuh's 0-15 rule
+ * levels, ...) -- mapping a tool's own severity into this is the integrator's job,
+ * kept out of Seredina to stay tool-agnostic.
+ */
+export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    // A re-fired alert for a problem that's still open folds into the existing
+    // ticket instead of spawning a duplicate -- without this, an alert storm (a
+    // flapping service re-notifying every few minutes) would be unusable. A CLOSED
+    // ticket with the same externalId legitimately gets a fresh one: whatever was
+    // wrong was declared resolved and closed, so a new occurrence is a new incident.
+    if (input.externalId) {
+      const existing = await tx.ticket.findFirst({
+        where: { channel: 'alert', externalId: input.externalId, status: { category: { not: 'CLOSED' } } },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (existing) {
+        await tx.message.create({
+          data: {
+            tenantId,
+            ticketId: existing.id,
+            authorType: 'SYSTEM',
+            body: `Alert re-triggered by ${input.source}: ${input.title}${input.description ? `\n\n${input.description}` : ''}`,
+            isPrivateNote: false,
+          },
+        });
+        return existing;
+      }
+    }
+
+    const contact = await tx.contact.upsert({
+      where: { tenantId_email: { tenantId, email: `${input.source}@alerts.local` } },
+      create: { tenantId, email: `${input.source}@alerts.local`, name: input.source },
+      update: {},
+    });
+
+    const openStatus = await tx.ticketStatus.findFirst({ where: { key: 'open' } });
+    if (!openStatus) throw new Error('tenant has no "open" ticket status configured');
+
+    const tenant = await tx.tenant.update({ where: { id: tenantId }, data: { lastTicketNumber: { increment: 1 } } });
+
+    const ticket = await tx.ticket.create({
+      data: {
+        tenantId,
+        number: tenant.lastTicketNumber,
+        subject: input.title,
+        priority: input.severity ? SEVERITY_TO_PRIORITY[input.severity] : 'NORMAL',
+        statusId: openStatus.id,
+        contactId: contact.id,
+        channel: 'alert',
+        externalId: input.externalId,
+      },
+    });
+
+    await tx.message.create({
+      data: {
+        tenantId,
+        ticketId: ticket.id,
+        authorType: 'SYSTEM',
+        body: input.description ?? input.title,
+        isPrivateNote: false,
+      },
+    });
+
+    return ticket;
+  });
+}
+
 export async function listTicketStatuses(tenantId: string) {
   return withTenantTx(prisma, tenantId, async (tx) => tx.ticketStatus.findMany({ orderBy: { sortOrder: 'asc' } }));
 }

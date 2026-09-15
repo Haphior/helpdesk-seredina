@@ -1,7 +1,15 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { addMessage, createTicketFromApi, getTicket, listTickets, listTicketStatuses, updateTicket } from './service';
+import {
+  addMessage,
+  createTicketFromApi,
+  getTicket,
+  ingestAlert,
+  listTickets,
+  listTicketStatuses,
+  updateTicket,
+} from './service';
 import { linkAssetToTicket, unlinkAssetFromTicket } from '../assets/service';
 
 const PRIORITY = z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']);
@@ -29,6 +37,14 @@ const updateTicketSchema = z.object({
 
 const linkAssetSchema = z.object({ assetId: z.string().uuid() });
 
+const ingestAlertSchema = z.object({
+  source: z.string().min(1).max(100),
+  severity: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO']).optional(),
+  title: z.string().min(1).max(200),
+  description: z.string().optional(),
+  externalId: z.string().max(200).optional(),
+});
+
 export default async function ticketRoutes(app: FastifyInstance) {
   // The API channel -- see plugins/apiKeyAuth.ts. Deliberately a different auth
   // mechanism than every other route here (ApiKey, not a user JWT): the caller is a
@@ -39,6 +55,20 @@ export default async function ticketRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: parsed.error.flatten() });
     }
     const ticket = await createTicketFromApi(request.apiKeyTenantId!, parsed.data);
+    return reply.code(201).send(ticket);
+  });
+
+  // The NOC/SOC integration point -- see modules/tickets/service.ts's ingestAlert
+  // for why this reuses Ticket instead of a separate model, and
+  // docs/adr/0003-alert-ingestion.md for the full reasoning. Same ApiKey auth as
+  // /v1/tickets: a customer's monitoring tool and their generic integration share
+  // one credential type, not two.
+  app.post('/v1/alerts', { preHandler: app.authenticateApiKey }, async (request, reply) => {
+    const parsed = ingestAlertSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.flatten() });
+    }
+    const ticket = await ingestAlert(request.apiKeyTenantId!, parsed.data);
     return reply.code(201).send(ticket);
   });
 

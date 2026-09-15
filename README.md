@@ -2,12 +2,14 @@
 
 Open source, fully configurable helpdesk + ITSM/ITAM (GLPI-scope: ticketing, asset
 management/CMDB, agentless inventory, and more to come) with AI agent integration,
-plus NOC/SOC integration via webhook ingestion (not built yet — see roadmap). Ships
-as a self-hosted Docker deployment (single tenant) and as a multi-tenant cloud
-service — same codebase, same containers, both modes.
+plus NOC/SOC integration via webhook alert ingestion (`POST /v1/alerts` turns a
+Zabbix/Wazuh/Grafana/etc. alert into a ticket). Ships as a self-hosted Docker
+deployment (single tenant) and as a multi-tenant cloud service — same codebase, same
+containers, both modes.
 
-Status: Phase 1 in progress (ticketing core, agent console, CMDB + agentless
-discovery) — see [docs/ROADMAP.md](docs/ROADMAP.md).
+Status: Phase 1 done, Phase 2 in progress (ticketing core, agent console, CMDB +
+agentless discovery, NOC/SOC alert ingestion) — see
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Stack
 

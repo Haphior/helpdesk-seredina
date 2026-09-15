@@ -179,7 +179,14 @@ model Ticket {
   assignee   User?          @relation("TicketAssignee", fields: [assigneeId], references: [id])
   contactId  String         @map("contact_id") @db.Uuid
   contact    Contact        @relation(fields: [contactId], references: [id])
-  channel    String         @default("api") // 'api' | 'email' | 'widget' (Phase 1 only ships api)
+  channel    String         @default("api") // 'api' | 'alert' | 'email' | 'widget' (only api/alert ship so far)
+  // Set only for channel='alert' -- the monitoring/security tool's own id for this
+  // problem (e.g. a Zabbix event id, a Wazuh alert id), used to fold a re-fired
+  // alert into the same ticket instead of spawning a duplicate. Not unique-
+  // constrained: dedup is a service-layer lookup (see ingestAlert), not a DB
+  // constraint, since "same externalId" is only a duplicate while the earlier
+  // ticket is still open -- a closed one legitimately gets a fresh ticket.
+  externalId String?        @map("external_id")
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
   resolvedAt DateTime?      @map("resolved_at")
@@ -189,6 +196,7 @@ model Ticket {
   assets   TicketAsset[]
 
   @@unique([tenantId, number])
+  @@index([tenantId, channel, externalId])
   @@map("tickets")
 }
 

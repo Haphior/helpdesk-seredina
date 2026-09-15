@@ -18,8 +18,8 @@ inferred) because guessing wrong here would have wasted enormous effort:
    correlation are each mature, decades-old product categories on their own
    (Zabbix/Nagios; Wazuh/a SIEM) — natively building either would be more work than
    this entire project combined several times over. Seredina's job is to become the
-   ticketing/incident hub those tools feed into (via webhook ingestion, not yet
-   built — see Phase 2.5 below), not to replace them.
+   ticketing/incident hub those tools feed into (via webhook ingestion — `POST
+   /v1/alerts`, shipped in Phase 2, see below), not to replace them.
 2. **Agentless dynamic inventory was prioritized first** among the GLPI list (over
    Asset Management/CMDB itself, which is the more typically-natural starting point)
    — so CMDB was built alongside it, as the minimum destination the scanner needs to
@@ -229,34 +229,71 @@ text-match assertion mistakes for "still linked").
 
 ## Phase 2 — Configurability, SLA, and ITSM/ITAM breadth (GLPI parity)
 
-The GLPI feature list the user asked to match, mapped to concrete near-term work.
-Nothing here is built yet — CMDB/discovery (Phase 1, above) was deliberately
-sequenced first as the foundation the rest reads/writes against.
+The GLPI feature list the user asked to match, mapped to concrete work. CMDB/
+discovery (Phase 1) was deliberately sequenced first as the foundation the rest
+reads/writes against.
 
 - **Service Desk**: already the ticketing core (Phase 1). GLPI parity here mostly
   means the configurability items below (forms, SLA, macros), not new ticket
   concepts.
+
+**Security Alerts Management + Monitoring (the SOC/NOC integration points) ✅ (this
+pass).** `POST /v1/alerts` — same `ApiKey` auth as `POST /v1/tickets` (one
+credential type, not two) — turns an external tool's alert into a `Ticket`
+(`channel: 'alert'`). Deliberately reuses `Ticket` rather than a new `Incident`
+model, resolving what `docs/adr/0002-agentless-discovery.md` had left explicitly
+undecided — see `docs/adr/0003-alert-ingestion.md` for the full reasoning (the
+lifecycle and every mechanism that already exists for it — RBAC, status categories,
+assignment — is identical; a separate model earns its cost only when the lifecycle
+actually diverges, and it doesn't here). One generic endpoint covers both Security
+Alerts and Monitoring — they're the same shape (external tool → ticket), just
+differentiated by `source`/payload, not separate systems, exactly as flagged when
+this was still just a roadmap note.
+
+Concretely: a normalized 5-value `severity` (`CRITICAL`/`HIGH`/`MEDIUM`/`LOW`/`INFO`)
+maps to `TicketPriority` — mapping a specific tool's native scheme (Zabbix's
+"Disaster".."Not classified", Wazuh's numeric rule levels, ...) into this is the
+integrator's job, kept out of Seredina to stay tool-agnostic. A new nullable
+`Ticket.externalId` column (the source tool's own alert/event id) drives
+deduplication: a re-fired alert for a problem whose ticket is still open (status
+category ≠ `CLOSED`) folds into that ticket as a new message instead of spawning a
+duplicate — without this, an alert storm (a flapping service re-notifying every few
+minutes) would be unusable. A `CLOSED` ticket with the same `externalId`
+legitimately gets a fresh ticket (a new occurrence, not a reopening) — this is a
+service-layer lookup (`ingestAlert` in `modules/tickets/service.ts`), not a DB
+constraint, since "duplicate" depends on the existing ticket's current status. Alerts
+get a synthetic per-source `Contact` (`{source}@alerts.local`) since `Ticket`
+requires one and inventing a nullable-contact code path everywhere wasn't worth it
+for this one case.
+
+Web: a `Channel` column/badge on the ticket queue and detail header
+(red for `alert`, distinguishing it from `api`), plus the `externalId` shown as
+`ref: <id>` when present.
+
+Verified end to end against a real Postgres, not just unit-level: registered a
+tenant, issued an API key, POSTed a `CRITICAL` alert (→ `URGENT` priority), re-POSTed
+the identical `externalId` (confirmed it folded into the same ticket as a second
+message, no new ticket number), closed that ticket, POSTed the same `externalId`
+again (confirmed a genuinely new ticket, not a reopen), and confirmed the synthetic
+contact was reused correctly across both of a source's tickets. Browser-verified the
+channel badges and `ref:` display render correctly with zero console errors.
+
 - **Configuration Management (CMDB)**: `CustomFieldDefinition` + hybrid values
   (jsonb for the common case, a narrow typed mirror table only for fields explicitly
   marked filterable — not full EAV) + `TicketForm`, extended to `Asset` too (custom
   fields per asset type). Tenant-defined `TicketStatus` labels already ship (Phase
   1); this generalizes the same pattern.
-- **Security Alerts Management** (the SOC integration point): generic inbound
-  webhook endpoint that turns an external tool's alert (Wazuh, a SIEM, whatever) into
-  a `Ticket` (or a new lighter-weight `Incident` type, undecided) — this is what "SOC
-  integrated" concretely means per the scoping decision above. Natural home for
-  Phase 2's `Webhook` model to start as inbound, not just outbound.
-- **Monitoring** (the NOC integration point): same shape as Security Alerts — ingest
-  uptime/performance alerts from Zabbix/Nagios/Grafana via webhook rather than
-  polling infrastructure ourselves. Could share the same generic inbound-webhook
-  endpoint as Security Alerts, differentiated by payload/source, not a separate
-  system.
 - `Macro` with a typed action union (not arbitrary code).
 - `SlaPolicy` + `BusinessHours` + breach escalations.
-- Outbound `Webhook`s (doubles as groundwork for Phase 3's "open framework").
+- Outbound `Webhook`s (doubles as groundwork for Phase 3's "open framework") — note
+  this is the *opposite* direction from `POST /v1/alerts` above (Seredina notifying
+  something else vs. something else notifying Seredina); both will likely end up
+  called "Webhook" in the UI eventually, worth a naming pass when both exist to avoid
+  confusing the two directions.
 - Reporting v1: volume, first-response/resolution time, SLA compliance, agent
   workload, plus asset counts/types once Asset Management has enough data to report
-  on.
+  on, plus alert-channel volume (how many tickets came from monitoring vs. real
+  requesters) now that there's a `channel` to group by.
 
 ## Phase 3 — AI depth: RAG + MCP + autonomous mode
 

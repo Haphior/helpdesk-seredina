@@ -56,6 +56,7 @@ export function TicketsQueue() {
               <tr>
                 <th className="px-4 py-2 font-medium">#</th>
                 <th className="px-4 py-2 font-medium">Subject</th>
+                <th className="px-4 py-2 font-medium">Channel</th>
                 <th className="px-4 py-2 font-medium">Contact</th>
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">Priority</th>
@@ -71,6 +72,9 @@ export function TicketsQueue() {
                     <Link to={`/tickets/${ticket.id}`} className="font-medium text-indigo-700 hover:underline">
                       {ticket.subject}
                     </Link>
+                  </td>
+                  <td className="px-4 py-2">
+                    <Badge tone={ticket.channel === 'alert' ? 'red' : 'slate'}>{ticket.channel}</Badge>
                   </td>
                   <td className="px-4 py-2 text-slate-600">{ticket.contact.name}</td>
                   <td className="px-4 py-2">
