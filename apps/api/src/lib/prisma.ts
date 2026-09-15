@@ -27,6 +27,12 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   Role: 'tenantId',
   RolePermission: 'tenantId',
   User: 'tenantId',
+  Team: 'tenantId',
+  Contact: 'tenantId',
+  TicketStatus: 'tenantId',
+  Ticket: 'tenantId',
+  Message: 'tenantId',
+  ApiKey: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

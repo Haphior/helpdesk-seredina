@@ -34,20 +34,55 @@ critical CVEs in `fast-jwt` — see engines field in `package.json`.
 
 ## Phase 1 — MVP: core ticketing + email/API ingestion + AI copilot v1
 
-- Ticketing schema: `Ticket`, `Message`, `TicketStatus` (+ fixed `category` enum),
-  `Priority`, `Team`, `Contact`, `Tag`, `Attachment`.
-- Fixed Admin/Agent/TeamLead RBAC.
-- Channels: email (IMAP poll or inbound webhook + SMTP out, threaded via
-  `In-Reply-To`/`References`) and API (`POST /v1/tickets` via `ApiKey`) behind one
-  `ChannelAdapter` interface.
-- Web app: queue view, ticket detail, reply/internal-note composer, team/user admin.
-- Realtime ticket updates over WebSockets via Redis pub/sub.
-- AI copilot v1 (Anthropic only): reply suggestions, summarization, auto-classify —
-  human always approves/sends. No tool-calling loop yet, just single-completion
-  enrichment jobs.
-- Knowledge base CRUD + full-text search (no embeddings yet).
-- Self-hosted Docker Compose fully working end to end, including
-  `SEREDINA_MODE=self_hosted` auto-bootstrapping a default tenant.
+**Ticketing core backend ✅ (this pass).** Schema: `Team`, `Contact`, `TicketStatus`
+(tenant-defined label + fixed `category` enum: `OPEN`/`PENDING`/`RESOLVED`/`CLOSED`),
+`Ticket` (per-tenant sequential `number`, `TicketPriority` enum), `Message` (a public
+reply and an agent-only internal note are both `Message` rows, differentiated only by
+`isPrivateNote`), `ApiKey`. All wired into the same RLS + Prisma-extension isolation
+as Phase 0 (`TENANT_SCOPE_FIELD` in `lib/prisma.ts`, loop-generated policies in
+`prisma/rls/policies.sql`), plus a proportional isolation test
+(`test/ticket-tenant-isolation.test.ts`). Fixed Admin/Agent/TeamLead RBAC (new
+`tickets:read`/`tickets:write`/`tickets:manage_all` permissions;
+`packages/shared/src/permissions.ts`). Default `TicketStatus` rows + a "General"
+`Team` seeded at tenant registration (`modules/tickets/service.ts`'s
+`seedDefaultTicketStatuses`, `modules/teams/service.ts`'s `seedDefaultTeam`).
+
+The API channel: `POST /v1/tickets`, authenticated by `ApiKey` via
+`plugins/apiKeyAuth.ts` — resolving "which tenant does this key belong to" from its
+SHA-256 hash uses the same `SECURITY DEFINER` pattern as `resolve_tenant_id(slug)`
+(`resolve_tenant_id_by_api_key_hash` in `prisma/rls/policies.sql`), since that lookup
+has no tenant context yet either. Keys are issued via `POST /api-keys`
+(admin/`users:manage`) and shown once, only the hash is stored. Also shipped:
+`GET /ticket-statuses`, `GET /teams`, `GET /tickets` (+ `statusCategory` filter),
+`GET /tickets/:id`, `POST /tickets/:id/messages`, `PATCH /tickets/:id` (status
+changes into the `RESOLVED`/`CLOSED` categories auto-stamp `resolvedAt`/`closedAt` —
+category drives behavior, never the tenant-chosen label, matching the ADR's
+reasoning for why `TicketStatusCategory` exists at all).
+
+Verified end to end locally: full register → issue API key → create ticket via API
+key → list/get/reply/internal-note/patch → status-category-driven
+`resolvedAt`/`closedAt` stamping, plus 401/403/404 edge cases, against a real
+Postgres. `npm test` is 7/7 (5 Phase 0 + 2 new ticket-isolation tests).
+
+**Deferred from this pass, still open for Phase 1:**
+- Email channel (IMAP/SMTP, threading) — needs real mail credentials to build against
+  meaningfully; the `ChannelAdapter` interface it'll implement isn't written yet
+  either, only the API channel exists concretely so far.
+- Web app (queue view, ticket detail, composer, team/user admin) — backend was
+  sequenced first on purpose; nothing here blocks starting it.
+- Realtime updates over WebSockets via Redis pub/sub.
+- AI copilot v1 (reply suggestions, summarization, auto-classify).
+- Knowledge base CRUD + full-text search.
+- An endpoint to create additional users under a tenant (`registerTenant` only ever
+  creates the first admin) — needed before "Fixed Admin/Agent/TeamLead RBAC" is
+  actually exercisable by more than one person per tenant.
+- `SEREDINA_MODE=self_hosted` auto-bootstrapping a default tenant in the `migrate`
+  container.
+- `infra/docker-compose.yml` has not been run as a single `docker compose up` in this
+  environment (no compose plugin here) — verified by running each of its steps by
+  hand instead (`docker run` for postgres/redis, manual migrate+RLS+seed, `tsx` for
+  api). Worth an actual `docker compose up` smoke test in an environment that has the
+  plugin before calling Phase 1 done.
 
 ## Phase 2 — Configurability + SLA
 

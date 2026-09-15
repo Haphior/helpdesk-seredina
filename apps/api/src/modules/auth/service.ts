@@ -4,6 +4,8 @@ import { DEFAULT_ROLES, type Permission } from '@seredina/shared';
 import { prisma } from '../../lib/prisma';
 import { withTenantTx } from '../../lib/tenant-context';
 import { resolveTenantIdBySlug } from '../tenants/service';
+import { seedDefaultTicketStatuses } from '../tickets/service';
+import { seedDefaultTeam } from '../teams/service';
 
 export interface RegisterTenantInput {
   tenantSlug: string;
@@ -54,6 +56,9 @@ export async function registerTenant(input: RegisterTenantInput): Promise<AuthRe
     const adminUser = await tx.user.create({
       data: { tenantId, email: input.adminEmail, name: input.adminName, passwordHash, roleId: adminRoleId },
     });
+
+    await seedDefaultTicketStatuses(tx, tenantId);
+    await seedDefaultTeam(tx, tenantId);
 
     return { tenantId, userId: adminUser.id, permissions: DEFAULT_ROLES.admin };
   });

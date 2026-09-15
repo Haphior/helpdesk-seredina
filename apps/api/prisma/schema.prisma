@@ -1,5 +1,6 @@
-// Phase 0 schema: just enough to prove tenant isolation (RLS + Prisma) end to end.
-// Ticketing/KB/SLA/AI models land in later phases (see docs/ROADMAP.md).
+// Phase 0 added Tenant/User/Role/Permission -- proving tenant isolation (RLS + Prisma)
+// end to end. Phase 1 adds the ticketing core below. SLA/custom-fields/AI models land
+// in later phases (see docs/ROADMAP.md).
 //
 // Every tenant-owned table carries an explicit tenant_id column (even join tables,
 // denormalized rather than derived via a join) so every RLS policy has the same
@@ -21,15 +22,22 @@ datasource db {
 }
 
 model Tenant {
-  id        String   @id @default(uuid()) @db.Uuid
-  slug      String   @unique
-  name      String
-  mode      String   @default("cloud") // 'self_hosted' | 'cloud'
-  createdAt DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid()) @db.Uuid
+  slug             String   @unique
+  name             String
+  mode             String   @default("cloud") // 'self_hosted' | 'cloud'
+  lastTicketNumber Int      @default(0) @map("last_ticket_number")
+  createdAt        DateTime @default(now()) @map("created_at")
 
   users           User[]
   roles           Role[]
   rolePermissions RolePermission[]
+  teams           Team[]
+  contacts        Contact[]
+  ticketStatuses  TicketStatus[]
+  tickets         Ticket[]
+  messages        Message[]
+  apiKeys         ApiKey[]
 
   @@map("tenants")
 }
@@ -80,6 +88,146 @@ model User {
   role         Role?    @relation(fields: [roleId], references: [id])
   createdAt    DateTime @default(now()) @map("created_at")
 
+  assignedTickets  Ticket[]  @relation("TicketAssignee")
+  authoredMessages Message[] @relation("MessageAuthorUser")
+
   @@unique([tenantId, email])
   @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1: ticketing core
+// ---------------------------------------------------------------------------
+
+model Team {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name     String
+
+  tickets Ticket[]
+
+  @@unique([tenantId, name])
+  @@map("teams")
+}
+
+// The requester on a ticket -- deliberately separate from User (agents/admins), see
+// docs/adr/0001-multi-tenancy-rls.md's sibling reasoning for Tenant/User: different
+// trust boundary, never merge these into one model even though both have email/name.
+model Contact {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email     String
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tickets Ticket[]
+
+  @@unique([tenantId, email])
+  @@map("contacts")
+}
+
+enum TicketStatusCategory {
+  OPEN
+  PENDING
+  RESOLVED
+  CLOSED
+}
+
+// Tenant-defined labels (the "fully configurable" part), each mapped to one of the
+// four fixed categories above -- SLA/reporting logic (added in Phase 2) reasons about
+// the category, never the label, so a tenant can add as many statuses as they want
+// (e.g. "Waiting on Vendor" -> PENDING) without touching that logic.
+model TicketStatus {
+  id        String               @id @default(uuid()) @db.Uuid
+  tenantId  String               @map("tenant_id") @db.Uuid
+  tenant    Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key       String
+  label     String
+  category  TicketStatusCategory
+  sortOrder Int                  @default(0) @map("sort_order")
+
+  tickets Ticket[]
+
+  @@unique([tenantId, key])
+  @@map("ticket_statuses")
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model Ticket {
+  id         String         @id @default(uuid()) @db.Uuid
+  tenantId   String         @map("tenant_id") @db.Uuid
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number     Int
+  subject    String
+  priority   TicketPriority @default(NORMAL)
+  statusId   String         @map("status_id") @db.Uuid
+  status     TicketStatus   @relation(fields: [statusId], references: [id])
+  teamId     String?        @map("team_id") @db.Uuid
+  team       Team?          @relation(fields: [teamId], references: [id])
+  assigneeId String?        @map("assignee_id") @db.Uuid
+  assignee   User?          @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  contactId  String         @map("contact_id") @db.Uuid
+  contact    Contact        @relation(fields: [contactId], references: [id])
+  channel    String         @default("api") // 'api' | 'email' | 'widget' (Phase 1 only ships api)
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  resolvedAt DateTime?      @map("resolved_at")
+  closedAt   DateTime?      @map("closed_at")
+
+  messages Message[]
+
+  @@unique([tenantId, number])
+  @@map("tickets")
+}
+
+enum MessageAuthorType {
+  CONTACT
+  AGENT
+  SYSTEM
+  AI
+}
+
+// A ticket's conversation IS its messages -- a public reply and an agent-only
+// internal note are both Message rows, differentiated only by isPrivateNote, never
+// two separate models.
+model Message {
+  id            String            @id @default(uuid()) @db.Uuid
+  tenantId      String            @map("tenant_id") @db.Uuid
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ticketId      String            @map("ticket_id") @db.Uuid
+  ticket        Ticket            @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorType    MessageAuthorType @map("author_type")
+  authorUserId  String?           @map("author_user_id") @db.Uuid
+  authorUser    User?             @relation("MessageAuthorUser", fields: [authorUserId], references: [id])
+  body          String
+  isPrivateNote Boolean           @default(false) @map("is_private_note")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  @@map("messages")
+}
+
+// Authenticates the API channel (POST /v1/tickets) -- see
+// docs/adr/0001-multi-tenancy-rls.md for why resolving "which tenant does this key
+// belong to" needs the same SECURITY DEFINER pattern as resolve_tenant_id(slug).
+// hashedKey is a plain SHA-256 hex digest, not bcrypt: API keys are high-entropy
+// random tokens (unlike passwords), so a fast deterministic hash that supports exact-
+// match lookup is correct here, not a slow salted compare.
+model ApiKey {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name       String
+  hashedKey  String    @unique @map("hashed_key")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  @@map("api_keys")
 }

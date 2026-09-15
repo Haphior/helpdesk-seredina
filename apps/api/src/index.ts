@@ -1,12 +1,20 @@
 import Fastify, { type FastifyError } from 'fastify';
 import jwtPlugin from './plugins/jwt';
+import apiKeyAuthPlugin from './plugins/apiKeyAuth';
 import authRoutes from './modules/auth/routes';
+import apiKeyRoutes from './modules/apikeys/routes';
+import ticketRoutes from './modules/tickets/routes';
+import teamRoutes from './modules/teams/routes';
 
 export function buildApp() {
   const app = Fastify({ logger: true });
 
   app.register(jwtPlugin);
+  app.register(apiKeyAuthPlugin);
   app.register(authRoutes);
+  app.register(apiKeyRoutes);
+  app.register(ticketRoutes);
+  app.register(teamRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

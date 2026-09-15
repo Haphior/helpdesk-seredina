@@ -23,10 +23,14 @@ GRANT USAGE ON SCHEMA public TO app_tenant;
 GRANT SELECT ON permissions TO app_tenant;
 
 -- Tenant-owned tables: full CRUD for the app, but every row is gated by RLS below.
-GRANT SELECT, INSERT, UPDATE, DELETE ON tenants, roles, role_permissions, users TO app_tenant;
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  tenants, roles, role_permissions, users,
+  teams, contacts, ticket_statuses, tickets, messages, api_keys
+  TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
--- cross-tenant enumeration via the tenant registry itself).
+-- cross-tenant enumeration via the tenant registry itself). Its scope column is its
+-- own `id`, everything else below is scoped by `tenant_id`.
 ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tenants FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation ON tenants;
@@ -34,26 +38,29 @@ CREATE POLICY tenant_isolation ON tenants
   USING (id = current_setting('app.tenant_id', true)::uuid)
   WITH CHECK (id = current_setting('app.tenant_id', true)::uuid);
 
-ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE roles FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation ON roles;
-CREATE POLICY tenant_isolation ON roles
-  USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);
-
-ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE role_permissions FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation ON role_permissions;
-CREATE POLICY tenant_isolation ON role_permissions
-  USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);
-
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation ON users;
-CREATE POLICY tenant_isolation ON users
-  USING (tenant_id = current_setting('app.tenant_id', true)::uuid)
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);
+-- Every other tenant-owned table shares the exact same tenant_id-based policy shape
+-- (see lib/prisma.ts's TENANT_SCOPE_FIELD, which mirrors this table list) -- looped
+-- instead of repeated by hand so adding a table here can't accidentally drift from
+-- the shape above.
+DO $do$
+DECLARE
+  tbl text;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY[
+    'roles', 'role_permissions', 'users',
+    'teams', 'contacts', 'ticket_statuses', 'tickets', 'messages', 'api_keys'
+  ]
+  LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
+    EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', tbl);
+    EXECUTE format('DROP POLICY IF EXISTS tenant_isolation ON %I', tbl);
+    EXECUTE format(
+      'CREATE POLICY tenant_isolation ON %I USING (tenant_id = current_setting(''app.tenant_id'', true)::uuid) WITH CHECK (tenant_id = current_setting(''app.tenant_id'', true)::uuid)',
+      tbl
+    );
+  END LOOP;
+END
+$do$;
 
 -- current_setting(..., true) (missing_ok=true) returns NULL when unset rather than
 -- erroring, and NULL never equals a uuid — so a code path that forgets to open a
@@ -78,3 +85,19 @@ $$;
 
 REVOKE ALL ON FUNCTION public.resolve_tenant_id(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_tenant_id(text) TO app_tenant;
+
+-- Same pattern, for the API channel (POST /v1/tickets): resolving "which tenant does
+-- this API key belong to" from its hash has no tenant context yet either. See
+-- schema.prisma's ApiKey model for why hashedKey is a plain SHA-256 digest (exact-
+-- match lookup), not a bcrypt hash.
+CREATE OR REPLACE FUNCTION public.resolve_tenant_id_by_api_key_hash(p_hashed_key text)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT tenant_id FROM api_keys WHERE hashed_key = p_hashed_key;
+$$;
+
+REVOKE ALL ON FUNCTION public.resolve_tenant_id_by_api_key_hash(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resolve_tenant_id_by_api_key_hash(text) TO app_tenant;
