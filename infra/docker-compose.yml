@@ -45,6 +45,7 @@ services:
       DATABASE_URL: postgresql://app_tenant:${APP_TENANT_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-seredina}
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
       SEREDINA_MODE: ${SEREDINA_MODE:-self_hosted}
       CORS_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
     ports:
@@ -67,6 +68,8 @@ services:
       # publish to the host via `ports:`.
       DATABASE_URL: postgresql://app_tenant:${APP_TENANT_DB_PASSWORD}@localhost:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-seredina}
       REDIS_URL: redis://localhost:${REDIS_PORT:-6379}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+      EMAIL_POLL_INTERVAL_MS: ${EMAIL_POLL_INTERVAL_MS:-30000}
     # Agentless discovery (see docs/adr/0002-agentless-discovery.md) needs to reach
     # whatever LAN an operator asks it to scan -- host networking is the pragmatic
     # default for a self-hosted deployment. Linux-only; on Docker Desktop

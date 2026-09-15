@@ -8,6 +8,7 @@ import ticketRoutes from './modules/tickets/routes';
 import teamRoutes from './modules/teams/routes';
 import assetRoutes from './modules/assets/routes';
 import discoveryRoutes from './modules/discovery/routes';
+import emailChannelRoutes from './modules/emailchannels/routes';
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -27,6 +28,7 @@ export function buildApp() {
   app.register(teamRoutes);
   app.register(assetRoutes);
   app.register(discoveryRoutes);
+  app.register(emailChannelRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

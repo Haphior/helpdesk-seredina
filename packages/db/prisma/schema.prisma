@@ -41,6 +41,7 @@ model Tenant {
   assets          Asset[]
   ticketAssets    TicketAsset[]
   discoveryJobs   DiscoveryJob[]
+  emailChannels   EmailChannel[]
 
   @@map("tenants")
 }
@@ -221,8 +222,13 @@ model Message {
   authorUser    User?             @relation("MessageAuthorUser", fields: [authorUserId], references: [id])
   body          String
   isPrivateNote Boolean           @default(false) @map("is_private_note")
+  // The email Message-ID header, inbound or outbound, for channel='email' tickets
+  // only -- a reply's In-Reply-To/References is matched against this to thread it
+  // onto the right ticket. See docs/adr/0004-email-channel.md.
+  externalId    String?           @map("external_id")
   createdAt     DateTime          @default(now()) @map("created_at")
 
+  @@index([tenantId, externalId])
   @@map("messages")
 }
 
@@ -242,6 +248,35 @@ model ApiKey {
   lastUsedAt DateTime? @map("last_used_at")
 
   @@map("api_keys")
+}
+
+// The email channel: inbound polled via IMAP, outbound sent via SMTP -- see
+// docs/adr/0004-email-channel.md. Passwords are stored encrypted (AES-256-GCM,
+// packages/shared/src/crypto.ts), not hashed like User.passwordHash or ApiKey's
+// hashedKey, because the worker needs the real password back to authenticate to the
+// mail server -- this is the one place in the schema that needs a genuinely
+// recoverable secret, not a one-way or exact-match one.
+model EmailChannel {
+  id                    String    @id @default(uuid()) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name                  String
+  fromAddress           String    @map("from_address")
+  imapHost              String    @map("imap_host")
+  imapPort              Int       @map("imap_port")
+  imapSecure            Boolean   @default(true) @map("imap_secure")
+  imapUsername          String    @map("imap_username")
+  imapPasswordEncrypted String    @map("imap_password_encrypted")
+  smtpHost              String    @map("smtp_host")
+  smtpPort              Int       @map("smtp_port")
+  smtpSecure            Boolean   @default(true) @map("smtp_secure")
+  smtpUsername          String    @map("smtp_username")
+  smtpPasswordEncrypted String    @map("smtp_password_encrypted")
+  isActive              Boolean   @default(true) @map("is_active")
+  lastPolledAt          DateTime? @map("last_polled_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  @@map("email_channels")
 }
 
 // ---------------------------------------------------------------------------

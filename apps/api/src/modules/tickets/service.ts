@@ -1,4 +1,5 @@
 import { prisma, withTenantTx, type Prisma, type TicketPriority, type TicketStatusCategory } from '@seredina/db';
+import { emailSendQueue } from '../../lib/queue';
 
 const DEFAULT_TICKET_STATUSES: { key: string; label: string; category: TicketStatusCategory; sortOrder: number }[] = [
   { key: 'open', label: 'Open', category: 'OPEN', sortOrder: 0 },
@@ -200,11 +201,15 @@ export interface AddMessageInput {
 }
 
 export async function addMessage(tenantId: string, ticketId: string, input: AddMessageInput) {
-  return withTenantTx(prisma, tenantId, async (tx) => {
+  // The DB write happens inside withTenantTx as usual; the Redis enqueue is
+  // deliberately outside it (network I/O doesn't belong inside a tenant transaction
+  // -- see docs/adr/0001-multi-tenancy-rls.md), so the transaction closes first and
+  // only then do we tell the worker there's an email to send.
+  const { message, shouldEmail } = await withTenantTx(prisma, tenantId, async (tx) => {
     const ticket = await tx.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) throw new Error('ticket not found');
 
-    return tx.message.create({
+    const message = await tx.message.create({
       data: {
         tenantId,
         ticketId,
@@ -214,7 +219,17 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
         isPrivateNote: input.isPrivateNote,
       },
     });
+
+    // Internal notes never leave Seredina; only a public reply on an email-sourced
+    // ticket needs to actually go out as an email.
+    return { message, shouldEmail: ticket.channel === 'email' && !input.isPrivateNote };
   });
+
+  if (shouldEmail) {
+    await emailSendQueue.add('send', { tenantId, ticketId, messageId: message.id });
+  }
+
+  return message;
 }
 
 export interface UpdateTicketInput {

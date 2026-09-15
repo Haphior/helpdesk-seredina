@@ -5,7 +5,8 @@ export type Permission =
   | 'tickets:write'
   | 'tickets:manage_all'
   | 'assets:read'
-  | 'assets:manage';
+  | 'assets:manage'
+  | 'channels:manage';
 
 export type TicketStatusCategory = 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
 export type TicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
@@ -127,4 +128,21 @@ export interface ApiKeySummary {
   name: string;
   createdAt: string;
   lastUsedAt: string | null;
+}
+
+export interface EmailChannel {
+  id: string;
+  name: string;
+  fromAddress: string;
+  imapHost: string;
+  imapPort: number;
+  imapSecure: boolean;
+  imapUsername: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUsername: string;
+  isActive: boolean;
+  lastPolledAt: string | null;
+  createdAt: string;
 }

@@ -26,7 +26,7 @@ GRANT SELECT ON permissions TO app_tenant;
 GRANT SELECT, INSERT, UPDATE, DELETE ON
   tenants, roles, role_permissions, users,
   teams, contacts, ticket_statuses, tickets, messages, api_keys,
-  assets, ticket_assets, discovery_jobs
+  assets, ticket_assets, discovery_jobs, email_channels
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -50,7 +50,7 @@ BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'roles', 'role_permissions', 'users',
     'teams', 'contacts', 'ticket_statuses', 'tickets', 'messages', 'api_keys',
-    'assets', 'ticket_assets', 'discovery_jobs'
+    'assets', 'ticket_assets', 'discovery_jobs', 'email_channels'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
@@ -103,3 +103,21 @@ $$;
 
 REVOKE ALL ON FUNCTION public.resolve_tenant_id_by_api_key_hash(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_tenant_id_by_api_key_hash(text) TO app_tenant;
+
+-- Same escape-hatch pattern, inverted: apps/worker polls IMAP for every tenant's
+-- active email channel(s), so unlike the two functions above it genuinely needs to
+-- discover WHICH tenants to look at, not resolve a single already-known one. Exposes
+-- only (id, tenant_id) -- never imap_password_encrypted or any other column -- the
+-- worker fetches each channel's full row afterward through the normal tenant-scoped
+-- path (withTenantTx), so credentials never pass through a SECURITY DEFINER context.
+CREATE OR REPLACE FUNCTION public.list_active_email_channels()
+RETURNS TABLE (id uuid, tenant_id uuid)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT id, tenant_id FROM email_channels WHERE is_active = true;
+$$;
+
+REVOKE ALL ON FUNCTION public.list_active_email_channels() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.list_active_email_channels() TO app_tenant;

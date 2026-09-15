@@ -16,8 +16,10 @@ agentless discovery, NOC/SOC alert ingestion) — see
 - **API**: Node.js/TypeScript, Fastify, Prisma, PostgreSQL (with Row-Level Security for
   tenant isolation)
 - **Web**: React, Vite, Tailwind
-- **Worker**: BullMQ (Redis) for agentless network discovery, email ingestion, AI
-  jobs, SLA timers
+- **Worker**: BullMQ (Redis) for agentless network discovery and outbound email
+  send; a plain interval loop for inbound email polling (see
+  docs/adr/0004-email-channel.md for why that one isn't BullMQ too); AI jobs, SLA
+  timers still to come
 - **AI**: pluggable provider adapters (Anthropic first) + a first-class MCP server so
   external agents can operate on tickets/knowledge base under the same guardrails as
   Seredina's own AI
@@ -29,16 +31,15 @@ agentless discovery, NOC/SOC alert ingestion) — see
 apps/
   api/          Fastify + Prisma HTTP/WS API — all domain logic lives in src/modules/*/service.ts
   web/          Agent/admin console
-  worker/       BullMQ background processors — agentless network discovery today
+  worker/       Discovery + email (IMAP poll, SMTP send) background processing — src/email/, src/discovery/
   mcp-server/   MCP server exposing the same tool catalog as the AI copilot/autonomous modes
 packages/
   db/           Prisma schema/migrations/RLS policies + the guarded-client/withTenantTx
                 tenant-isolation mechanism -- shared by apps/api and apps/worker,
                 not duplicated (see docs/adr/0001-multi-tenancy-rls.md)
-  shared/       Cross-app types, zod DTOs, permission constants, CIDR utils
+  shared/       Cross-app types, zod DTOs, permission constants, CIDR/crypto/queue-contract utils
   ui/           Shared React components
   ai-adapters/  LLM provider adapter interface + implementations
-  email-parser/ MIME parsing/threading for the email channel
   config/       Shared tsconfig/eslint
 infra/          Dockerfiles, docker-compose.yml
 docs/           Roadmap, architecture decision records
@@ -58,8 +59,8 @@ npm run dev:api
 # in a second terminal
 npm run dev --workspace=apps/web   # http://localhost:5173, expects the API on :4000
 
-# in a third terminal, only if you want agentless discovery working locally
-npm run dev --workspace=apps/worker   # needs REDIS_URL + DATABASE_URL set
+# in a third terminal, only if you want discovery/email working locally
+npm run dev --workspace=apps/worker   # needs REDIS_URL + DATABASE_URL + ENCRYPTION_KEY set
 ```
 
 The web app reads its API base URL from `VITE_API_URL` (`apps/web/.env.example`,

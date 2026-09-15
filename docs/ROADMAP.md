@@ -180,10 +180,45 @@ ADR for why this is a real, not hypothetical, deployment constraint, and why its
 `DATABASE_URL`/`REDIS_URL` had to change to `localhost:<host-mapped-port>` instead of
 the compose service-name DNS that host networking bypasses).
 
+**Email channel ✅ (this pass).** `EmailChannel` model (per-tenant IMAP+SMTP config,
+passwords AES-256-GCM encrypted via `ENCRYPTION_KEY` — the one place in the schema
+needing a genuinely recoverable secret, not hashed). `apps/worker` gained a plain
+interval poll loop (not a BullMQ repeatable job — see
+`docs/adr/0004-email-channel.md` for why) that discovers every tenant's active
+channels via a new `list_active_email_channels()` `SECURITY DEFINER` function (same
+pattern as `resolve_tenant_id`/`resolve_tenant_id_by_api_key_hash`), fetches new mail
+via `imapflow`, parses via `mailparser`, and threads replies by matching In-Reply-To/
+References against a new `Message.externalId` column. Outbound replies enqueue onto
+a new `email-send` BullMQ queue (from `modules/tickets/service.ts`'s `addMessage`,
+only for `channel: 'email'` tickets) and go out via `nodemailer`.
+
+A reply to a **closed** ticket's thread reopens it — deliberately different from
+alert ingestion's dedup (`docs/adr/0003-alert-ingestion.md`), where a closed ticket
+gets a fresh one; a reply really is the same conversation continuing, an alert
+re-firing really is a new occurrence, and the ADR explains why those aren't the same
+shape.
+
+**Verified against a real mail server, not mocked** (`greenmail/standalone` Docker
+image, both SMTP and IMAP): sent mail as an external customer → worker's poll loop
+created the ticket → replied through the real API → confirmed the reply was
+automatically sent (no manual trigger) via the real BullMQ worker → connected via
+IMAP as the customer and confirmed correct `In-Reply-To`/`References` threading
+headers → replied again threaded to that email and confirmed it landed on the same
+ticket, not a new one → closed the ticket → replied once more and confirmed it
+reopened automatically. This real-server testing caught a genuine bug no mock would
+likely have: issuing a `STORE` (mark-as-seen) command while a multi-message `FETCH`
+was still streaming on the same IMAP connection hung indefinitely against Greenmail
+— fixed by batching all flag updates after the fetch loop fully drains. Full
+narrative in the ADR. Browser-verified the `/email-channels` settings page and the
+rendered conversation thread, zero console errors.
+
 **Deferred from this pass, still open for Phase 1:**
-- Email channel (IMAP/SMTP, threading) — needs real mail credentials to build against
-  meaningfully; the `ChannelAdapter` interface it'll implement isn't written yet
-  either, only the API channel exists concretely so far.
+- A ticket doesn't remember which specific `EmailChannel` it arrived through —
+  outbound send just picks the tenant's first active one. Fine for one channel per
+  tenant (the expected case); needs `Ticket.emailChannelId` before multiple email
+  channels per tenant are meaningfully supported.
+- No email attachment handling (`mailparser` extracts them; nothing stores/surfaces
+  them yet).
 - Realtime updates over WebSockets via Redis pub/sub (the web app currently polls by
   navigation/refetch-after-mutation only — no live push).
 - AI copilot v1 (reply suggestions, summarization, auto-classify).
@@ -382,3 +417,12 @@ BPMN-style workflow automation, SSO/SAML, per-tenant data residency, console i18
   mode (no access to a customer's private LAN) — currently it just silently finds
   nothing there rather than being disabled/warned against; needs a real guard before
   cloud GA. See `docs/adr/0002-agentless-discovery.md`.
+- `ENCRYPTION_KEY` loss or rotation makes every stored `EmailChannel` password
+  undecryptable — same operational weight as losing `JWT_SECRET`, but easier to
+  overlook since it's a newer env var; back it up like a database password, document
+  this prominently before any real self-hosted deployment. See
+  `docs/adr/0004-email-channel.md`.
+- Multiple `worker` replicas would double-poll every tenant's email channels (the
+  interval-loop design isn't coordinated across instances) — a real constraint on
+  horizontal scaling, not yet solved, deferred to Phase 4 alongside the equivalent
+  discovery-worker scaling question.

@@ -16,11 +16,15 @@
     "@seredina/db": "*",
     "@seredina/shared": "*",
     "bullmq": "^6.3.6",
+    "imapflow": "^2.0.3",
     "ioredis": "^6.0.0",
-    "net-snmp": "^3.29.1"
+    "mailparser": "^3.9.26",
+    "net-snmp": "^3.29.1",
+    "nodemailer": "^10.0.10"
   },
   "devDependencies": {
     "@seredina/config": "*",
+    "@types/mailparser": "^3.4.6",
     "@types/net-snmp": "^3.23.0",
     "@types/node": "^20.16.10",
     "tsx": "^4.19.1",

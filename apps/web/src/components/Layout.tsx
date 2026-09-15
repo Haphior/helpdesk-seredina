@@ -6,6 +6,7 @@ const navItems = [
   { to: '/assets', label: 'Assets' },
   { to: '/api-keys', label: 'API Keys' },
   { to: '/users', label: 'Users', permission: 'users:manage' as const },
+  { to: '/email-channels', label: 'Email Channels', permission: 'channels:manage' as const },
 ];
 
 export function Layout() {
