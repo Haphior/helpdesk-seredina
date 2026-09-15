@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type {
   AssetSummary,
@@ -9,7 +9,9 @@ import type {
   TicketStatus,
   UserSummary,
 } from '../lib/types';
+import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
+import { BackArrowIcon, ChevronDownIcon, LockIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
@@ -98,62 +100,90 @@ export function TicketDetail() {
     }
   }
 
-  if (error && !ticket) return <div className="p-6 text-sm text-red-600">{error}</div>;
+  if (error && !ticket) return <div className="p-6 text-sm text-rose-600">{error}</div>;
   if (!ticket) return <div className="p-6 text-sm text-slate-500">Loading…</div>;
 
   return (
     <div className="flex h-full">
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mb-4">
-          <span className="text-sm text-slate-500">#{ticket.number}</span>
-          <h1 className="text-2xl font-semibold text-slate-900">{ticket.subject}</h1>
-          <div className="mt-1 flex items-center gap-2">
-            <Badge tone={STATUS_CATEGORY_TONE[ticket.status.category]}>{ticket.status.label}</Badge>
-            <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
-            <Badge tone={ticket.channel === 'alert' ? 'red' : 'slate'}>{ticket.channel}</Badge>
+      <div className="flex-1 overflow-y-auto px-9 py-7">
+        <Link to="/tickets" className="mb-3.5 flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-slate-600">
+          <BackArrowIcon width={15} height={15} />
+          Tickets
+        </Link>
+
+        <div className="mb-5">
+          <span className="text-[13px] font-medium text-slate-400">#{ticket.number}</span>
+          <h1 className="mb-2.5 mt-0.5 text-[22px] font-extrabold tracking-tight text-slate-900">{ticket.subject}</h1>
+          <div className="flex items-center gap-2">
+            <Badge tone={STATUS_CATEGORY_TONE[ticket.status.category]} dot>
+              {ticket.status.label}
+            </Badge>
+            <Badge tone={PRIORITY_TONE[ticket.priority]} dot>
+              {ticket.priority} priority
+            </Badge>
+            <Badge tone={ticket.channel === 'alert' ? 'rose' : 'slate'}>{ticket.channel}</Badge>
             {ticket.externalId && <span className="text-xs text-slate-400">ref: {ticket.externalId}</span>}
           </div>
         </div>
 
-        {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-2 text-sm text-rose-600">{error}</p>}
 
-        <div className="space-y-3" data-testid="message-list">
-          {ticket.messages.map((message) => (
-            <div
-              key={message.id}
-              className={`rounded-lg border p-3 text-sm ${
-                message.isPrivateNote ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white'
-              }`}
-            >
-              <div className="mb-1 flex justify-between text-xs text-slate-500">
-                <span className="font-medium text-slate-700">
-                  {message.authorType === 'CONTACT' ? ticket.contact.name : message.authorUser?.name ?? message.authorType}
-                  {message.isPrivateNote && ' · internal note'}
-                </span>
-                <span>{formatDateTime(message.createdAt)}</span>
+        <div className="flex flex-col gap-3" data-testid="message-list">
+          {ticket.messages.map((message) => {
+            const authorName = message.authorType === 'CONTACT' ? ticket.contact.name : message.authorUser?.name ?? message.authorType;
+            return (
+              <div
+                key={message.id}
+                className={`rounded-xl border p-3.5 shadow-sm ${
+                  message.isPrivateNote ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white'
+                }`}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Avatar name={authorName} size={22} />
+                    <span className="text-[13px] font-semibold text-slate-700">{authorName}</span>
+                    {message.isPrivateNote && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">
+                        <LockIcon width={10} height={10} />
+                        Internal
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs ${message.isPrivateNote ? 'text-amber-600' : 'text-slate-400'}`}>
+                    {formatDateTime(message.createdAt)}
+                  </span>
+                </div>
+                <p className={`whitespace-pre-wrap text-[13.5px] leading-relaxed ${message.isPrivateNote ? 'text-amber-900' : 'text-slate-700'}`}>
+                  {message.body}
+                </p>
               </div>
-              <p className="whitespace-pre-wrap text-slate-800">{message.body}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-1.5 pb-2.5 shadow-sm">
           <textarea
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             placeholder="Write a reply…"
             rows={3}
-            className="w-full resize-none border-0 text-sm focus:outline-none"
+            className="w-full resize-none rounded-lg border-0 px-2.5 py-2 text-[13.5px] focus:outline-none"
           />
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm text-slate-600">
-              <input type="checkbox" checked={isPrivateNote} onChange={(e) => setIsPrivateNote(e.target.checked)} />
+          <div className="flex items-center justify-between px-1.5">
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[12.5px] font-medium text-slate-500">
+              <input
+                type="checkbox"
+                checked={isPrivateNote}
+                onChange={(e) => setIsPrivateNote(e.target.checked)}
+                className="h-3 w-3 accent-amber-500"
+              />
+              <LockIcon width={12} height={12} />
               Internal note
             </label>
             <button
               onClick={sendReply}
               disabled={sending || !reply.trim()}
-              className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
             >
               {sending ? 'Sending…' : isPrivateNote ? 'Add note' : 'Send reply'}
             </button>
@@ -161,90 +191,85 @@ export function TicketDetail() {
         </div>
       </div>
 
-      <aside className="w-64 border-l border-slate-200 bg-white p-4 text-sm">
-        <h2 className="mb-3 font-medium text-slate-700">Details</h2>
+      <aside className="w-[280px] flex-shrink-0 overflow-y-auto border-l border-slate-200 bg-white px-5 py-[22px]">
+        <h2 className="mb-4 text-[13px] font-bold uppercase tracking-wide text-slate-400">Details</h2>
 
-        <FieldGroup label="Status">
-          <select
-            value={ticket.statusId}
-            onChange={(e) => patch({ statusId: e.target.value })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-          >
-            {statuses.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </FieldGroup>
+        <div className="flex flex-col gap-3.5">
+          <PropertyRow label="Status">
+            <PropertySelect value={ticket.statusId} onChange={(v) => patch({ statusId: v })}>
+              {statuses.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </PropertySelect>
+          </PropertyRow>
 
-        <FieldGroup label="Priority">
-          <select
-            value={ticket.priority}
-            onChange={(e) => patch({ priority: e.target.value })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-          >
-            {PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </FieldGroup>
+          <PropertyRow label="Priority">
+            <PropertySelect value={ticket.priority} onChange={(v) => patch({ priority: v })}>
+              {PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </PropertySelect>
+          </PropertyRow>
 
-        <FieldGroup label="Team">
-          <select
-            value={ticket.teamId ?? ''}
-            onChange={(e) => patch({ teamId: e.target.value || null })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-          >
-            <option value="">Unassigned</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </FieldGroup>
+          <PropertyRow label="Team">
+            <PropertySelect value={ticket.teamId ?? ''} onChange={(v) => patch({ teamId: v || null })}>
+              <option value="">Unassigned</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </PropertySelect>
+          </PropertyRow>
 
-        <FieldGroup label="Assignee">
-          <select
-            value={ticket.assigneeId ?? ''}
-            onChange={(e) => patch({ assigneeId: e.target.value || null })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-          >
-            <option value="">Unassigned</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
-        </FieldGroup>
+          <PropertyRow label="Assignee">
+            <PropertySelect value={ticket.assigneeId ?? ''} onChange={(v) => patch({ assigneeId: v || null })}>
+              <option value="">Unassigned</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </PropertySelect>
+          </PropertyRow>
+        </div>
+
+        <div className="my-[18px] h-px bg-slate-100" />
 
         <FieldGroup label="Contact">
-          <p className="text-slate-700">{ticket.contact.name}</p>
-          <p className="text-slate-500">{ticket.contact.email}</p>
+          <div className="flex items-center gap-2.5">
+            <Avatar name={ticket.contact.name} size={30} />
+            <div className="min-w-0">
+              <p className="truncate text-[13.5px] font-semibold text-slate-800">{ticket.contact.name}</p>
+              <p className="truncate text-xs text-slate-400">{ticket.contact.email}</p>
+            </div>
+          </div>
         </FieldGroup>
 
+        <div className="my-[18px] h-px bg-slate-100" />
+
         <FieldGroup label="Linked assets">
-          {ticket.assets.length === 0 && <p className="mb-2 text-slate-500">None linked.</p>}
+          {ticket.assets.length === 0 && <p className="mb-2 text-[13px] text-slate-400">None linked.</p>}
           {ticket.assets.map(({ asset }) => (
-            <div key={asset.id} className="mb-1 flex items-center justify-between rounded-md bg-slate-50 px-2 py-1">
-              <span className="text-slate-700">
+            <div key={asset.id} className="mb-1 flex items-center justify-between rounded-lg bg-slate-50 px-2.5 py-1.5">
+              <span className="truncate text-[13px] text-slate-700">
                 {asset.name}
                 {asset.ipAddress && <span className="text-slate-400"> · {asset.ipAddress}</span>}
               </span>
-              <button onClick={() => unlinkAsset(asset.id)} className="text-xs text-slate-400 hover:text-red-600">
+              <button onClick={() => unlinkAsset(asset.id)} className="flex-shrink-0 text-xs text-slate-400 hover:text-rose-600">
                 remove
               </button>
             </div>
           ))}
-          <div className="mt-2 flex gap-1">
+          <div className="mt-2 flex gap-1.5">
             <select
               value={assetToLink}
               onChange={(e) => setAssetToLink(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-700"
             >
               <option value="">Link an asset…</option>
               {allAssets
@@ -258,7 +283,7 @@ export function TicketDetail() {
             <button
               onClick={linkAsset}
               disabled={!assetToLink}
-              className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              className="flex-shrink-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
             >
               Link
             </button>
@@ -269,10 +294,42 @@ export function TicketDetail() {
   );
 }
 
+function PropertyRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-[13px] text-slate-500">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function PropertySelect({
+  value,
+  onChange,
+  children,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="appearance-none rounded-lg bg-slate-50 py-1.5 pl-2.5 pr-7 text-[13px] font-medium text-slate-700 hover:bg-slate-100"
+      >
+        {children}
+      </select>
+      <ChevronDownIcon width={13} height={13} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" />
+    </div>
+  );
+}
+
 function FieldGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="mb-4">
-      <span className="mb-1 block text-xs font-medium uppercase text-slate-400">{label}</span>
+    <div>
+      <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-400">{label}</span>
       {children}
     </div>
   );

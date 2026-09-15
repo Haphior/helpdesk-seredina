@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { AuthLayout, Field } from '../components/AuthLayout';
 import { ApiError } from '../lib/api';
 
 export function Login() {
@@ -27,59 +28,43 @@ export function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-xl font-semibold text-slate-900">Sign in to Seredina</h1>
+    <AuthLayout
+      tagline="Helpdesk & ITSM software your team will actually enjoy using."
+      bullets={[
+        'Ticketing, assets & CMDB in one place',
+        'NOC/SOC alerts flow straight into tickets',
+        'Open source, self-hosted or cloud',
+      ]}
+    >
+      <form onSubmit={onSubmit} className="flex flex-col gap-5">
+        <div>
+          <h1 className="mb-1 text-[23px] font-extrabold tracking-tight text-slate-900">Sign in to Seredina</h1>
+          <p className="text-[13.5px] text-slate-400">Welcome back — enter your workspace to continue.</p>
+        </div>
 
-        <Field label="Organization slug" value={tenantSlug} onChange={setTenantSlug} placeholder="acme" />
-        <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@company.com" />
-        <Field label="Password" type="password" value={password} onChange={setPassword} />
+        <div className="flex flex-col gap-3.5">
+          <Field label="Organization slug" value={tenantSlug} onChange={setTenantSlug} placeholder="acme" />
+          <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@company.com" />
+          <Field label="Password" type="password" value={password} onChange={setPassword} />
+        </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="w-full rounded-[9px] bg-indigo-600 px-4 py-2.5 text-[13.5px] font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
         >
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
 
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-[13px] text-slate-400">
           No organization yet?{' '}
-          <Link to="/register" className="font-medium text-indigo-600 hover:underline">
+          <Link to="/register" className="font-semibold text-indigo-600 hover:underline">
             Create one
           </Link>
         </p>
       </form>
-    </div>
-  );
-}
-
-export function Field({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  placeholder?: string;
-}) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block font-medium text-slate-700">{label}</span>
-      <input
-        type={type}
-        required
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-      />
-    </label>
+    </AuthLayout>
   );
 }

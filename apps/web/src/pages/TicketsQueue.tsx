@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiGet } from '../lib/api';
 import type { Ticket, TicketStatusCategory } from '../lib/types';
+import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
+import { SearchIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
 
 const TABS: { key: TicketStatusCategory | 'ALL'; label: string }[] = [
@@ -12,6 +14,10 @@ const TABS: { key: TicketStatusCategory | 'ALL'; label: string }[] = [
   { key: 'RESOLVED', label: 'Resolved' },
   { key: 'CLOSED', label: 'Closed' },
 ];
+
+const CHANNEL_TONE: Record<string, 'rose' | 'slate'> = { alert: 'rose', email: 'slate', api: 'slate' };
+
+const ROW_COLUMNS = '56px 1fr 108px 120px 130px 110px 100px';
 
 export function TicketsQueue() {
   const [tab, setTab] = useState<TicketStatusCategory | 'ALL'>('ALL');
@@ -27,70 +33,96 @@ export function TicketsQueue() {
   }, [tab]);
 
   return (
-    <div className="p-6">
-      <h1 className="mb-4 text-2xl font-semibold text-slate-900">Tickets</h1>
+    <div className="flex h-full flex-col">
+      <div className="flex flex-col gap-4 px-8 pb-5 pt-7">
+        <div className="flex items-baseline gap-2.5">
+          <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Tickets</h1>
+          {tickets && <span className="text-[13px] text-slate-400">{tickets.length} in this view</span>}
+        </div>
 
-      <div className="mb-4 flex gap-1 border-b border-slate-200">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-3 py-2 text-sm font-medium ${
-              tab === t.key ? 'border-b-2 border-indigo-600 text-indigo-700' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex gap-1 rounded-[9px] bg-slate-100 p-[3px]">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`rounded-[7px] px-3.5 py-1.5 text-[13px] font-medium ${
+                  tab === t.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex w-[280px] items-center gap-2 rounded-[9px] border border-slate-200 bg-white px-3 py-2">
+            <SearchIcon width={15} height={15} className="text-slate-400" />
+            <span className="text-[13px] text-slate-400">Search tickets…</span>
+          </div>
+        </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex-1 overflow-y-auto px-8 pb-7">
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+        {tickets === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
+        {tickets?.length === 0 && <p className="text-sm text-slate-500">No tickets here.</p>}
 
-      {tickets === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
-      {tickets?.length === 0 && <p className="text-sm text-slate-500">No tickets here.</p>}
+        {tickets && tickets.length > 0 && (
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div
+              className="grid items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-400"
+              style={{ gridTemplateColumns: ROW_COLUMNS }}
+            >
+              <span>#</span>
+              <span>Subject</span>
+              <span>Status</span>
+              <span>Priority</span>
+              <span>Assignee</span>
+              <span>Channel</span>
+              <span className="text-right">Updated</span>
+            </div>
 
-      {tickets && tickets.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500">
-              <tr>
-                <th className="px-4 py-2 font-medium">#</th>
-                <th className="px-4 py-2 font-medium">Subject</th>
-                <th className="px-4 py-2 font-medium">Channel</th>
-                <th className="px-4 py-2 font-medium">Contact</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Priority</th>
-                <th className="px-4 py-2 font-medium">Assignee</th>
-                <th className="px-4 py-2 font-medium">Updated</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100">
               {tickets.map((ticket) => (
-                <tr key={ticket.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-2 text-slate-500">#{ticket.number}</td>
-                  <td className="px-4 py-2">
-                    <Link to={`/tickets/${ticket.id}`} className="font-medium text-indigo-700 hover:underline">
-                      {ticket.subject}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2">
-                    <Badge tone={ticket.channel === 'alert' ? 'red' : 'slate'}>{ticket.channel}</Badge>
-                  </td>
-                  <td className="px-4 py-2 text-slate-600">{ticket.contact.name}</td>
-                  <td className="px-4 py-2">
-                    <Badge tone={STATUS_CATEGORY_TONE[ticket.status.category]}>{ticket.status.label}</Badge>
-                  </td>
-                  <td className="px-4 py-2">
-                    <Badge tone={PRIORITY_TONE[ticket.priority]}>{ticket.priority}</Badge>
-                  </td>
-                  <td className="px-4 py-2 text-slate-600">{ticket.assignee?.name ?? '—'}</td>
-                  <td className="px-4 py-2 text-slate-500">{formatDateTime(ticket.updatedAt)}</td>
-                </tr>
+                <Link
+                  key={ticket.id}
+                  to={`/tickets/${ticket.id}`}
+                  className="grid items-center gap-3 px-5 py-3.5 hover:bg-slate-50"
+                  style={{ gridTemplateColumns: ROW_COLUMNS }}
+                >
+                  <span className="text-[13px] font-medium text-slate-400">{ticket.number}</span>
+                  <div className="min-w-0">
+                    <div className="truncate text-[14px] font-semibold text-slate-800">{ticket.subject}</div>
+                    <div className="truncate text-[12.5px] text-slate-400">{ticket.contact.name}</div>
+                  </div>
+                  <span className="w-fit">
+                    <Badge tone={STATUS_CATEGORY_TONE[ticket.status.category]} dot>
+                      {ticket.status.label}
+                    </Badge>
+                  </span>
+                  <span className="w-fit">
+                    <Badge tone={PRIORITY_TONE[ticket.priority]} dot>
+                      {ticket.priority}
+                    </Badge>
+                  </span>
+                  {ticket.assignee ? (
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <Avatar name={ticket.assignee.name} size={19} />
+                      <span className="truncate text-[12.5px] text-slate-600">{ticket.assignee.name}</span>
+                    </div>
+                  ) : (
+                    <span className="text-[12.5px] text-slate-400">Unassigned</span>
+                  )}
+                  <span className="w-fit">
+                    <Badge tone={CHANNEL_TONE[ticket.channel] ?? 'slate'}>{ticket.channel}</Badge>
+                  </span>
+                  <span className="text-right text-[12px] text-slate-400">{formatDateTime(ticket.updatedAt)}</span>
+                </Link>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,22 +1,47 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { apiGet } from '../lib/api';
+import { Avatar } from './Avatar';
+import { AssetsIcon, KeyIcon, LogoutIcon, MailIcon, TicketIcon, UsersIcon } from './icons';
+
+interface Me {
+  name: string;
+  email: string;
+  role: { key: string } | null;
+  tenantName: string;
+}
 
 const navItems = [
-  { to: '/tickets', label: 'Tickets' },
-  { to: '/assets', label: 'Assets' },
-  { to: '/api-keys', label: 'API Keys' },
-  { to: '/users', label: 'Users', permission: 'users:manage' as const },
-  { to: '/email-channels', label: 'Email Channels', permission: 'channels:manage' as const },
+  { to: '/tickets', label: 'Tickets', icon: TicketIcon },
+  { to: '/assets', label: 'Assets', icon: AssetsIcon },
+  { to: '/api-keys', label: 'API Keys', icon: KeyIcon },
+  { to: '/users', label: 'Users', icon: UsersIcon, permission: 'users:manage' as const },
+  { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' as const },
 ];
 
 export function Layout() {
   const { logout, hasPermission } = useAuth();
+  const [me, setMe] = useState<Me | null>(null);
+
+  useEffect(() => {
+    apiGet<Me>('/auth/me')
+      .then(setMe)
+      .catch(() => setMe(null));
+  }, []);
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900">
-      <aside className="flex w-56 flex-col border-r border-slate-200 bg-white">
-        <div className="border-b border-slate-200 px-4 py-4 text-lg font-semibold">Seredina</div>
-        <nav className="flex-1 space-y-1 p-2">
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
+      <aside className="flex w-[248px] flex-col border-r border-slate-200 bg-white">
+        <div className="flex flex-col gap-0.5 border-b border-slate-100 px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="h-[26px] w-[26px] flex-shrink-0 rounded-[7px] bg-gradient-to-br from-indigo-500 to-violet-500" />
+            <span className="text-[15px] font-extrabold tracking-tight text-slate-900">Seredina</span>
+          </div>
+          <span className="truncate pl-[35px] text-xs text-slate-400">{me?.tenantName ?? ' '}</span>
+        </div>
+
+        <nav className="flex-1 space-y-0.5 p-3">
           {navItems
             .filter((item) => !item.permission || hasPermission(item.permission))
             .map((item) => (
@@ -24,21 +49,25 @@ export function Layout() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `block rounded-md px-3 py-2 text-sm font-medium ${
+                  `flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium ${
                     isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'
                   }`
                 }
               >
+                <item.icon />
                 {item.label}
               </NavLink>
             ))}
         </nav>
-        <div className="border-t border-slate-200 p-2">
-          <button
-            onClick={logout}
-            className="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100"
-          >
-            Log out
+
+        <div className="flex items-center gap-2.5 border-t border-slate-100 px-4 py-3.5">
+          <Avatar name={me?.name ?? '?'} size={28} />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] font-semibold text-slate-800">{me?.name ?? '…'}</div>
+            <div className="truncate text-[11.5px] capitalize text-slate-400">{me?.role?.key ?? ''}</div>
+          </div>
+          <button onClick={logout} aria-label="Log out" className="flex-shrink-0 text-slate-400 hover:text-slate-700">
+            <LogoutIcon width={16} height={16} />
           </button>
         </div>
       </aside>

@@ -7,9 +7,9 @@ import { formatDateTime } from '../lib/format';
 
 const JOB_STATUS_TONE = {
   PENDING: 'slate',
-  RUNNING: 'blue',
-  COMPLETED: 'green',
-  FAILED: 'red',
+  RUNNING: 'sky',
+  COMPLETED: 'emerald',
+  FAILED: 'rose',
 } as const;
 
 export function Assets() {
@@ -169,7 +169,7 @@ export function Assets() {
                     <Badge tone="slate">{asset.assetType}</Badge>
                   </td>
                   <td className="px-4 py-2">
-                    <Badge tone={asset.status === 'ACTIVE' ? 'green' : asset.status === 'RETIRED' ? 'slate' : 'amber'}>
+                    <Badge tone={asset.status === 'ACTIVE' ? 'emerald' : asset.status === 'RETIRED' ? 'slate' : 'amber'}>
                       {asset.status}
                     </Badge>
                   </td>

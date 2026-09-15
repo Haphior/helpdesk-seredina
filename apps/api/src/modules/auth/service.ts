@@ -96,10 +96,17 @@ export async function getMe(tenantId: string, userId: string) {
   return withTenantTx(prisma, tenantId, async (tx) => {
     const user = await tx.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, role: { select: { key: true } } },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: { select: { key: true } },
+        tenant: { select: { name: true } },
+      },
     });
     if (!user) throw new Error('user not found');
-    return user;
+    const { tenant, ...rest } = user;
+    return { ...rest, tenantName: tenant.name };
   });
 }
 

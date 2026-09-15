@@ -281,6 +281,35 @@ them to `team_lead` via `PATCH /users/:id` and confirmed the role stuck. Browser
 verified the `/users` page end to end (create, inline role change), zero console
 errors.
 
+**UI visual refresh ✅ (this pass).** The agent console worked but looked like an
+unstyled admin panel (default system font, flat white cards, native `<select>`s,
+minimal color). Explored the direction first as a mockup (a Claude Design canvas
+with the four highest-traffic screens — tickets list, ticket detail, sign in,
+register) before touching real code, so the visual direction was approved once
+rather than iterated on inside the app. Direction: Linear/Height-style refined
+minimal — `Plus Jakarta Sans` (Google Font, loaded in `apps/web/index.html`,
+`fontFamily.sans` in `tailwind.config.js`) on the existing slate-neutral base, a
+single indigo→violet accent, and a clearer semantic palette for status (`OPEN`=sky,
+`PENDING`=amber, `RESOLVED`=emerald, `CLOSED`=slate) and priority (`LOW`=slate,
+`NORMAL`=indigo, `HIGH`=orange, `URGENT`=rose) — `Badge` (`components/Badge.tsx`)
+gained an optional leading dot for this. New shared primitives: `components/
+icons.tsx` (inline stroke SVG, no icon library dependency) and `components/
+Avatar.tsx` (deterministic initials + color from a name hash, used for
+agents/contacts throughout). `Layout.tsx`'s sidebar now shows the tenant name and a
+real user identity in its footer — pulled from `GET /auth/me`, which the API
+extended to include `tenantName` (`modules/auth/service.ts`) since the UI had no
+prior way to know the workspace's display name. `TicketsQueue`/`TicketDetail` moved
+from an HTML `<table>`/stacked-label form to row/property-row layouts closer to a
+Linear issue view; `Login`/`Register` share a new `AuthLayout` (gradient brand panel
++ centered form) instead of a bare centered card. No functional/permission changes —
+same endpoints, same RBAC, same data shapes.
+
+Verified against the real running app, not just visually: logged in as a real
+tenant, created a ticket via the API channel exactly as before, changed its status
+through the redesigned `<select>`, and sent a reply through the redesigned composer
+— confirmed each mutation actually round-tripped (not just that it looked right),
+zero browser console errors throughout.
+
 ## Phase 2 — Configurability, SLA, and ITSM/ITAM breadth (GLPI parity)
 
 The GLPI feature list the user asked to match, mapped to concrete work. CMDB/
