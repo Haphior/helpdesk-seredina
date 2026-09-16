@@ -110,3 +110,11 @@ export function CheckIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function CloseIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M5 5l10 10M15 5 5 15" />
+    </Icon>
+  );
+}

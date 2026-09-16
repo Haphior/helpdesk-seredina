@@ -35,13 +35,13 @@ export function Register() {
       bullets={[
         'Your own tenant, isolated by row-level security',
         "Invite your team once you're in",
-        'No credit card — self-hosted or cloud',
+        'No credit card, self-hosted or cloud',
       ]}
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-5">
         <div>
           <h1 className="mb-1 text-[23px] font-extrabold tracking-tight text-slate-900">Create your organization</h1>
-          <p className="text-[13.5px] text-slate-400">You'll be the first admin — invite teammates after.</p>
+          <p className="text-[13.5px] text-slate-400">You'll be the first admin. Invite teammates after.</p>
         </div>
 
         <div className="flex flex-col gap-3.5">

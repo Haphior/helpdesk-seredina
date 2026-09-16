@@ -39,7 +39,7 @@ export function Login() {
       <form onSubmit={onSubmit} className="flex flex-col gap-5">
         <div>
           <h1 className="mb-1 text-[23px] font-extrabold tracking-tight text-slate-900">Sign in to Seredina</h1>
-          <p className="text-[13.5px] text-slate-400">Welcome back — enter your workspace to continue.</p>
+          <p className="text-[13.5px] text-slate-400">Enter your workspace to continue.</p>
         </div>
 
         <div className="flex flex-col gap-3.5">

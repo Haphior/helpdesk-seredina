@@ -73,6 +73,32 @@ Alternates, kept as options rather than picked because none beat the above outri
    class." A real ADR reference or a real verification note is more persuasive
    than an adjective, and it's the kind of claim a technical ICP (see
    `docs/PRODUCT.md#icp`) actually trusts.
+4. **Vary sentence connectors — don't default to the em dash.** Reviewed against a
+   "how to spot a vibe-coded app" checklist (2026-09): the em dash-as-default-
+   connector is a recognizable AI-writing tic, present enough in this UI's own
+   copy at the time (`Login.tsx`, `Register.tsx`, `ApiKeys.tsx`, `Users.tsx`,
+   `Assets.tsx`) that it was worth fixing, not just noting. A period, a colon, or
+   just rewriting the sentence works as well and reads less like every helper
+   string came out of the same template. Not a total ban — the copyright line
+   (`© Seredina — AGPL-3.0`) keeps its dash, that's an idiomatic convention, not a
+   sentence connector — just don't reach for it by default.
+
+## Anti-patterns checked against (2026-09 audit)
+
+Reviewed the UI against a "signs your app was vibe-coded" list someone sent the
+team. Most were already avoided by earlier decisions in this doc and
+`docs/DESIGN_SYSTEM.md` (Plus Jakarta Sans instead of Inter/Space Grotesk, no
+Lucide/shadcn, no glassmorphism, no gradient text, no emoji, no colored-left-
+border cards, no generic buzzword copy, no icon-grid/badge-above-headline
+patterns — the app has no marketing landing page yet, only product screens). Two
+real hits, fixed: the em-dash tic above, and `Modal.tsx`'s close button was a
+literal `✕` text character instead of an SVG icon like everything else in
+`icons.tsx` (now `CloseIcon`). The indigo→violet gradient on the login/register
+brand panel and logo core was checked deliberately, not reflexively kept: it's
+scoped to exactly those two places, tied to the logo's own "convergence" premise
+(see above), not a decorative hero-section fill — kept as-is, not the generic
+"purple-to-blue gradient" this kind of checklist is warning about, but worth
+re-checking if it ever spreads to a third place without a reason.
 
 ## Where this shows up
 

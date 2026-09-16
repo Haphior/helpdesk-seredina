@@ -41,7 +41,7 @@ export function Users() {
         </button>
       </div>
       <p className="mb-4 text-sm text-slate-500">
-        Agents/admins in this organization. No invite email yet — share the password with them directly.
+        Agents/admins in this organization. No invite email yet: share the password with them directly.
       </p>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}

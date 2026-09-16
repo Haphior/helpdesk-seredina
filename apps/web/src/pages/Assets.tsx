@@ -144,7 +144,7 @@ export function Assets() {
       )}
 
       {assets === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {assets?.length === 0 && <p className="text-sm text-slate-500">No assets yet — add one or run a scan above.</p>}
+      {assets?.length === 0 && <p className="text-sm text-slate-500">No assets yet. Add one or run a scan above.</p>}
 
       {assets && assets.length > 0 && (
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">

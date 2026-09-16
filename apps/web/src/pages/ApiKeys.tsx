@@ -38,13 +38,13 @@ export function ApiKeys() {
     <div className="p-6">
       <h1 className="mb-1 text-2xl font-semibold text-slate-900">API Keys</h1>
       <p className="mb-4 text-sm text-slate-500">
-        Used to authenticate the API channel (<code className="rounded bg-slate-100 px-1">POST /v1/tickets</code>) — how
+        Authenticates the API channel (<code className="rounded bg-slate-100 px-1">POST /v1/tickets</code>), the way
         an external integration creates tickets in Seredina.
       </p>
 
       {newKey && (
         <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
-          <p className="mb-1 font-medium text-amber-800">Copy this key now — it will not be shown again.</p>
+          <p className="mb-1 font-medium text-amber-800">Copy this key now. It won't be shown again.</p>
           <code className="block break-all rounded bg-white px-2 py-1 text-amber-900">{newKey}</code>
         </div>
       )}
