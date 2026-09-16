@@ -599,9 +599,74 @@ match, not a direct function call standing in for the real path.
   on, plus alert-channel volume (how many tickets came from monitoring vs. real
   requesters) now that there's a `channel` to group by.
 
+**Added 2026-09-16, from a competitive pass against Jira Service Management, GLPI,
+and ManageEngine ServiceDesk Plus — see the research notes below each item.
+Ordered here roughly by how directly each one builds on something already
+shipped, not by external priority:**
+
+- **Agent collision detection + ticket merge + bulk actions.** The three items
+  that showed up as "must-have" in essentially every source checked, and the
+  cheapest of everything in this addition — no new data model. Collision
+  detection is "who else has this ticket open right now," a presence signal
+  (WebSocket or short-poll) keyed by `ticketId`, not a new table. Merge folds
+  one ticket's messages into another's and closes the source — mechanically
+  close to what `ingestAlert`'s re-fire-folding already does for a different
+  reason, so there's a real precedent to reuse rather than invent. Bulk actions
+  (assign/close/tag several tickets from the queue) are UI + a loop over the
+  existing single-ticket `updateTicket`, not new backend logic.
+- **On-call scheduling + SLA escalation chains.** The direct sequel to this
+  pass's SLA engine, not a separate concern — Opsgenie-inside-Jira-SM is the
+  clearest competitive example of exactly this combination. Where the SLA
+  engine's breach webhook (`sla.*_breached`) is the endpoint today, this adds
+  what actually receives it: an on-call rotation (`OnCallSchedule` +
+  `OnCallShift`, whoever's on shift right now) and an escalation chain ("if
+  the on-call person hasn't acknowledged in N minutes, escalate to the next
+  tier") that consumes the same breach-check delayed-job mechanism already
+  built rather than a second scheduler.
+- **Service Catalog.** A tenant-defined list of *requestable things*
+  ("new laptop," "VPN access," "onboard a contractor"), each pointing at its
+  own form — the missing piece `docs/adr/0006-custom-fields.md` already
+  flagged as a known v1 limitation ("no drag-and-drop `TicketForm` layout
+  customization... a separate, larger GLPI-parity item"). This is that item,
+  now named concretely instead of deferred vaguely: `ServiceCatalogItem`
+  (name, description, icon, which `CustomFieldDefinition`s it shows) creates a
+  `Ticket` pre-filled from the chosen item, the same creation path every other
+  channel already uses.
+- **Change Management (ITIL).** Deliberately scoped as an extension of the
+  existing IT Processes engine (`ProcessTemplate`/`ProcessInstance`, Phase 2 ✅),
+  not a new subsystem: a `ProcessTemplate.kind = 'CHANGE'` (or a small
+  dedicated fields addition — risk level, planned window, rollback plan) reuses
+  every mechanism already proven there, including the approval-gated step type
+  that already makes a CAB-style sign-off enforceable. Building a whole
+  separate Change model when the process engine already does "multi-step,
+  approval-gated, outlives-a-single-ticket" would be two systems pretending to
+  be one — the same reasoning `docs/adr/0003-alert-ingestion.md` used to keep
+  alerts on `Ticket` instead of a new `Incident` model.
+- **Problem Management (ITIL).** Distinguishing a root cause ("Problem") from
+  the individual incidents it's causing — Jira Service Management treats this
+  as a first-class, separate concept from ticket/incident. Not yet designed in
+  as much detail as the item above: likely a lightweight `Problem` record that
+  several `Ticket`s can link to (many incidents, one root cause), surfaced as
+  "N linked incidents" on the problem and "linked to Problem #X" on each
+  ticket. Sequenced after Change Management above since a real problem
+  management workflow usually *produces* a change request as its fix.
+- **Self-service portal + a browsable knowledge base.** A real gap, not a
+  duplicate of Phase 3's RAG plan below: this needs `KbArticle` as a plain,
+  human-browsable CRUD resource (a contact can read and search it directly)
+  *before* anything AI-related touches it. Phase 3's `pgvector` embeddings and
+  `search_knowledge_base` tool should be an enhancement layered onto these same
+  articles, not the reason they exist — a knowledge base that only an AI can
+  query isn't a knowledge base a support team can maintain or trust. Worth
+  pulling the plain-CRUD half of this forward into Phase 2 rather than waiting
+  for Phase 3, given how consistently "the KB is incomplete/impossible to
+  search live" showed up as a real agent pain point in the research pass.
+
 ## Phase 3 — AI depth: RAG + MCP + autonomous mode
 
-- pgvector `KbChunk` embeddings + a `search_knowledge_base` RAG tool.
+- pgvector `KbChunk` embeddings + a `search_knowledge_base` RAG tool, layered
+  onto the plain `KbArticle` CRUD resource added in Phase 2 above — the
+  articles need to exist and be human-maintained first; this phase makes them
+  AI-searchable, not the other way around.
 - One shared tool catalog (`get_ticket`, `add_ticket_reply`, `set_ticket_status`,
   `assign_ticket`, `apply_macro`, `escalate_to_human`, ...) used by copilot,
   autonomous mode, and the MCP server alike — never a second implementation.
@@ -686,6 +751,14 @@ these real users actually want:
 - **Environmental Impact Management**: GLPI's sustainability/carbon-footprint
   tracking for IT assets — needs real power/lifecycle data models nothing here has
   yet.
+- **Contract/license/financial asset management** (added 2026-09-16, from the
+  same competitive pass as Phase 2's new items above): contracts, warranties,
+  and purchase orders linked to an `Asset`/`AssetModel` — GLPI's strongest
+  differentiator against every other tool checked. Same relationship as Data
+  Center Management above: a specialization of Asset Management once there's
+  real signal a tenant wants the financial side tracked here rather than in
+  whatever accounting/procurement system they already use, not something to
+  build speculatively ahead of that signal.
 - ~~**Governance Helping**~~ — resolved into **IT processes/procedures**, see
   Phase 2 above, now that there's concrete direction instead of GLPI's broad
   label.
