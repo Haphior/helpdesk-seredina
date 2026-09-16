@@ -310,6 +310,37 @@ through the redesigned `<select>`, and sent a reply through the redesigned compo
 — confirmed each mutation actually round-tripped (not just that it looked right),
 zero browser console errors throughout.
 
+**Security hardening pass ✅ (this pass).** Prompted by an external checklist audit
+(40 generic items across two lists) — most were already covered by existing
+architecture (RLS, parameterized queries via Prisma, bcrypt, server-side auth on
+every route, no cookies so CSRF doesn't apply) or don't apply yet (no payments, no
+file uploads, no shipped AI feature). Four real gaps fixed:
+
+- **Account lockout**: 5 failed logins locks the account 15 minutes
+  (`User.failedLoginAttempts`/`lockedUntil`). Caught a real bug while verifying
+  against a real Postgres — the counter update was originally inside the same
+  Prisma transaction as the throw signaling failed login, so the write was
+  silently rolled back with everything else. Fixed by returning `null` from the
+  transaction and throwing only after it commits.
+- **Rate limiting** (`@fastify/rate-limit`): 300/min global, 10/min on
+  `/auth/login`, 5/min on `/auth/register` — independent of account lockout (this
+  is per-IP and resets every window; lockout is per-account and doesn't).
+- **Security headers** (`@fastify/helmet` on the API; baseline headers on the
+  nginx-served web app) — HSTS, CSP, X-Frame-Options, X-Content-Type-Options.
+- **CORS fails closed in production**: `CORS_ORIGIN` is now required when
+  `NODE_ENV=production` (already set by the Docker runtime images) instead of
+  silently defaulting to allow-all; local dev keeps the existing permissive
+  default.
+
+Also: explicit `bodyLimit` instead of Fastify's implicit default. Verified against
+the real running API: hammered `/auth/login` past its limit and got real 429s,
+confirmed helmet headers on a live response, confirmed the CORS guard both fails
+closed with no `CORS_ORIGIN` and boots correctly with one set, full existing test
+suite (9/9) still green. Remaining lower-priority items from the audit (CAPTCHA/bot
+protection on login+register, CI-gated dependency scanning, a real security-event
+audit log, tenant-slug enumeration on `/auth/register`) are deliberately deferred,
+not silently dropped — revisit once real users exist.
+
 ## Phase 2 — Configurability, SLA, and ITSM/ITAM breadth (GLPI parity)
 
 The GLPI feature list the user asked to match, mapped to concrete work. CMDB/
