@@ -605,10 +605,44 @@ the real worker process — created a webhook via the browser, created a real
 ticket via the API, and watched the webhook's delivery status update to
 match, not a direct function call standing in for the real path.
 
-- Reporting v1: volume, first-response/resolution time, SLA compliance, agent
-  workload, plus asset counts/types once Asset Management has enough data to report
-  on, plus alert-channel volume (how many tickets came from monitoring vs. real
-  requesters) now that there's a `channel` to group by.
+- **Reporting v1 + an interactive, configurable home dashboard (expanded
+  2026-09-16 at the user's request).** The metrics were already scoped —
+  volume, first-response/resolution time, SLA compliance, agent workload,
+  asset counts/types once Asset Management has enough data, alert-channel
+  volume now that there's a `channel` to group by. What's new is the UI this
+  data actually lives in: a per-user, drag-and-drop dashboard
+  (`DashboardWidget`: type, position/size, config — a saved layout, not a
+  fixed page) built from a small library of widget types (a chart, a
+  single-number KPI, a leaderboard, a recent-activity feed) that each read
+  from the same Reporting v1 aggregation queries, never a separate data path.
+  Sensible tenant-wide defaults an admin sets up, individually rearrangeable
+  per agent from there — the same "tenant default, user can override" shape
+  already used for statuses/priorities elsewhere in the schema. This is the
+  UI layer; it has no reason to exist before the underlying queries above do.
+
+**Deep customization, as an explicit cross-cutting goal (added 2026-09-16 at
+the user's request), not just a side effect of individual features.** Already
+true in practice — tenant-defined statuses, custom fields, macros, SLA
+policies, and (once built) the Service Catalog and dashboard above all let a
+tenant shape its own instance without filing a ticket against Seredina
+itself. Naming what's still missing to make that a *complete* story:
+- **Tenant branding / white-label.** A tenant's own logo and accent color on
+  their login screen and portal — real weight for a multi-tenant cloud
+  product where every tenant currently sees Seredina's own brand regardless
+  of who they are. A `Tenant.branding` jsonb blob (logo URL, one or two accent
+  colors) is enough for v1; no theming engine needed for that scope.
+- **Saved views / filters per agent.** "My open tickets," "Unassigned +
+  urgent" as named, reusable filters an agent saves once instead of
+  rebuilding every session — small, but it's the kind of daily-friction item
+  that showed up repeatedly in the "what do helpdesk agents actually need"
+  research pass, and it's cheap: a filter is just serialized query params
+  under a name.
+- **Notification preferences per agent.** Email vs. in-app, immediate vs.
+  digest — currently there's no per-agent choice at all in how they're told
+  about ticket activity.
+- Custom roles (already listed under Phase 4 below) and the Service Catalog's
+  per-request-type forms (already added above) both belong to this same
+  theme — listed once each, not repeated here.
 
 **Added 2026-09-16, from a competitive pass against Jira Service Management, GLPI,
 and ManageEngine ServiceDesk Plus — see the research notes below each item.
