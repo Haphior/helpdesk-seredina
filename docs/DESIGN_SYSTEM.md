@@ -31,8 +31,8 @@ Base neutral: **slate** (`slate-50` background, `slate-200`/`slate-100` borders,
 text/headings). This was already the app's neutral before the redesign — kept, not
 replaced.
 
-Brand accent: **indigo → violet**, used for the logo mark gradient
-(`bg-gradient-to-br from-indigo-500 to-violet-500`), primary buttons
+Brand accent: **indigo → violet**, used for the logo mark's three overlapping
+circles (indigo-400/indigo-500/violet-500, see `docs/BRAND.md`), primary buttons
 (`bg-indigo-600`, hover `indigo-700`), active nav state (`bg-indigo-50
 text-indigo-700`), and the login/register brand panel
 (`from-indigo-700 via-indigo-500 to-violet-500`). Don't introduce a third accent hue

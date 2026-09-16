@@ -1,15 +1,23 @@
-# Seredina
+<p align="center">
+  <img src="apps/web/public/favicon.svg" width="84" height="84" alt="Seredina logo">
+</p>
 
-Open source, fully configurable helpdesk + ITSM/ITAM (GLPI-scope: ticketing, asset
-management/CMDB, agentless inventory, and more to come) with AI agent integration,
-plus NOC/SOC integration via webhook alert ingestion (`POST /v1/alerts` turns a
-Zabbix/Wazuh/Grafana/etc. alert into a ticket). Ships as a self-hosted Docker
-deployment (single tenant) and as a multi-tenant cloud service — same codebase, same
-containers, both modes.
+<h1 align="center">Seredina</h1>
+<p align="center"><b>Open-source ITSM that meets you in the middle.</b></p>
+
+Ticketing, asset management/CMDB, and NOC/SOC alert ingestion — with an AI copilot
+that drafts, and a human who approves — in one open-source helpdesk. "Seredina"
+(середина) is Slavic for "the middle": email, API calls, and monitoring alerts all
+arrive from different places and land in the same ticket.
+
+Run it as a self-hosted Docker deployment or as a multi-tenant cloud service — same
+codebase, same containers, your choice. Full source, AGPL-3.0, no separate
+"enterprise" fork holding features back.
 
 Status: Phase 1 done, Phase 2 in progress (ticketing core, agent console, CMDB +
-agentless discovery, NOC/SOC alert ingestion, AI copilot v1) — see
-[docs/ROADMAP.md](docs/ROADMAP.md).
+agentless discovery, NOC/SOC alert ingestion, AI copilot v1, SLA engine, macros,
+custom fields) — see [docs/ROADMAP.md](docs/ROADMAP.md) for what's shipped and
+what's next.
 
 ## Stack
 

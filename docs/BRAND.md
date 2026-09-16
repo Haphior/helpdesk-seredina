@@ -19,32 +19,47 @@ middle") that lines up with the Slavic meaning without forcing it.
 
 ## Logo
 
-Three unequal arcs curving into one solid center point (`apps/web/src/components/
-Logo.tsx`, favicon at `apps/web/public/favicon.svg`). Deliberately **asymmetric**
-— different arc lengths and curvatures, three differently-sized source dots — so
-it reads as this one specific idea (unequal things resolving into a middle point)
-rather than a generic symmetric spoke-and-hub, which is a shape shared by a huge
-swath of tech/network logos.
+Three unequal, semi-transparent, overlapping circles (`apps/web/src/components/
+Logo.tsx`, favicon at `apps/web/public/favicon.svg` — identical geometry in both,
+unscaled). The blended center where all three overlap *is* "the middle" — the
+name's meaning told through the overlap itself, not a line pointing at it.
+Concretely, the three circles are the three real values of `Ticket.channel`
+(email, API, monitoring alert): separate things that land in one shared ticket.
 
-An early viewer read it as "a hand waving hello, reaching out to help" before
-being told the etymology. That's not the mark's original premise — it was
-designed around "convergence" — but it's a genuinely good second reading for a
-helpdesk brand and worth keeping in mind rather than designing away. Both readings
-point the same direction: something (or someone) reaching toward a center to help.
+Replaced 2026-09-16. The original mark (three unequal arcs curving into one
+center point, kept in git history) was dropped for two reasons: external
+feedback flagged the specific arrangement of its three arms as an accidental
+anatomical read (verified as a real, geometry-level issue — two arms clustered
+tightly on one side, one alone on the other — not just a subjective complaint),
+and even after re-angling to fix that, arcs have a structural cost circles don't:
+a stroke has a line endpoint that drops below 1px at small sizes, which is why
+that mark needed a second, dedicated "micro-glyph" shape just for the favicon.
+Three filled circles need no such adaptation — verified by rendering the exact
+same markup at 128/64/32/16px before adopting it, holding up at every size on
+fill opacity alone.
 
-Three variants (`variant` prop): `light`/`dark` (full color, for a white or
-slate/navy surface — nav, cards) and `mono` (solid white at varying opacity, for
-the saturated indigo/violet brand panel itself, where the full-color gradient core
-would blend into a same-hue background instead of standing out). Never place the
-`light`/`dark` full-color mark directly on the indigo/violet brand gradient — use
-`mono` there, as `AuthLayout.tsx` does.
+Explored and set aside before landing here, across several rounds: the original
+arcs re-angled in place; a keystone/arch, a fulcrum/balance-beam, a suture, and
+an interlocking-halves mark (each tied to a specific "the middle" metaphor, tried
+because the first round leaned on common icon patterns); and — because an early
+viewer's "hand waving hello" reading of the original arcs was worth building
+toward on purpose — a confident abstract wave, a full mascot ("Seri," with a
+headset variant), and two hands meeting at the center. All were real, rendered
+candidates, not just described; overlapping circles won on the combination of
+being the most structurally sound (no small-size adaptation needed) and the most
+concretely tied to the product's actual channel model, not just the name.
 
-Four other directions were explored and set aside (a ticket-tag shape, twin
-speech-bubbles forming an "S", a shield-with-checkmark, a symmetric node-hub) —
-each leaned on a visual cliché already common in this product category (ticket
-tags, chat bubbles, shields, network hubs). The convergence mark was chosen
-specifically because it's the one idea genuinely tied to this product's name and
-mechanism, not swappable with a competitor's logo.
+Three variants (`variant` prop): `onLightBg` (default — saturated indigo/violet,
+for the white/slate-50 surfaces this is actually used on, i.e. the nav sidebar),
+`onDarkBg` (a paler set, reserved for a dark surface that isn't the saturated
+mono panel — nothing uses this yet), and `mono` (solid white at varying opacity,
+for the saturated indigo/violet brand panel itself, where the full-color version
+would blend into a same-hue background instead of standing out). Never place
+`onLightBg`/`onDarkBg` directly on the indigo/violet brand gradient — use `mono`
+there, as `AuthLayout.tsx` does. (The variant names themselves were fixed from
+`light`/`dark` — those described the *shade* of the mark's own fill, not *where*
+it sits, which is how the pale, low-contrast set had ended up shipped on the
+white sidebar at one point. `onLightBg`/`onDarkBg` describe placement instead.)
 
 ## Tagline
 
