@@ -505,11 +505,15 @@ in cloud mode, and a plugin able to execute arbitrary code inside that process i
 a direct route around the RLS + Prisma-extension tenant isolation this entire
 project is built on — one tenant's "plugin" could read another tenant's data. A
 contract-based model keeps every integration out-of-process in both deployment
-modes, so it can't bypass isolation regardless of who wrote it. A self-hosted-only
-native plugin loader (accepting that a self-hoster runs their own trusted code) is
-a legitimate but *separate* future decision, not the default extensibility path —
-flagging this as a recommendation to confirm, not a decision already made
-unilaterally.
+modes, so it can't bypass isolation regardless of who wrote it. **Decided
+2026-09-16, no longer just a recommendation**: a self-hosted-only native
+plugin loader was considered and explicitly rejected too, even though the
+tenant-isolation argument above doesn't technically apply there (only one
+tenant, nothing to leak to) — the user's call was that a curated set of real,
+pre-built integrations ships more usable feature surface than a generic
+loader would, without ever needing a plugin capability/permission model at
+all. See the Backlog section's "Extensibility" note for the final framing:
+integrations, not a plugin platform, in either deployment mode.
 
 **Macros ✅ (this pass)** — `Macro` (name, a typed `actions` union as jsonb: optional
 `setStatusId`/`setPriority`/`setTeamId`/`setAssigneeId`/`addReply`, validated to
@@ -821,7 +825,20 @@ self-hosted install and a cloud signup need it:**
 
 - Tenant self-signup / plan-tier scaffolding.
 - Per-tenant bring-your-own AI key UI.
-- Widget (embeddable web chat) + WhatsApp/Telegram channels.
+- Widget (embeddable web chat) + WhatsApp/Telegram channels (customer-facing
+  channels — a contact reaching Seredina, same shape as email/API today).
+- **Pre-built integrations (added 2026-09-16 — the concrete list behind the
+  "integrations, not a plugin platform" decision above): Slack and Microsoft
+  Teams notifications** (a new ticket/an SLA breach posts to a channel an
+  agent already has open, one-click "Connect Slack" using the existing
+  `Webhook` delivery mechanism under the hood, OAuth instead of a tenant
+  hand-rolling their own receiver), **plus one or two of the monitoring tools
+  already implicitly supported through `POST /v1/alerts`** (a real, named
+  Zabbix or Grafana integration with its own setup UI, instead of leaving
+  every NOC/SOC tool integration as "here's the generic endpoint, map your
+  own payload"). Each one is its own small, real feature — not a platform for
+  arbitrary future ones — which is the entire point of choosing this over a
+  plugin loader.
 - Custom roles beyond the fixed three.
 - Advanced reporting/CSAT/export.
 - Automated RLS fuzz tests in CI.
@@ -911,25 +928,24 @@ these real users actually want:
   enrollment) stays its own significant subsystem (comparable in scope to e.g.
   Microsoft Intune), effectively a separate product — revisit only if there's
   real demand, not preemptively.
-- **Self-hosted-only native plugin loader** (named concretely 2026-09-16, at
-  the user's request, after re-confirming the cloud-mode rejection below still
-  holds). Real code, loaded and executed, extending Seredina's own backend —
-  something the contract-based model (webhooks/API/MCP) deliberately doesn't
-  offer, because it can't without breaking tenant isolation in cloud mode.
-  Self-hosted is a different risk shape: exactly one tenant, so a plugin
-  running arbitrary code in that process has no other tenant's data to leak —
-  the entire reason the cloud version is rejected (below) doesn't apply.
-  Still deferred, not because it's unsafe here, but because it needs its own
-  answer to "what can a plugin actually touch" (a capability/permission model
-  for plugin code, not just "yes it can run") before it's a real feature
-  rather than an open door.
 
 **Other**: mobile apps, voice/telephony, BPMN-style workflow automation, SSO/SAML,
-per-tenant data residency, console i18n. (Third-party plugin marketplace resolved
-into the contract-based extension recommendation in Phase 2 above — that
-rejection is specifically about *cloud mode*; see the self-hosted plugin
-loader item just above for why the same conclusion doesn't automatically
-carry over to self-hosted.)
+per-tenant data residency, console i18n.
+
+**Extensibility, decided 2026-09-16: integrations, not a plugin platform —
+in either deployment mode.** A self-hosted-only native plugin loader was
+considered and explicitly rejected, not just left un-prioritized: the user's
+own call was that a curated, growing list of pre-built integrations (Slack,
+Teams, a specific ticketing/monitoring tool, ...) a tenant enables and
+configures through Settings ships more real, usable feature surface than a
+generic loader ever would, without ever needing a plugin permission/
+capability model at all. Every one of these is still built on the same
+contract-based foundation already in place — the existing `Webhook`/`ApiKey`
+mechanisms (Phase 2 ✅) for outbound, Phase 3's MCP server for AI-era
+integrations — just packaged as a one-click "Connect Slack" in the product
+instead of a tenant hand-rolling their own webhook receiver. No third-party
+or tenant-supplied code runs inside Seredina's process, in cloud or
+self-hosted, full stop.
 
 ## Key risks (carried forward from planning, revisit each phase)
 
