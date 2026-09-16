@@ -447,6 +447,48 @@ end: created a TEXT/SELECT/required-BOOLEAN field as admin, confirmed all three
 render on a real ticket's details panel, edited each one, confirmed the values
 survive a full page reload — a real round trip, not a mocked assertion.
 
+**Hardware/equipment catalog (not yet built).** A `Manufacturer` + `AssetModel`
+reference catalog (manufacturer, asset type, name, specs), decoupled from `Asset`
+instances — many assets share one model. `Asset.modelId` becomes an optional FK;
+picking a model in the asset form prefills manufacturer/type/spec fields instead
+of re-typing them per device, which is most of what makes manual inventory entry
+tedious today. Self-hosted-friendly by design: the catalog is tenant-curated
+(add a model the first time a device needs one, reuse it after), not backed by an
+external device-database API — consistent with not adding a network dependency
+self-hosted operators would otherwise be stuck depending on.
+
+**IT processes / procedures (not yet built) — resolves the "Governance Helping"
+item below**, now that there's concrete direction instead of GLPI's broad label:
+a `ProcessTemplate` (name, description, ordered steps — each with a label, an
+assigned role/team, and whether it needs a document or an approval) that spawns a
+`ProcessInstance` tracking per-step completion/approval/assignee over however long
+it actually takes (days, sometimes weeks) — think employee onboarding (accounts,
+equipment assignment, badge) or a commercial document approval chain (vendor
+onboarding, contract sign-off). Deliberately **not** the same model as `Macro`:
+a Macro is a one-shot bundle of actions applied instantly to a single ticket;
+a Process is a multi-step, multi-person checklist that outlives any single
+conversation. A process step that needs IT action can link or spawn a `Ticket`,
+but the process itself is tracked as its own record, not shoehorned into the
+ticket/message model — a process isn't a conversation thread.
+
+**Plugin/extension architecture (recommendation, not yet built) — resolves the
+vague "third-party plugin marketplace" backlog mention below.** Recommending a
+**contract-based** model over native in-process code-loading: outbound `Webhook`s
+(already planned above) for "notify an external system," the existing scoped
+`ApiKey` + REST API for "let an external system act on Seredina," and the planned
+MCP server (Phase 3) as the structured interface for AI-era integrations (n8n,
+a customer's own agent, Zapier-style tools). Deliberately **not** a GLPI/WordPress-
+style loaded-code plugin system: Seredina runs the same process for every tenant
+in cloud mode, and a plugin able to execute arbitrary code inside that process is
+a direct route around the RLS + Prisma-extension tenant isolation this entire
+project is built on — one tenant's "plugin" could read another tenant's data. A
+contract-based model keeps every integration out-of-process in both deployment
+modes, so it can't bypass isolation regardless of who wrote it. A self-hosted-only
+native plugin loader (accepting that a self-hoster runs their own trusted code) is
+a legitimate but *separate* future decision, not the default extensibility path —
+flagging this as a recommendation to confirm, not a decision already made
+unilaterally.
+
 - `Macro` with a typed action union (not arbitrary code).
 - `SlaPolicy` + `BusinessHours` + breach escalations.
 - Outbound `Webhook`s (doubles as groundwork for Phase 3's "open framework") — note
@@ -484,6 +526,57 @@ survive a full page reload — a real round trip, not a mocked assertion.
 - Automated RLS fuzz tests in CI.
 - Verified stateless multi-replica `api`/`worker` + WS fanout under load.
 
+## Phase 5 — Endpoint agents (Windows/Linux/macOS)
+
+Not yet built. Deeper than Phase 1's agentless discovery (a best-effort TCP+SNMP
+network scan that only ever reads what's reachable from outside a device) — a
+real lightweight background agent installed *on* a device: full hardware/software
+inventory, OS patch level, disk-encryption/AV status, and — opt-in, higher trust
+— remote script execution and software/patch deployment. Sequenced after Phase 4
+deliberately: letting a fleet of real, privileged endpoints phone home safely is
+much lower-stakes once the multi-tenant cloud hardening above already exists,
+than bolting it onto an earlier phase.
+
+**Explicitly desktop/server only — not Android/iOS in this phase.** Real mobile
+MDM means enrolling as an Android Enterprise or Apple MDM device-policy
+controller, a fundamentally different and much larger subsystem than a desktop
+background agent — already correctly flagged below as "comparable in scope to
+Microsoft Intune." Bundling it into this phase would be scope creep against the
+project's own stated risk ("this is a large surface for a solo developer");
+mobile MDM stays a separate, later, demand-gated decision.
+
+**Security architecture (non-negotiable — this runs with real privilege on a
+real endpoint, unlike everything else in this codebase so far):**
+
+- **Per-device enrollment, never a shared secret.** A short-lived, single-use
+  enrollment token mints a unique per-device credential — the same shape as the
+  `ApiKey` pattern already used for the API/alert channels, just one per device
+  instead of one per integration, so a single compromised device can't act as
+  every device.
+- **TLS-only transport**, agent verifies the server's certificate — the same
+  "force HTTPS" posture as the rest of this project, not an exception for agent
+  traffic.
+- **Capability tiers, mirroring Phase 3's `AutonomyPolicy`** — the same "default
+  to the safest tier, opt in to more" shape applied to a different kind of
+  autonomous actor:
+  1. Inventory-only (read-only) — the default.
+  2. Remote script/command execution — opt-in per tenant, every run audited.
+  3. Software/patch deployment — highest trust tier, opt-in, capped.
+- **Every remote action gets a real audit log entry.** This is what makes the
+  "real security-event audit log" already flagged as deferred in the security-
+  hardening pass load-bearing rather than nice-to-have — the same relationship
+  `AiAgentRun` has to Phase 3's autonomous AI mode.
+- **Signed agent binary and signed auto-update**, verified before executing — an
+  agent able to silently update itself is the single highest-value supply-chain
+  target against every tenant running it.
+- **Data minimization**: hardware/software/patch/AV inventory only, never
+  arbitrary file access, keystrokes, or screen content — both a security-exposure
+  and an operator-compliance boundary, deliberately not crossed.
+
+Unlocks two Backlog items below that currently have no path without it
+(Antivirus Management, Application Deployment) and the desktop half of a third
+(MDM/MAM) — mobile stays out of scope per above.
+
 ## Backlog (explicitly deferred, not forgotten)
 
 **Remaining GLPI-list items with no phase yet** — not dropped, just not close enough
@@ -495,21 +588,24 @@ these real users actually want:
 - **Environmental Impact Management**: GLPI's sustainability/carbon-footprint
   tracking for IT assets — needs real power/lifecycle data models nothing here has
   yet.
-- **Governance Helping**: GLPI's term is broad (compliance/governance workflows);
-  needs the user to clarify what concretely this should mean here before it's
-  plannable.
-- **Antivirus Management**: tracking AV deployment/status per endpoint — needs an
-  actual agent or an AV vendor's API integration, neither of which exists yet.
-- **Application Deployment**: pushing software to endpoints — needs an agent (this
-  is fundamentally different from the agentless discovery built in Phase 1, which
-  only ever reads).
-- **Mobile Device/Application Management (MDM/MAM)**: enrollment, remote
-  wipe/policy push — its own significant subsystem (comparable in scope to e.g.
-  Microsoft Intune), effectively a separate product; revisit only if there's real
-  demand, not preemptively.
+- ~~**Governance Helping**~~ — resolved into **IT processes/procedures**, see
+  Phase 2 above, now that there's concrete direction instead of GLPI's broad
+  label.
+- **Antivirus Management**: tracking AV deployment/status per endpoint — needs
+  Phase 5's endpoint agent (or an AV vendor's API integration as an alternative
+  path); neither exists yet.
+- **Application Deployment**: pushing software to endpoints — needs Phase 5's
+  endpoint agent (fundamentally different from Phase 1's agentless discovery,
+  which only ever reads).
+- **Mobile Device/Application Management (MDM/MAM)**: Phase 5 covers the desktop
+  half (an agent is an agent); real mobile MDM (Android Enterprise / Apple MDM
+  enrollment) stays its own significant subsystem (comparable in scope to e.g.
+  Microsoft Intune), effectively a separate product — revisit only if there's
+  real demand, not preemptively.
 
-**Other**: third-party plugin marketplace for channels, mobile apps, voice/telephony,
-BPMN-style workflow automation, SSO/SAML, per-tenant data residency, console i18n.
+**Other**: mobile apps, voice/telephony, BPMN-style workflow automation, SSO/SAML,
+per-tenant data residency, console i18n. (Third-party plugin marketplace resolved
+into the contract-based extension recommendation in Phase 2 above.)
 
 ## Key risks (carried forward from planning, revisit each phase)
 
@@ -536,3 +632,14 @@ BPMN-style workflow automation, SSO/SAML, per-tenant data residency, console i18
   interval-loop design isn't coordinated across instances) — a real constraint on
   horizontal scaling, not yet solved, deferred to Phase 4 alongside the equivalent
   discovery-worker scaling question.
+- Phase 5's endpoint agent is a categorically bigger trust boundary than anything
+  else in this project — everything before it runs inside Seredina's own
+  infrastructure; an agent runs with real privilege on a customer's real machine.
+  Ship inventory-only by default, remote-execution capability tiers opt-in and
+  audited, per-device credentials, and signed auto-update, all from day one of
+  that phase — retrofitting any of those onto an already-deployed agent fleet is
+  far more painful than building them in from the start.
+- A native code-loading plugin system (rejected in favor of a contract-based one,
+  see Phase 2) would have been a direct route around the RLS + Prisma-extension
+  tenant isolation this whole project is built on — worth remembering if a future
+  session is ever tempted to add one for convenience.

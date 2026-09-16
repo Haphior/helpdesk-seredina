@@ -57,21 +57,25 @@ phase: [docs/ROADMAP.md](ROADMAP.md). Summary:
 | Phase | Scope | Status |
 |---|---|---|
 | 0 — Foundations | Multi-tenant RLS + Prisma isolation, JWT auth, Docker Compose | ✅ Done |
-| 1 — MVP | Ticketing core, API + email channels, agent console UI, CMDB + agentless discovery, multi-user tenants, UI visual refresh | ✅ Done (AI copilot v1 in this phase's original scope is not yet built — see Backlog) |
-| 2 — Configurability & SLA | Alert ingestion (NOC/SOC) ✅ done; custom fields/forms, macros, SLA engine, outbound webhooks, reporting v1 — not yet started | 🚧 In progress |
+| 1 — MVP | Ticketing core, API + email channels, agent console UI, CMDB + agentless discovery, multi-user tenants, UI visual refresh, AI copilot v1 | ✅ Done |
+| 2 — Configurability & SLA | Alert ingestion (NOC/SOC) ✅, custom fields ✅; hardware/equipment catalog, IT processes/procedures, plugin/extension architecture, macros, SLA engine, outbound webhooks, reporting v1 — not yet started | 🚧 In progress |
 | 3 — AI depth | RAG (pgvector), shared AI tool catalog, autonomous mode + `AutonomyPolicy`, MCP server, second LLM provider | Not started |
 | 4 — Cloud hardening | Tenant self-signup, BYO AI key, widget/WhatsApp channels, custom roles, RLS fuzz tests in CI, multi-replica load verification | Not started |
+| 5 — Endpoint agents | Windows/Linux/macOS inventory + opt-in remote execution/deployment agent, capability-tiered like Phase 3's `AutonomyPolicy`, desktop-only (not mobile MDM) | Not started |
 
 ## Explicitly out of scope (for now)
 
 Carried from [ROADMAP.md § Backlog](ROADMAP.md#backlog-explicitly-deferred-not-forgotten):
-Data Center Management, Environmental Impact Management, Governance Helping,
-Antivirus Management, Application Deployment, MDM/MAM (all: needs an agent or a
-data model nothing here has yet — revisit only on real demand), plugin marketplace,
-mobile apps, voice/telephony, workflow automation engine, SSO/SAML, data residency,
-console i18n. Also: **NOC/SOC will never be natively built** (monitoring/SIEM are
-mature categories on their own — Seredina integrates via webhook, permanently, not
-as a temporary scope cut).
+Data Center Management, Environmental Impact Management, mobile MDM/MAM (Phase 5
+covers the desktop half only — real Android Enterprise/Apple MDM enrollment is a
+separate, much larger subsystem), mobile apps, voice/telephony, BPMN-style workflow
+automation engine, SSO/SAML, data residency, console i18n. Also: **NOC/SOC will
+never be natively built** (monitoring/SIEM are mature categories on their own —
+Seredina integrates via webhook, permanently, not as a temporary scope cut), and
+**no native code-loading plugin system** (a contract-based model — webhooks, API
+keys, the planned MCP server — is the deliberate alternative, since loaded code
+running inside the shared multi-tenant process would be a direct route around RLS
+tenant isolation; see ROADMAP.md's Phase 2 for the full reasoning).
 
 ## Architecture references
 
