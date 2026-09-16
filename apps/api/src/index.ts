@@ -1,5 +1,7 @@
 import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { attachErrorTracking, initErrorTracking } from './lib/errorTracking';
 import jwtPlugin from './plugins/jwt';
 import apiKeyAuthPlugin from './plugins/apiKeyAuth';
@@ -14,14 +16,26 @@ import emailChannelRoutes from './modules/emailchannels/routes';
 initErrorTracking();
 
 export function buildApp() {
-  const app = Fastify({ logger: true });
+  // Explicit, not the framework default by omission -- Fastify's implicit 1 MiB
+  // applied either way, but this makes it a decision instead of an accident.
+  const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
   attachErrorTracking(app);
+
+  app.register(helmet);
+  app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
 
   // Auth here is a Bearer token (JWT or ApiKey), never a cookie, so there's no CSRF
   // exposure to reflecting the origin -- CORS_ORIGIN lets an operator lock this down
-  // to their actual web origin(s) in production; unset defaults to allow-all for local
-  // dev, where the web app runs on a different Vite port than the API.
+  // to their actual web origin(s); unset defaults to allow-all for local dev, where
+  // the web app runs on a different Vite port than the API. In production
+  // (NODE_ENV=production, set by infra/docker/Dockerfile.api's runtime image) that
+  // default would be wide-open-by-omission, so it's required there instead --
+  // docker-compose.yml already sets it via WEB_ORIGIN, so this only fires for an
+  // operator running the built image directly without it.
   const corsOrigin = process.env.CORS_ORIGIN;
+  if (!corsOrigin && process.env.NODE_ENV === 'production') {
+    throw new Error('CORS_ORIGIN must be set when NODE_ENV=production');
+  }
   app.register(cors, { origin: corsOrigin ? corsOrigin.split(',') : true });
 
   app.register(jwtPlugin);

@@ -34,43 +34,55 @@ const updateUserSchema = z.object({
 });
 
 export default async function authRoutes(app: FastifyInstance) {
-  app.post('/auth/register', async (request, reply) => {
-    const parsed = registerSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.flatten() });
-    }
+  // Tighter than the global default (see index.ts) -- these are the two routes an
+  // automated credential-stuffing/mass-registration attempt would actually hit.
+  // Account lockout (service.ts's login()) is a second, independent layer: this
+  // limit is per-IP and resets every window, lockout is per-account and doesn't.
+  app.post(
+    '/auth/register',
+    { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const parsed = registerSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.flatten() });
+      }
 
-    try {
-      const result = await registerTenant(parsed.data);
-      const token = app.jwt.sign({
-        sub: result.userId,
-        tenantId: result.tenantId,
-        permissions: result.permissions,
-      });
-      return reply.code(201).send({ token });
-    } catch (err) {
-      return reply.code(400).send({ error: (err as Error).message });
-    }
-  });
+      try {
+        const result = await registerTenant(parsed.data);
+        const token = app.jwt.sign({
+          sub: result.userId,
+          tenantId: result.tenantId,
+          permissions: result.permissions,
+        });
+        return reply.code(201).send({ token });
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
 
-  app.post('/auth/login', async (request, reply) => {
-    const parsed = loginSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.flatten() });
-    }
+  app.post(
+    '/auth/login',
+    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const parsed = loginSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.flatten() });
+      }
 
-    try {
-      const result = await login(parsed.data);
-      const token = app.jwt.sign({
-        sub: result.userId,
-        tenantId: result.tenantId,
-        permissions: result.permissions,
-      });
-      return reply.send({ token });
-    } catch {
-      return reply.code(401).send({ error: 'invalid credentials' });
-    }
-  });
+      try {
+        const result = await login(parsed.data);
+        const token = app.jwt.sign({
+          sub: result.userId,
+          tenantId: result.tenantId,
+          permissions: result.permissions,
+        });
+        return reply.send({ token });
+      } catch {
+        return reply.code(401).send({ error: 'invalid credentials' });
+      }
+    },
+  );
 
   app.get('/auth/me', { preHandler: app.authenticate }, async (request, reply) => {
     const { sub, tenantId } = request.user;
