@@ -631,6 +631,15 @@ itself. Naming what's still missing to make that a *complete* story:
   product where every tenant currently sees Seredina's own brand regardless
   of who they are. A `Tenant.branding` jsonb blob (logo URL, one or two accent
   colors) is enough for v1; no theming engine needed for that scope.
+- **Editable outbound email templates.** Every outbound email the
+  `EmailChannel` sends today (Phase 1 ✅ — a reply on an email-sourced ticket)
+  uses one fixed, hardcoded format. A tenant should be able to edit the
+  subject/body per event type (new reply, ticket resolved, ...) with a small
+  placeholder system (`{{ticket.subject}}`, `{{contact.name}}`, ...) —
+  `EmailTemplate` (tenant-scoped, one row per event type, falls back to a
+  built-in default when a tenant hasn't customized one). Reuses the same
+  `Tenant.branding` blob above for a logo in the template, rather than a
+  second place to configure it.
 - **Saved views / filters per agent.** "My open tickets," "Unassigned +
   urgent" as named, reusable filters an agent saves once instead of
   rebuilding every session — small, but it's the kind of daily-friction item
@@ -729,7 +738,7 @@ shipped, not by external priority:**
 **Differentiators (added 2026-09-16, at the user's explicit request for
 "what would set this apart, not just close the gap") — deliberately NOT
 competitive parity. The point of everything else in this phase is closing
-gaps against Jira SM/GLPI/ServiceDesk Plus; these two are things none of
+gaps against Jira SM/GLPI/ServiceDesk Plus; these three are things none of
 them do, chosen because each one is cheap specifically because it reuses a
 piece already being built for another reason:**
 
@@ -757,6 +766,38 @@ piece already being built for another reason:**
   written by the copilot calls that already exist today (Phase 1's summarize/
   suggest-reply) is enough to start, with Phase 3's fuller audit trail
   extending the same table rather than replacing it.
+- **Full data portability — a one-click export in an open format.** Tickets,
+  messages, KB articles, assets, and every configuration table (custom
+  fields, macros, SLA policies, ...) as a downloadable JSON/CSV bundle. The
+  honest opposite of how Jira and ServiceDesk Plus treat migrating *away*
+  from them — deliberately painful, by design, for a vendor whose business
+  model depends on lock-in. Seredina's doesn't: AGPL-3.0 and a self-hosted
+  path already say "you own this" implicitly; this makes it a real, provable
+  feature instead of a licensing technicality nobody notices. Low technical
+  risk — every table involved is already tenant-scoped and RLS-gated, so the
+  export query shape is the same `withTenantTx` pattern used everywhere else,
+  just serialized to a file instead of a response body.
+
+**Onboarding & installation experience (added 2026-09-16, at the user's
+request) — a cross-cutting concern, not tied to one phase, since both a
+self-hosted install and a cloud signup need it:**
+
+- **A real setup wizard for self-hosted Docker installs.** This session's own
+  repeated friction restarting the dev API server (wrong `DATABASE_URL`,
+  regenerated `JWT_SECRET`/`ENCRYPTION_KEY` by hand, a masked error that
+  turned out to be a stale port) is a preview of exactly what a first-time
+  self-hoster would hit blind, with nobody to ask. A one-shot
+  `docker compose up` should be followed by a web setup wizard — generate and
+  save the secrets, create the first tenant/admin, verify the DB/Redis
+  connection with a visible pass/fail instead of a silent hang — not a README
+  telling someone to export nine environment variables correctly by hand.
+- **A first-run product tour after signup/first login.** A short, dismissible
+  walkthrough (create your first custom status, try a macro, set an SLA
+  policy) rather than dropping a new tenant into an empty ticket queue with
+  twelve sidebar items and no hint which ones matter first. Cheap relative to
+  everything else on this list — mostly frontend, no new backend concept —
+  but real first-impression value, and pairs naturally with the dashboard
+  above as "the first widget you see is literally the tour's checklist."
 
 ## Phase 3 — AI depth: RAG + MCP + autonomous mode
 
@@ -870,10 +911,25 @@ these real users actually want:
   enrollment) stays its own significant subsystem (comparable in scope to e.g.
   Microsoft Intune), effectively a separate product — revisit only if there's
   real demand, not preemptively.
+- **Self-hosted-only native plugin loader** (named concretely 2026-09-16, at
+  the user's request, after re-confirming the cloud-mode rejection below still
+  holds). Real code, loaded and executed, extending Seredina's own backend —
+  something the contract-based model (webhooks/API/MCP) deliberately doesn't
+  offer, because it can't without breaking tenant isolation in cloud mode.
+  Self-hosted is a different risk shape: exactly one tenant, so a plugin
+  running arbitrary code in that process has no other tenant's data to leak —
+  the entire reason the cloud version is rejected (below) doesn't apply.
+  Still deferred, not because it's unsafe here, but because it needs its own
+  answer to "what can a plugin actually touch" (a capability/permission model
+  for plugin code, not just "yes it can run") before it's a real feature
+  rather than an open door.
 
 **Other**: mobile apps, voice/telephony, BPMN-style workflow automation, SSO/SAML,
 per-tenant data residency, console i18n. (Third-party plugin marketplace resolved
-into the contract-based extension recommendation in Phase 2 above.)
+into the contract-based extension recommendation in Phase 2 above — that
+rejection is specifically about *cloud mode*; see the self-hosted plugin
+loader item just above for why the same conclusion doesn't automatically
+carry over to self-hosted.)
 
 ## Key risks (carried forward from planning, revisit each phase)
 
