@@ -71,10 +71,12 @@ dev since auth is a Bearer token, never a cookie).
 Database schema/migrations/seed now live in `packages/db`, not `apps/api` — run
 `npm run prisma:generate|prisma:migrate|prisma:deploy|prisma:seed --workspace=@seredina/db`.
 
-See [docs/adr/](docs/adr/) for the reasoning behind the multi-tenancy, AI, and
-agentless-discovery architecture, [docs/PRODUCT.md](docs/PRODUCT.md) for who this is
-for and why, and [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) for the UI's
-typography/color/component conventions.
+See [docs/PRD.md](docs/PRD.md) for the consolidated product requirements
+(problem/ICP/scope/risks in one place), [docs/adr/](docs/adr/) for the reasoning
+behind the multi-tenancy, AI, and agentless-discovery architecture,
+[docs/PRODUCT.md](docs/PRODUCT.md) for the full ICP/pain/value detail, and
+[docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) for the UI's typography/color/
+component conventions.
 
 ## Contributing
 
