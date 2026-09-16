@@ -49,6 +49,8 @@ services:
       SEREDINA_MODE: ${SEREDINA_MODE:-self_hosted}
       CORS_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
       SENTRY_DSN: ${SENTRY_DSN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
     ports:
       - '${API_PORT:-4000}:4000'
 

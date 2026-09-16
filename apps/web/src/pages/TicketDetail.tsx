@@ -11,7 +11,7 @@ import type {
 } from '../lib/types';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
-import { BackArrowIcon, ChevronDownIcon, LockIcon } from '../components/icons';
+import { BackArrowIcon, ChevronDownIcon, LockIcon, SparkleIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
@@ -29,6 +29,11 @@ export function TicketDetail() {
   const [reply, setReply] = useState('');
   const [isPrivateNote, setIsPrivateNote] = useState(false);
   const [sending, setSending] = useState(false);
+
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -100,6 +105,34 @@ export function TicketDetail() {
     }
   }
 
+  async function handleSummarize() {
+    if (!id) return;
+    setAiError(null);
+    setSummarizing(true);
+    try {
+      const res = await apiPost<{ summary: string }>(`/tickets/${id}/ai/summarize`);
+      setSummary(res.summary);
+    } catch (err) {
+      setAiError(err instanceof ApiError ? err.message : 'Failed to summarize');
+    } finally {
+      setSummarizing(false);
+    }
+  }
+
+  async function handleSuggestReply() {
+    if (!id) return;
+    setAiError(null);
+    setSuggesting(true);
+    try {
+      const res = await apiPost<{ suggestion: string }>(`/tickets/${id}/ai/suggest-reply`);
+      setReply(res.suggestion);
+    } catch (err) {
+      setAiError(err instanceof ApiError ? err.message : 'Failed to suggest a reply');
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
   if (error && !ticket) return <div className="p-6 text-sm text-rose-600">{error}</div>;
   if (!ticket) return <div className="p-6 text-sm text-slate-500">Loading…</div>;
 
@@ -123,10 +156,29 @@ export function TicketDetail() {
             </Badge>
             <Badge tone={ticket.channel === 'alert' ? 'rose' : 'slate'}>{ticket.channel}</Badge>
             {ticket.externalId && <span className="text-xs text-slate-400">ref: {ticket.externalId}</span>}
+            <button
+              onClick={handleSummarize}
+              disabled={summarizing}
+              className="ml-auto flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <SparkleIcon width={12} height={12} />
+              {summarizing ? 'Summarizing…' : 'Summarize'}
+            </button>
           </div>
         </div>
 
         {error && <p className="mb-2 text-sm text-rose-600">{error}</p>}
+        {aiError && <p className="mb-2 text-sm text-rose-600">{aiError}</p>}
+
+        {summary && (
+          <div className="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3.5">
+            <div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-indigo-700">
+              <SparkleIcon width={12} height={12} />
+              AI summary
+            </div>
+            <p className="text-[13.5px] leading-relaxed text-indigo-900">{summary}</p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-3" data-testid="message-list">
           {ticket.messages.map((message) => {
@@ -170,16 +222,26 @@ export function TicketDetail() {
             className="w-full resize-none rounded-lg border-0 px-2.5 py-2 text-[13.5px] focus:outline-none"
           />
           <div className="flex items-center justify-between px-1.5">
-            <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[12.5px] font-medium text-slate-500">
-              <input
-                type="checkbox"
-                checked={isPrivateNote}
-                onChange={(e) => setIsPrivateNote(e.target.checked)}
-                className="h-3 w-3 accent-amber-500"
-              />
-              <LockIcon width={12} height={12} />
-              Internal note
-            </label>
+            <div className="flex items-center gap-2">
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[12.5px] font-medium text-slate-500">
+                <input
+                  type="checkbox"
+                  checked={isPrivateNote}
+                  onChange={(e) => setIsPrivateNote(e.target.checked)}
+                  className="h-3 w-3 accent-amber-500"
+                />
+                <LockIcon width={12} height={12} />
+                Internal note
+              </label>
+              <button
+                onClick={handleSuggestReply}
+                disabled={suggesting}
+                className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[12.5px] font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <SparkleIcon width={12} height={12} />
+                {suggesting ? 'Drafting…' : 'Suggest reply'}
+              </button>
+            </div>
             <button
               onClick={sendReply}
               disabled={sending || !reply.trim()}

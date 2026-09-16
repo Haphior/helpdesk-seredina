@@ -8,7 +8,7 @@ deployment (single tenant) and as a multi-tenant cloud service — same codebase
 containers, both modes.
 
 Status: Phase 1 done, Phase 2 in progress (ticketing core, agent console, CMDB +
-agentless discovery, NOC/SOC alert ingestion) — see
+agentless discovery, NOC/SOC alert ingestion, AI copilot v1) — see
 [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Stack
@@ -20,9 +20,12 @@ agentless discovery, NOC/SOC alert ingestion) — see
   send; a plain interval loop for inbound email polling (see
   docs/adr/0004-email-channel.md for why that one isn't BullMQ too); AI jobs, SLA
   timers still to come
-- **AI**: pluggable provider adapters (Anthropic first) + a first-class MCP server so
-  external agents can operate on tickets/knowledge base under the same guardrails as
-  Seredina's own AI
+- **AI**: pluggable provider adapters (`packages/ai-adapters`; Anthropic implemented,
+  optional — unset `ANTHROPIC_API_KEY` and the feature 503s cleanly) power a v1
+  copilot (suggest-reply/summarize on a ticket, human approves — see
+  docs/adr/0005-ai-copilot.md); autonomous mode and a first-class MCP server so
+  external agents can operate on tickets/knowledge base under the same guardrails
+  are still Phase 3
 - **License**: AGPL-3.0-only — see [LICENSE](LICENSE)
 
 ## Repo layout

@@ -118,3 +118,11 @@ export function CloseIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function SparkleIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M10 3.5 11.4 8 16 9.5 11.4 11 10 15.5 8.6 11 4 9.5 8.6 8Z" />
+    </Icon>
+  );
+}

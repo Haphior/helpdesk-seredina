@@ -12,6 +12,7 @@ import teamRoutes from './modules/teams/routes';
 import assetRoutes from './modules/assets/routes';
 import discoveryRoutes from './modules/discovery/routes';
 import emailChannelRoutes from './modules/emailchannels/routes';
+import aiRoutes from './modules/ai/routes';
 
 initErrorTracking();
 
@@ -47,6 +48,7 @@ export function buildApp() {
   app.register(assetRoutes);
   app.register(discoveryRoutes);
   app.register(emailChannelRoutes);
+  app.register(aiRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

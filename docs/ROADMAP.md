@@ -221,7 +221,8 @@ rendered conversation thread, zero console errors.
   them yet).
 - Realtime updates over WebSockets via Redis pub/sub (the web app currently polls by
   navigation/refetch-after-mutation only — no live push).
-- AI copilot v1 (reply suggestions, summarization, auto-classify).
+- ~~AI copilot v1 (reply suggestions, summarization, auto-classify)~~ — reply
+  suggestions and summarization shipped (below); auto-classify still open.
 - Knowledge base CRUD + full-text search.
 - `SEREDINA_MODE=self_hosted` auto-bootstrapping a default tenant in the `migrate`
   container.
@@ -340,6 +341,39 @@ suite (9/9) still green. Remaining lower-priority items from the audit (CAPTCHA/
 protection on login+register, CI-gated dependency scanning, a real security-event
 audit log, tenant-slug enumeration on `/auth/register`) are deliberately deferred,
 not silently dropped — revisit once real users exist.
+
+**AI copilot v1 ✅ (this pass).** `packages/ai-adapters`: a provider-agnostic
+`LlmProviderAdapter` interface (`complete()`), `AnthropicAdapter` (real, using
+`@anthropic-ai/sdk`, model configurable via `ANTHROPIC_MODEL`, defaults to
+`claude-opus-5`), and a `TestProviderAdapter` double for tests — no route/service
+code depends on the Anthropic SDK directly. Two actions on a ticket, both
+copilot-only (suggest, human approves — never auto-sent, never auto-applied):
+`POST /tickets/:id/ai/suggest-reply` and `POST /tickets/:id/ai/summarize`, gated
+on `tickets:write`. Internal notes are unconditionally excluded from what the
+model sees (`modules/ai/service.ts`'s `loadTicketThread`) — a private note can
+contain things an agent never meant to end up in a customer-facing draft. See
+`docs/adr/0005-ai-copilot.md` for the full reasoning, including why extended
+thinking is explicitly disabled (this is a real-time UI action, not open-ended
+reasoning) and why copilot-only was a deliberate choice, not a v1 shortcut.
+
+`getAiAdapter()` returns `null` when `ANTHROPIC_API_KEY` is unset, same
+graceful-absence pattern as error tracking and email channels — routes turn that
+into a `503`, the web UI (`TicketDetail.tsx`'s new "Summarize"/"Suggest reply"
+buttons, sparkle icon) shows it inline without breaking the rest of the ticket
+page.
+
+**Verified**: 3 new automated tests against a real Postgres (no network —
+`TestProviderAdapter`) prove prompt construction and, specifically, that a
+distinctive marker string placed in an internal note never reaches the prompt
+sent to the provider, for both actions; plus a real `curl` against the running
+API confirming the `503` path, and a real browser run confirming the UI renders
+that error inline with zero console exceptions. **Not verified**: no Anthropic
+API key was available this session, so `AnthropicAdapter`'s actual request to
+the live Anthropic API has never been exercised — written correctly against the
+current SDK's types, not from training-data memory, but that's a different claim
+than "confirmed working." Documented plainly in the ADR rather than glossed
+over, same transparency standard as every other honestly-flagged gap in this
+project.
 
 ## Phase 2 — Configurability, SLA, and ITSM/ITAM breadth (GLPI parity)
 
