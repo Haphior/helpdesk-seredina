@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { CheckIcon } from './icons';
+import { Logo } from './Logo';
 
 export function AuthLayout({
   tagline,
@@ -18,7 +19,7 @@ export function AuthLayout({
           style={{ backgroundImage: 'radial-gradient(circle, #ffffff 1.4px, transparent 1.4px)', backgroundSize: '22px 22px' }}
         />
         <div className="relative flex items-center gap-2.5">
-          <div className="h-[30px] w-[30px] rounded-lg border border-white/30 bg-white/15" />
+          <Logo size={30} variant="mono" />
           <span className="text-[17px] font-extrabold tracking-tight text-white">Seredina</span>
         </div>
 

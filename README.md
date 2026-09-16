@@ -74,9 +74,9 @@ Database schema/migrations/seed now live in `packages/db`, not `apps/api` — ru
 See [docs/PRD.md](docs/PRD.md) for the consolidated product requirements
 (problem/ICP/scope/risks in one place), [docs/adr/](docs/adr/) for the reasoning
 behind the multi-tenancy, AI, and agentless-discovery architecture,
-[docs/PRODUCT.md](docs/PRODUCT.md) for the full ICP/pain/value detail, and
+[docs/PRODUCT.md](docs/PRODUCT.md) for the full ICP/pain/value detail,
 [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) for the UI's typography/color/
-component conventions.
+component conventions, and [docs/BRAND.md](docs/BRAND.md) for the name/logo/voice.
 
 Error tracking (`apps/api`, `apps/worker`, `apps/web`) is wired via the Sentry SDK
 but no-ops until `SENTRY_DSN`/`VITE_SENTRY_DSN` is set — point it at Sentry.io or a

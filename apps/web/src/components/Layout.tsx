@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { apiGet } from '../lib/api';
 import { Avatar } from './Avatar';
 import { AssetsIcon, KeyIcon, LogoutIcon, MailIcon, TicketIcon, UsersIcon } from './icons';
+import { Logo } from './Logo';
 
 interface Me {
   name: string;
@@ -35,7 +36,7 @@ export function Layout() {
       <aside className="flex w-[248px] flex-col border-r border-slate-200 bg-white">
         <div className="flex flex-col gap-0.5 border-b border-slate-100 px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <div className="h-[26px] w-[26px] flex-shrink-0 rounded-[7px] bg-gradient-to-br from-indigo-500 to-violet-500" />
+            <Logo size={26} />
             <span className="text-[15px] font-extrabold tracking-tight text-slate-900">Seredina</span>
           </div>
           <span className="truncate pl-[35px] text-xs text-slate-400">{me?.tenantName ?? ' '}</span>
