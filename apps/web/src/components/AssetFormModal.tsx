@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { apiGet } from '../lib/api';
 import { Modal } from './Modal';
-import type { Asset, AssetStatus, AssetType } from '../lib/types';
+import type { Asset, AssetModel, AssetStatus, AssetType } from '../lib/types';
 
 const ASSET_TYPES: AssetType[] = ['SERVER', 'WORKSTATION', 'NETWORK_DEVICE', 'PRINTER', 'MOBILE_DEVICE', 'OTHER'];
 const ASSET_STATUSES: AssetStatus[] = ['ACTIVE', 'INACTIVE', 'RETIRED'];
@@ -16,6 +17,7 @@ export interface AssetFormValues {
   manufacturer: string | null;
   model: string | null;
   operatingSystem: string | null;
+  modelId: string | null;
 }
 
 function toFormValues(asset?: Asset): AssetFormValues {
@@ -30,6 +32,7 @@ function toFormValues(asset?: Asset): AssetFormValues {
     manufacturer: asset?.manufacturer ?? null,
     model: asset?.model ?? null,
     operatingSystem: asset?.operatingSystem ?? null,
+    modelId: asset?.modelId ?? null,
   };
 }
 
@@ -45,9 +48,32 @@ export function AssetFormModal({
   const [values, setValues] = useState<AssetFormValues>(() => toFormValues(asset));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [catalogModels, setCatalogModels] = useState<AssetModel[]>([]);
+
+  useEffect(() => {
+    apiGet<{ assetModels: AssetModel[] }>('/asset-models')
+      .then((res) => setCatalogModels(res.assetModels))
+      .catch(() => {}); // catalog picker is a convenience; a load failure shouldn't block editing an asset by hand
+  }, []);
 
   function setField<K extends keyof AssetFormValues>(key: K, value: AssetFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
+  }
+
+  function pickCatalogModel(modelId: string) {
+    if (!modelId) {
+      setField('modelId', null);
+      return;
+    }
+    const picked = catalogModels.find((m) => m.id === modelId);
+    if (!picked) return;
+    setValues((v) => ({
+      ...v,
+      modelId: picked.id,
+      assetType: picked.assetType,
+      manufacturer: picked.manufacturer.name,
+      model: picked.name,
+    }));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -103,6 +129,24 @@ export function AssetFormModal({
           value={values.hostname ?? ''}
           onChange={(v) => setField('hostname', v || null)}
         />
+
+        {catalogModels.length > 0 && (
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium text-slate-700">Catalog model</span>
+            <select
+              value={values.modelId ?? ''}
+              onChange={(e) => pickCatalogModel(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+            >
+              <option value="">— pick to prefill manufacturer/model/type —</option>
+              {catalogModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.manufacturer.name} / {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <div className="grid grid-cols-2 gap-2">
           <TextField

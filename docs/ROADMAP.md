@@ -447,15 +447,24 @@ end: created a TEXT/SELECT/required-BOOLEAN field as admin, confirmed all three
 render on a real ticket's details panel, edited each one, confirmed the values
 survive a full page reload — a real round trip, not a mocked assertion.
 
-**Hardware/equipment catalog (not yet built).** A `Manufacturer` + `AssetModel`
-reference catalog (manufacturer, asset type, name, specs), decoupled from `Asset`
-instances — many assets share one model. `Asset.modelId` becomes an optional FK;
-picking a model in the asset form prefills manufacturer/type/spec fields instead
-of re-typing them per device, which is most of what makes manual inventory entry
-tedious today. Self-hosted-friendly by design: the catalog is tenant-curated
-(add a model the first time a device needs one, reuse it after), not backed by an
-external device-database API — consistent with not adding a network dependency
-self-hosted operators would otherwise be stuck depending on.
+**Hardware/equipment catalog ✅ (this pass).** `Manufacturer` + `AssetModel`
+reference tables, decoupled from `Asset` instances — many assets share one
+model. `Asset.modelId` is an optional FK (`SET NULL` on delete, so cleaning up
+the catalog never touches the asset itself); picking a model in the "New asset"
+form prefills manufacturer/type fields instead of re-typing them per device,
+which was most of what made manual inventory entry tedious. Tenant-curated (a
+new "Equipment Catalog" settings page, `assets:manage`-gated, can create a
+brand-new manufacturer inline while adding a model), not backed by an external
+device-database API — no network dependency a self-hosted operator would
+otherwise be stuck depending on. See `docs/adr/0007-equipment-catalog.md`.
+
+Verified: 3 automated tests against a real Postgres (model creation defaults, a
+clean duplicate-name error, and specifically that deleting a manufacturer
+cascades to its models and `SET NULL`s any linked asset without touching the
+asset itself), full suite 18/18 green. Browser-verified end to end: created a
+manufacturer + model in one step, picked it from a real asset's form, confirmed
+via a direct API read that the asset's `modelId`/`catalogModel` link and its
+prefilled fields were all correct.
 
 **IT processes / procedures (not yet built) — resolves the "Governance Helping"
 item below**, now that there's concrete direction instead of GLPI's broad label:

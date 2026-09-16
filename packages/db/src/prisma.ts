@@ -38,6 +38,8 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   DiscoveryJob: 'tenantId',
   EmailChannel: 'tenantId',
   CustomFieldDefinition: 'tenantId',
+  Manufacturer: 'tenantId',
+  AssetModel: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

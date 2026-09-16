@@ -109,6 +109,20 @@ export interface Asset {
   lastSeenAt: string | null;
   createdAt: string;
   updatedAt: string;
+  modelId: string | null;
+  catalogModel: AssetModel | null;
+}
+
+export interface Manufacturer {
+  id: string;
+  name: string;
+}
+
+export interface AssetModel {
+  id: string;
+  name: string;
+  assetType: AssetType;
+  manufacturer: Manufacturer;
 }
 
 export interface AssetSummary {

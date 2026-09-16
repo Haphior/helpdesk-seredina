@@ -11,6 +11,9 @@ export interface AssetInput {
   manufacturer?: string | null;
   model?: string | null;
   operatingSystem?: string | null;
+  // Optional link into the equipment catalog -- see docs/adr/0007-equipment-catalog.md.
+  // Independent of the free-text manufacturer/model fields above.
+  modelId?: string | null;
 }
 
 /** Hand-entered assets, as opposed to the agentless scanner (apps/worker) -- discoverySource stays MANUAL. */
@@ -37,14 +40,22 @@ export async function deleteAsset(tenantId: string, id: string) {
 }
 
 export async function listAssets(tenantId: string) {
-  return withTenantTx(prisma, tenantId, (tx) => tx.asset.findMany({ orderBy: { name: 'asc' } }));
+  return withTenantTx(prisma, tenantId, (tx) =>
+    tx.asset.findMany({
+      orderBy: { name: 'asc' },
+      include: { catalogModel: { include: { manufacturer: true } } },
+    }),
+  );
 }
 
 export async function getAsset(tenantId: string, id: string) {
   return withTenantTx(prisma, tenantId, async (tx) => {
     const asset = await tx.asset.findUnique({
       where: { id },
-      include: { tickets: { include: { ticket: { select: { id: true, number: true, subject: true } } } } },
+      include: {
+        tickets: { include: { ticket: { select: { id: true, number: true, subject: true } } } },
+        catalogModel: { include: { manufacturer: true } },
+      },
     });
     if (!asset) throw new Error('asset not found');
     return asset;

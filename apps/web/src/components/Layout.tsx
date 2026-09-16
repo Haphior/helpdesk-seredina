@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { apiGet } from '../lib/api';
 import { Avatar } from './Avatar';
-import { AssetsIcon, KeyIcon, LogoutIcon, MailIcon, SlidersIcon, TicketIcon, UsersIcon } from './icons';
+import { AssetsIcon, KeyIcon, LayersIcon, LogoutIcon, MailIcon, SlidersIcon, TicketIcon, UsersIcon } from './icons';
 import { Logo } from './Logo';
 
 interface Me {
@@ -16,6 +16,7 @@ interface Me {
 const navItems = [
   { to: '/tickets', label: 'Tickets', icon: TicketIcon },
   { to: '/assets', label: 'Assets', icon: AssetsIcon },
+  { to: '/equipment-catalog', label: 'Equipment Catalog', icon: LayersIcon, permission: 'assets:manage' as const },
   { to: '/api-keys', label: 'API Keys', icon: KeyIcon },
   { to: '/users', label: 'Users', icon: UsersIcon, permission: 'users:manage' as const },
   { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' as const },

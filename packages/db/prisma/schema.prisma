@@ -43,6 +43,8 @@ model Tenant {
   discoveryJobs   DiscoveryJob[]
   emailChannels   EmailChannel[]
   customFieldDefinitions CustomFieldDefinition[]
+  manufacturers   Manufacturer[]
+  assetModels     AssetModel[]
 
   @@map("tenants")
 }
@@ -370,6 +372,15 @@ model Asset {
   createdAt       DateTime             @default(now()) @map("created_at")
   updatedAt       DateTime             @updatedAt @map("updated_at")
 
+  // Optional link into the equipment catalog (docs/adr/0007-equipment-catalog.md).
+  // Deliberately separate from the `manufacturer`/`model` free-text columns above,
+  // which agentless discovery populates from whatever a device's SNMP sysDescr
+  // says -- text that can't be constrained to a curated catalog. This FK is for
+  // manually-entered/curated assets only; named `catalogModel` (not `model`) to
+  // avoid colliding with the existing free-text column.
+  modelId      String?     @map("model_id") @db.Uuid
+  catalogModel AssetModel? @relation(fields: [modelId], references: [id])
+
   tickets TicketAsset[]
 
   // Re-scanning the same range upserts by (tenantId, ipAddress) rather than
@@ -377,6 +388,44 @@ model Asset {
   // an oversight.
   @@unique([tenantId, ipAddress])
   @@map("assets")
+}
+
+// Equipment catalog: a curated reference list, decoupled from Asset instances --
+// many assets share one model. Tenant-curated (create one the first time a device
+// needs it), not backed by an external device-database API -- no network
+// dependency self-hosted operators would otherwise be stuck depending on. See
+// docs/adr/0007-equipment-catalog.md.
+model Manufacturer {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  models AssetModel[]
+
+  @@unique([tenantId, name])
+  @@map("manufacturers")
+}
+
+model AssetModel {
+  id             String       @id @default(uuid()) @db.Uuid
+  tenantId       String       @map("tenant_id") @db.Uuid
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  manufacturerId String       @map("manufacturer_id") @db.Uuid
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  name           String
+  // Default asset type for a device of this model -- prefills the Asset form's
+  // Type field when this model is picked; the asset's own `assetType` stays a
+  // plain column the user can still override afterward, never derived live from
+  // this at read time.
+  assetType      AssetType    @default(OTHER) @map("asset_type")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  assets Asset[]
+
+  @@unique([tenantId, manufacturerId, name])
+  @@map("asset_models")
 }
 
 // Lightweight CMDB linkage: "this ticket is about that asset." Deliberately just an

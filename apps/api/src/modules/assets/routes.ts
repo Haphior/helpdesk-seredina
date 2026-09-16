@@ -17,6 +17,7 @@ const assetFieldsSchema = {
   manufacturer: z.string().nullish(),
   model: z.string().nullish(),
   operatingSystem: z.string().nullish(),
+  modelId: z.string().uuid().nullish(),
 };
 
 const createAssetSchema = z.object({

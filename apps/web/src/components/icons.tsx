@@ -119,6 +119,15 @@ export function CloseIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function LayersIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M10 3 17 7l-7 4-7-4Z" />
+      <path d="M3 11l7 4 7-4" />
+    </Icon>
+  );
+}
+
 export function SlidersIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

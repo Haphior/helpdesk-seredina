@@ -14,6 +14,7 @@ import discoveryRoutes from './modules/discovery/routes';
 import emailChannelRoutes from './modules/emailchannels/routes';
 import aiRoutes from './modules/ai/routes';
 import customFieldRoutes from './modules/customfields/routes';
+import assetCatalogRoutes from './modules/assetcatalog/routes';
 
 initErrorTracking();
 
@@ -51,6 +52,7 @@ export function buildApp() {
   app.register(emailChannelRoutes);
   app.register(aiRoutes);
   app.register(customFieldRoutes);
+  app.register(assetCatalogRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 
