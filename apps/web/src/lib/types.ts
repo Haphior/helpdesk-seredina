@@ -174,6 +174,21 @@ export interface EmailChannel {
   createdAt: string;
 }
 
+export interface MacroActions {
+  setStatusId?: string;
+  setPriority?: TicketPriority;
+  setTeamId?: string | null;
+  setAssigneeId?: string | null;
+  addReply?: { body: string; isPrivateNote: boolean };
+}
+
+export interface Macro {
+  id: string;
+  name: string;
+  actions: MacroActions;
+  createdAt: string;
+}
+
 export type WebhookEvent = 'ticket.created' | 'ticket.updated' | 'message.created';
 
 export interface Webhook {

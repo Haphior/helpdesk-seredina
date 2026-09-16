@@ -4,6 +4,7 @@ import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type {
   AssetSummary,
   CustomFieldDefinition,
+  Macro,
   Team,
   TicketDetail as TicketDetailType,
   TicketPriority,
@@ -12,7 +13,7 @@ import type {
 } from '../lib/types';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
-import { BackArrowIcon, ChevronDownIcon, LockIcon, SparkleIcon } from '../components/icons';
+import { BackArrowIcon, BoltIcon, ChevronDownIcon, LockIcon, SparkleIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
@@ -26,6 +27,8 @@ export function TicketDetail() {
   const [allAssets, setAllAssets] = useState<AssetSummary[]>([]);
   const [assetToLink, setAssetToLink] = useState('');
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
+  const [macros, setMacros] = useState<Macro[]>([]);
+  const [applyingMacroId, setApplyingMacroId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [reply, setReply] = useState('');
@@ -41,13 +44,14 @@ export function TicketDetail() {
     if (!id) return;
     setError(null);
     try {
-      const [t, s, tm, u, a, cf] = await Promise.all([
+      const [t, s, tm, u, a, cf, mc] = await Promise.all([
         apiGet<TicketDetailType>(`/tickets/${id}`),
         apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses'),
         apiGet<{ teams: Team[] }>('/teams'),
         apiGet<{ users: UserSummary[] }>('/users'),
         apiGet<{ assets: AssetSummary[] }>('/assets'),
         apiGet<{ customFields: CustomFieldDefinition[] }>('/custom-fields'),
+        apiGet<{ macros: Macro[] }>('/macros'),
       ]);
       setTicket(t);
       setStatuses(s.statuses);
@@ -55,6 +59,7 @@ export function TicketDetail() {
       setUsers(u.users);
       setAllAssets(a.assets);
       setCustomFieldDefs(cf.customFields);
+      setMacros(mc.macros);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load ticket');
     }
@@ -137,6 +142,20 @@ export function TicketDetail() {
     }
   }
 
+  async function handleApplyMacro(macroId: string) {
+    if (!id || !macroId) return;
+    setApplyingMacroId(macroId);
+    setError(null);
+    try {
+      await apiPost(`/tickets/${id}/apply-macro`, { macroId });
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to apply macro');
+    } finally {
+      setApplyingMacroId(null);
+    }
+  }
+
   if (error && !ticket) return <div className="p-6 text-sm text-rose-600">{error}</div>;
   if (!ticket) return <div className="p-6 text-sm text-slate-500">Loading…</div>;
 
@@ -160,14 +179,37 @@ export function TicketDetail() {
             </Badge>
             <Badge tone={ticket.channel === 'alert' ? 'rose' : 'slate'}>{ticket.channel}</Badge>
             {ticket.externalId && <span className="text-xs text-slate-400">ref: {ticket.externalId}</span>}
-            <button
-              onClick={handleSummarize}
-              disabled={summarizing}
-              className="ml-auto flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
-            >
-              <SparkleIcon width={12} height={12} />
-              {summarizing ? 'Summarizing…' : 'Summarize'}
-            </button>
+
+            <div className="ml-auto flex items-center gap-2">
+              {macros.length > 0 && (
+                <div className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1">
+                  <BoltIcon width={12} height={12} className="text-slate-400" />
+                  <select
+                    value=""
+                    disabled={applyingMacroId !== null}
+                    onChange={(e) => handleApplyMacro(e.target.value)}
+                    className="bg-transparent text-xs font-semibold text-slate-500 focus:outline-none"
+                  >
+                    <option value="" disabled>
+                      {applyingMacroId ? 'Applying…' : 'Run macro…'}
+                    </option>
+                    {macros.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <button
+                onClick={handleSummarize}
+                disabled={summarizing}
+                className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <SparkleIcon width={12} height={12} />
+                {summarizing ? 'Summarizing…' : 'Summarize'}
+              </button>
+            </div>
           </div>
         </div>
 

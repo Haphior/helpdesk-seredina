@@ -17,6 +17,7 @@ import customFieldRoutes from './modules/customfields/routes';
 import assetCatalogRoutes from './modules/assetcatalog/routes';
 import processRoutes from './modules/processes/routes';
 import webhookRoutes from './modules/webhooks/routes';
+import macroRoutes from './modules/macros/routes';
 
 initErrorTracking();
 
@@ -57,6 +58,7 @@ export function buildApp() {
   app.register(assetCatalogRoutes);
   app.register(processRoutes);
   app.register(webhookRoutes);
+  app.register(macroRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

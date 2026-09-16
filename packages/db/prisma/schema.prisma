@@ -50,6 +50,7 @@ model Tenant {
   processInstances      ProcessInstance[]
   processStepInstances  ProcessStepInstance[]
   webhooks              Webhook[]
+  macros                Macro[]
 
   @@map("tenants")
 }
@@ -591,4 +592,23 @@ model Webhook {
   lastDeliveryStatus String?   @map("last_delivery_status") // 'success' | 'failed'
 
   @@map("webhooks")
+}
+
+// A saved bundle of actions applied to a ticket in one click -- deliberately a
+// TYPED action union stored as jsonb (the fixed shape below), never arbitrary
+// code, per the original roadmap note. Applying a macro reuses updateTicket/
+// addMessage (modules/tickets/service.ts) rather than duplicating their logic,
+// which means a macro's effects get webhook dispatch, resolvedAt/closedAt
+// stamping, and everything else those functions already do, for free. See
+// docs/adr/0010-macros.md.
+model Macro {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  actions   Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, name])
+  @@map("macros")
 }

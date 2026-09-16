@@ -5,6 +5,7 @@ import { apiGet } from '../lib/api';
 import { Avatar } from './Avatar';
 import {
   AssetsIcon,
+  BoltIcon,
   ChecklistIcon,
   KeyIcon,
   LayersIcon,
@@ -35,6 +36,7 @@ const navItems = [
   { to: '/custom-fields', label: 'Custom Fields', icon: SlidersIcon, permission: 'tickets:manage_all' as const },
   { to: '/process-templates', label: 'Process Templates', icon: ChecklistIcon, permission: 'tickets:manage_all' as const },
   { to: '/webhooks', label: 'Webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' as const },
+  { to: '/macros', label: 'Macros', icon: BoltIcon, permission: 'tickets:manage_all' as const },
 ];
 
 export function Layout() {

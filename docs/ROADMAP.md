@@ -511,7 +511,28 @@ a legitimate but *separate* future decision, not the default extensibility path 
 flagging this as a recommendation to confirm, not a decision already made
 unilaterally.
 
-- `Macro` with a typed action union (not arbitrary code).
+**Macros ✅ (this pass)** — `Macro` (name, a typed `actions` union as jsonb: optional
+`setStatusId`/`setPriority`/`setTeamId`/`setAssigneeId`/`addReply`, validated to
+require at least one action) applied instantly to a single ticket via a "Run
+macro…" dropdown in the ticket header. Deliberately not arbitrary code — same
+reasoning as the plugin/extension recommendation above, and see
+`docs/adr/0010-macros.md`. `applyMacro` calls the existing `updateTicket`/
+`addMessage` service functions rather than duplicating their logic, so a macro
+automatically inherits webhook dispatch, timestamp stamping, and internal-note
+handling for free. Same read/write permission split caught and fixed on custom
+fields and process templates: listing/applying macros is `tickets:write` (any
+agent working a ticket), defining/deleting one is `tickets:manage_all`
+(tenant-wide configuration) — this exact mismatch was over-gated on the first
+pass here too and fixed before shipping.
+
+Verified: 4 automated tests (rejection of an empty action set, real
+`updateTicket`/`addMessage` integration, not-found handling), full suite
+31/31 green. Browser-verified end to end: created a macro setting priority to
+URGENT and adding a canned reply, opened a ticket that was NOT yet urgent,
+applied the macro via the dropdown, and confirmed both the priority badge
+updated to URGENT and the canned reply appeared in the thread — zero console
+errors.
+
 - `SlaPolicy` + `BusinessHours` + breach escalations.
 
 **Outbound webhooks ✅ (this pass)** — the opposite direction from `POST

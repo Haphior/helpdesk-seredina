@@ -119,6 +119,14 @@ export function CloseIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function BoltIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M11 3 5.5 11h4L9 17l6.5-9h-4L11 3Z" />
+    </Icon>
+  );
+}
+
 export function WebhookIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
