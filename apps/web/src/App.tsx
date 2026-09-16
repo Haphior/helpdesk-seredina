@@ -10,6 +10,7 @@ import { ApiKeys } from './pages/ApiKeys';
 import { Assets } from './pages/Assets';
 import { Users } from './pages/Users';
 import { EmailChannels } from './pages/EmailChannels';
+import { CustomFields } from './pages/CustomFields';
 
 export function App() {
   return (
@@ -27,6 +28,7 @@ export function App() {
             <Route path="/api-keys" element={<ApiKeys />} />
             <Route path="/users" element={<Users />} />
             <Route path="/email-channels" element={<EmailChannels />} />
+            <Route path="/custom-fields" element={<CustomFields />} />
           </Route>
         </Route>
 

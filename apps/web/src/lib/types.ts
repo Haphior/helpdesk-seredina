@@ -73,6 +73,19 @@ export interface Ticket {
   updatedAt: string;
   resolvedAt: string | null;
   closedAt: string | null;
+  customFields: Record<string, unknown> | null;
+}
+
+export type CustomFieldType = 'TEXT' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'SELECT';
+
+export interface CustomFieldDefinition {
+  id: string;
+  key: string;
+  label: string;
+  fieldType: CustomFieldType;
+  options: string[];
+  required: boolean;
+  sortOrder: number;
 }
 
 export type AssetType = 'SERVER' | 'WORKSTATION' | 'NETWORK_DEVICE' | 'PRINTER' | 'MOBILE_DEVICE' | 'OTHER';

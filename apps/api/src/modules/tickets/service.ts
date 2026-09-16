@@ -237,6 +237,9 @@ export interface UpdateTicketInput {
   assigneeId?: string | null;
   priority?: TicketPriority;
   teamId?: string | null;
+  // Merged into the existing jsonb, never replaced -- a PATCH that only sets one
+  // custom field shouldn't silently blank out every other one already stored.
+  customFields?: Record<string, unknown>;
 }
 
 export async function updateTicket(tenantId: string, ticketId: string, input: UpdateTicketInput) {
@@ -248,6 +251,9 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
       priority: input.priority,
       assignee: input.assigneeId === undefined ? undefined : input.assigneeId ? { connect: { id: input.assigneeId } } : { disconnect: true },
       team: input.teamId === undefined ? undefined : input.teamId ? { connect: { id: input.teamId } } : { disconnect: true },
+      customFields: input.customFields
+        ? ({ ...((ticket.customFields as Record<string, unknown> | null) ?? {}), ...input.customFields } as Prisma.InputJsonValue)
+        : undefined,
     };
 
     if (input.statusId) {

@@ -426,11 +426,27 @@ again (confirmed a genuinely new ticket, not a reopen), and confirmed the synthe
 contact was reused correctly across both of a source's tickets. Browser-verified the
 channel badges and `ref:` display render correctly with zero console errors.
 
-- **Configuration Management (CMDB)**: `CustomFieldDefinition` + hybrid values
-  (jsonb for the common case, a narrow typed mirror table only for fields explicitly
-  marked filterable — not full EAV) + `TicketForm`, extended to `Asset` too (custom
-  fields per asset type). Tenant-defined `TicketStatus` labels already ship (Phase
-  1); this generalizes the same pattern.
+**Configuration Management: custom fields ✅ (this pass).** `CustomFieldDefinition`
+(tenant-scoped, 5 types: TEXT/NUMBER/BOOLEAN/DATE/SELECT) + a single
+`Ticket.customFields Json?` column — jsonb only, no typed mirror table yet (see
+`docs/adr/0006-custom-fields.md` for why that's a deliberate scope cut: nothing
+needs to filter/report on a custom field's value until Reporting v1 exists, so
+building the filtering-optimized half now would be speculative). `PATCH
+/tickets/:id` merges into the existing `customFields`, never replaces it
+wholesale — the kind of bug that looks fine with one field and breaks with two,
+covered by an automated test specifically for that. Reading definitions is
+`tickets:read` (every agent needs to see/fill them in); defining them is
+`tickets:manage_all` (admin/team_lead, a tenant-wide configuration concern).
+`TicketForm` (drag-and-drop field layout) and extending custom fields to `Asset`
+are still open — this pass is fields + values only, not layout.
+
+Verified: 3 new automated tests against a real Postgres (definition defaults,
+clean duplicate-key error, and specifically the merge-not-replace behavior
+across sequential patches), full suite 15/15 green. Browser-verified end to
+end: created a TEXT/SELECT/required-BOOLEAN field as admin, confirmed all three
+render on a real ticket's details panel, edited each one, confirmed the values
+survive a full page reload — a real round trip, not a mocked assertion.
+
 - `Macro` with a typed action union (not arbitrary code).
 - `SlaPolicy` + `BusinessHours` + breach escalations.
 - Outbound `Webhook`s (doubles as groundwork for Phase 3's "open framework") — note

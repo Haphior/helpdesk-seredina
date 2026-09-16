@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type {
   AssetSummary,
+  CustomFieldDefinition,
   Team,
   TicketDetail as TicketDetailType,
   TicketPriority,
@@ -24,6 +25,7 @@ export function TicketDetail() {
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [allAssets, setAllAssets] = useState<AssetSummary[]>([]);
   const [assetToLink, setAssetToLink] = useState('');
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [reply, setReply] = useState('');
@@ -39,18 +41,20 @@ export function TicketDetail() {
     if (!id) return;
     setError(null);
     try {
-      const [t, s, tm, u, a] = await Promise.all([
+      const [t, s, tm, u, a, cf] = await Promise.all([
         apiGet<TicketDetailType>(`/tickets/${id}`),
         apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses'),
         apiGet<{ teams: Team[] }>('/teams'),
         apiGet<{ users: UserSummary[] }>('/users'),
         apiGet<{ assets: AssetSummary[] }>('/assets'),
+        apiGet<{ customFields: CustomFieldDefinition[] }>('/custom-fields'),
       ]);
       setTicket(t);
       setStatuses(s.statuses);
       setTeams(tm.teams);
       setUsers(u.users);
       setAllAssets(a.assets);
+      setCustomFieldDefs(cf.customFields);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load ticket');
     }
@@ -300,6 +304,24 @@ export function TicketDetail() {
           </PropertyRow>
         </div>
 
+        {customFieldDefs.length > 0 && (
+          <>
+            <div className="my-[18px] h-px bg-slate-100" />
+            <div className="flex flex-col gap-3.5">
+              {customFieldDefs.map((def) => (
+                <PropertyRow key={def.id} label={def.label}>
+                  <CustomFieldControl
+                    key={`${def.id}-${ticket.updatedAt}`}
+                    def={def}
+                    value={ticket.customFields?.[def.key]}
+                    onChange={(value) => patch({ customFields: { [def.key]: value } })}
+                  />
+                </PropertyRow>
+              ))}
+            </div>
+          </>
+        )}
+
         <div className="my-[18px] h-px bg-slate-100" />
 
         <FieldGroup label="Contact">
@@ -362,6 +384,73 @@ function PropertyRow({ label, children }: { label: string; children: ReactNode }
       <span className="text-[13px] text-slate-500">{label}</span>
       {children}
     </div>
+  );
+}
+
+function CustomFieldControl({
+  def,
+  value,
+  onChange,
+}: {
+  def: CustomFieldDefinition;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const inputClass = 'w-32 rounded-lg bg-slate-50 px-2.5 py-1.5 text-right text-[13px] font-medium text-slate-700 hover:bg-slate-100';
+
+  if (def.fieldType === 'BOOLEAN') {
+    return (
+      <input
+        type="checkbox"
+        checked={Boolean(value)}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 accent-indigo-600"
+      />
+    );
+  }
+
+  if (def.fieldType === 'SELECT') {
+    return (
+      <PropertySelect value={typeof value === 'string' ? value : ''} onChange={onChange}>
+        <option value="">—</option>
+        {def.options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </PropertySelect>
+    );
+  }
+
+  if (def.fieldType === 'NUMBER') {
+    return (
+      <input
+        type="number"
+        defaultValue={typeof value === 'number' ? value : ''}
+        onBlur={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
+        className={inputClass}
+      />
+    );
+  }
+
+  if (def.fieldType === 'DATE') {
+    return (
+      <input
+        type="date"
+        defaultValue={typeof value === 'string' ? value : ''}
+        onBlur={(e) => onChange(e.target.value || null)}
+        className={inputClass}
+      />
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      defaultValue={typeof value === 'string' ? value : ''}
+      onBlur={(e) => onChange(e.target.value || null)}
+      className={inputClass}
+    />
   );
 }
 

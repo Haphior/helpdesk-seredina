@@ -26,7 +26,7 @@ GRANT SELECT ON permissions TO app_tenant;
 GRANT SELECT, INSERT, UPDATE, DELETE ON
   tenants, roles, role_permissions, users,
   teams, contacts, ticket_statuses, tickets, messages, api_keys,
-  assets, ticket_assets, discovery_jobs, email_channels
+  assets, ticket_assets, discovery_jobs, email_channels, custom_field_definitions
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -50,7 +50,8 @@ BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'roles', 'role_permissions', 'users',
     'teams', 'contacts', 'ticket_statuses', 'tickets', 'messages', 'api_keys',
-    'assets', 'ticket_assets', 'discovery_jobs', 'email_channels'
+    'assets', 'ticket_assets', 'discovery_jobs', 'email_channels',
+    'custom_field_definitions'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);

@@ -33,6 +33,7 @@ const updateTicketSchema = z.object({
   assigneeId: z.string().uuid().nullable().optional(),
   priority: PRIORITY.optional(),
   teamId: z.string().uuid().nullable().optional(),
+  customFields: z.record(z.string(), z.unknown()).optional(),
 });
 
 const linkAssetSchema = z.object({ assetId: z.string().uuid() });

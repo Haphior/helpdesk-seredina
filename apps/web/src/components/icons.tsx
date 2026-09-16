@@ -119,6 +119,16 @@ export function CloseIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function SlidersIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 6h7M14 6h2M4 14h2M9 14h7" />
+      <circle cx="11" cy="6" r="2" />
+      <circle cx="6" cy="14" r="2" />
+    </Icon>
+  );
+}
+
 export function SparkleIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

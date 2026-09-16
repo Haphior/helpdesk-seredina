@@ -42,6 +42,7 @@ model Tenant {
   ticketAssets    TicketAsset[]
   discoveryJobs   DiscoveryJob[]
   emailChannels   EmailChannel[]
+  customFieldDefinitions CustomFieldDefinition[]
 
   @@map("tenants")
 }
@@ -199,12 +200,47 @@ model Ticket {
   resolvedAt DateTime?      @map("resolved_at")
   closedAt   DateTime?      @map("closed_at")
 
+  // Tenant-defined field values, keyed by CustomFieldDefinition.key. jsonb only --
+  // no typed mirror table yet (see docs/adr/0006-custom-fields.md for why that's a
+  // deliberate v1 scope cut, not an oversight). A key with no matching
+  // CustomFieldDefinition row (the definition was since deleted) is simply never
+  // rendered -- the value is orphaned but harmless, not cleaned up automatically.
+  customFields Json? @map("custom_fields")
+
   messages Message[]
   assets   TicketAsset[]
 
   @@unique([tenantId, number])
   @@index([tenantId, channel, externalId])
   @@map("tickets")
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  DATE
+  SELECT
+}
+
+// Tenant-defined ticket fields beyond the fixed schema (status/priority/team/...).
+// `options` is only meaningful for SELECT (empty otherwise) -- enforced at the
+// service layer, not the DB, same trade-off as everywhere else custom-shaped input
+// is validated with zod rather than a CHECK constraint.
+model CustomFieldDefinition {
+  id        String          @id @default(uuid()) @db.Uuid
+  tenantId  String          @map("tenant_id") @db.Uuid
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key       String
+  label     String
+  fieldType CustomFieldType @map("field_type")
+  options   String[]        @default([])
+  required  Boolean         @default(false)
+  sortOrder Int             @default(0) @map("sort_order")
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  @@unique([tenantId, key])
+  @@map("custom_field_definitions")
 }
 
 enum MessageAuthorType {
