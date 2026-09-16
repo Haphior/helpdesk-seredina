@@ -1,15 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!--
+    Dedicated micro-glyph, not a shrunk copy of Logo.tsx's mark. A favicon is
+    always tiny, and at that size a dominant, unmistakably round center plus
+    three short "petal" stubs reads correctly, where the full mark's long thin
+    arcs collapse into an unreadable smudge. Same three way asymmetry as the
+    full mark, unequal petal lengths and widths, just built for the size it is
+    actually shown at.
+  -->
   <defs>
     <linearGradient id="seredina-core" x1="70" y1="70" x2="130" y2="130">
       <stop offset="0" stop-color="#6366f1" />
       <stop offset="1" stop-color="#8b5cf6" />
     </linearGradient>
   </defs>
-  <path d="M100 100 C 60 88, 34 50, 40 14" stroke="#c7d2fe" stroke-width="16" stroke-linecap="round" fill="none" />
-  <path d="M100 100 C 130 80, 168 84, 182 118" stroke="#a5b4fc" stroke-width="16" stroke-linecap="round" fill="none" />
-  <path d="M100 100 C 84 138, 96 172, 132 186" stroke="#ddd6fe" stroke-width="16" stroke-linecap="round" fill="none" />
-  <circle cx="40" cy="14" r="18" fill="#818cf8" />
-  <circle cx="182" cy="118" r="20" fill="#a78bfa" />
-  <circle cx="132" cy="186" r="17" fill="#c4b5fd" />
-  <circle cx="100" cy="100" r="42" fill="url(#seredina-core)" />
+  <path d="M71 59 L 55 36" stroke="#6366f1" stroke-width="24" stroke-linecap="round" fill="none" />
+  <path d="M149 111 L 176 117" stroke="#4338ca" stroke-width="24" stroke-linecap="round" fill="none" />
+  <path d="M117 147 L 127 173" stroke="#818cf8" stroke-width="24" stroke-linecap="round" fill="none" />
+  <circle cx="100" cy="100" r="55" fill="url(#seredina-core)" />
 </svg>
