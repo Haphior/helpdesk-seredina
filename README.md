@@ -72,4 +72,14 @@ Database schema/migrations/seed now live in `packages/db`, not `apps/api` — ru
 `npm run prisma:generate|prisma:migrate|prisma:deploy|prisma:seed --workspace=@seredina/db`.
 
 See [docs/adr/](docs/adr/) for the reasoning behind the multi-tenancy, AI, and
-agentless-discovery architecture.
+agentless-discovery architecture, [docs/PRODUCT.md](docs/PRODUCT.md) for who this is
+for and why, and [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) for the UI's
+typography/color/component conventions.
+
+## Contributing
+
+Commit small and often: one focused change per commit (a schema migration, a
+route, a UI pass on one screen) rather than batching a whole feature into one
+commit. Easier to review, `git bisect`, and revert. This wasn't followed
+consistently early on (Phase 0/1 commits are large, feature-sized) — new work
+should do better, not match that precedent.
