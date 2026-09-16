@@ -10,7 +10,9 @@ COPY apps/web apps/web
 # container runtime -- self-hosted operators changing the API's public URL need to
 # rebuild this image (docker compose build web), not just restart the container.
 ARG VITE_API_URL
+ARG VITE_SENTRY_DSN
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
 RUN npm run build --workspace=@seredina/web
 
 FROM nginx:1.27-alpine

@@ -48,6 +48,7 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
       SEREDINA_MODE: ${SEREDINA_MODE:-self_hosted}
       CORS_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     ports:
       - '${API_PORT:-4000}:4000'
 
@@ -70,6 +71,7 @@ services:
       REDIS_URL: redis://localhost:${REDIS_PORT:-6379}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
       EMAIL_POLL_INTERVAL_MS: ${EMAIL_POLL_INTERVAL_MS:-30000}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     # Agentless discovery (see docs/adr/0002-agentless-discovery.md) needs to reach
     # whatever LAN an operator asks it to scan -- host networking is the pragmatic
     # default for a self-hosted deployment. Linux-only; on Docker Desktop
@@ -86,6 +88,7 @@ services:
         # end user's BROWSER, not from inside the compose network (so not
         # `http://api:4000`), which is why it defaults to the host-mapped API_PORT.
         VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
     ports:
       - '${WEB_PORT:-8080}:80'
 

@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@sentry/node": "^10.74.0",
     "@seredina/db": "*",
     "@seredina/shared": "*",
     "bullmq": "^6.3.6",

@@ -1,5 +1,6 @@
 import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
+import { attachErrorTracking, initErrorTracking } from './lib/errorTracking';
 import jwtPlugin from './plugins/jwt';
 import apiKeyAuthPlugin from './plugins/apiKeyAuth';
 import authRoutes from './modules/auth/routes';
@@ -10,8 +11,11 @@ import assetRoutes from './modules/assets/routes';
 import discoveryRoutes from './modules/discovery/routes';
 import emailChannelRoutes from './modules/emailchannels/routes';
 
+initErrorTracking();
+
 export function buildApp() {
   const app = Fastify({ logger: true });
+  attachErrorTracking(app);
 
   // Auth here is a Bearer token (JWT or ApiKey), never a cookie, so there's no CSRF
   // exposure to reflecting the origin -- CORS_ORIGIN lets an operator lock this down

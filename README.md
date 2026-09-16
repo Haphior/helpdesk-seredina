@@ -78,6 +78,11 @@ behind the multi-tenancy, AI, and agentless-discovery architecture,
 [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) for the UI's typography/color/
 component conventions.
 
+Error tracking (`apps/api`, `apps/worker`, `apps/web`) is wired via the Sentry SDK
+but no-ops until `SENTRY_DSN`/`VITE_SENTRY_DSN` is set — point it at Sentry.io or a
+self-hosted [GlitchTip](https://glitchtip.com/) instance (protocol-compatible),
+whichever fits your deployment.
+
 ## Contributing
 
 Commit small and often: one focused change per commit (a schema migration, a

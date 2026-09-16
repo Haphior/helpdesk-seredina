@@ -9,6 +9,9 @@ import {
 import { runDiscoveryJob } from './discovery/processor';
 import { pollActiveEmailChannels } from './email/poll';
 import { sendEmailMessage } from './email/send';
+import { captureError, initErrorTracking } from './lib/errorTracking';
+
+initErrorTracking();
 
 const redisUrl = process.env.REDIS_URL;
 if (!redisUrl) {
@@ -37,8 +40,14 @@ const emailSendWorker = new Worker<EmailSendJobPayload>(
   { connection, concurrency: 4 },
 );
 
-discoveryWorker.on('failed', (job, err) => console.error(`[worker] discovery job ${job?.id} failed:`, err));
-emailSendWorker.on('failed', (job, err) => console.error(`[worker] email-send job ${job?.id} failed:`, err));
+discoveryWorker.on('failed', (job, err) => {
+  console.error(`[worker] discovery job ${job?.id} failed:`, err);
+  captureError(err);
+});
+emailSendWorker.on('failed', (job, err) => {
+  console.error(`[worker] email-send job ${job?.id} failed:`, err);
+  captureError(err);
+});
 
 // Inbound email is a plain interval loop across every tenant's channels, not a
 // per-channel BullMQ repeatable job -- see docs/adr/0004-email-channel.md for why
@@ -54,6 +63,7 @@ async function pollLoop() {
     await pollActiveEmailChannels();
   } catch (err) {
     console.error('[worker] email poll cycle failed:', err);
+    captureError(err);
   } finally {
     setTimeout(pollLoop, EMAIL_POLL_INTERVAL_MS);
   }
