@@ -568,6 +568,17 @@ leaking which part of a login attempt failed) `/auth/login` error handling
 was masking a `DATABASE_URL` mismatch on one restart as an ordinary wrong-
 password error — see the ADR for how that was diagnosed.
 
+**Known conceptual simplification, verified against ITIL 4's actual Service
+Level Management practice (added 2026-09-16):** ITIL formally separates three
+layers of agreement — the customer-facing SLA, an **OLA** (Operational Level
+Agreement) between internal teams, and a **UC** (Underpinning Contract) with
+an external supplier. `SlaPolicy` only models the SLA layer. Not a bug to fix
+now: an OLA is naturally a target between `Team`s (already a model) and a UC
+is naturally the contract/license/financial asset management backlog item
+already noted below — both have a natural home once/if they're built, neither
+needs a new concept invented today. Documented here so this is a deliberate,
+known scope cut, not an oversight if it comes up later.
+
 **Outbound webhooks ✅ (this pass)** — the opposite direction from `POST
 /v1/alerts` above (Seredina notifying something else vs. something else
 notifying Seredina); the naming-pass concern flagged when this was still just
@@ -632,24 +643,44 @@ shipped, not by external priority:**
   (name, description, icon, which `CustomFieldDefinition`s it shows) creates a
   `Ticket` pre-filled from the chosen item, the same creation path every other
   channel already uses.
-- **Change Management (ITIL).** Deliberately scoped as an extension of the
-  existing IT Processes engine (`ProcessTemplate`/`ProcessInstance`, Phase 2 ✅),
-  not a new subsystem: a `ProcessTemplate.kind = 'CHANGE'` (or a small
-  dedicated fields addition — risk level, planned window, rollback plan) reuses
-  every mechanism already proven there, including the approval-gated step type
-  that already makes a CAB-style sign-off enforceable. Building a whole
-  separate Change model when the process engine already does "multi-step,
-  approval-gated, outlives-a-single-ticket" would be two systems pretending to
-  be one — the same reasoning `docs/adr/0003-alert-ingestion.md` used to keep
-  alerts on `Ticket` instead of a new `Incident` model.
+- **Change Enablement (ITIL 4's official name for this practice — "Change
+  Management" in the original note here was ITIL v3 terminology, corrected
+  after checking against the actual ITIL 4 practice list).** Deliberately
+  scoped as an extension of the existing IT Processes engine
+  (`ProcessTemplate`/`ProcessInstance`, Phase 2 ✅), not a new subsystem: a
+  `ProcessTemplate.kind = 'CHANGE'` (or a small dedicated fields addition —
+  risk level, planned window, rollback plan) reuses every mechanism already
+  proven there, including the approval-gated step type that already makes a
+  CAB-style sign-off enforceable. Building a whole separate Change model when
+  the process engine already does "multi-step, approval-gated, outlives-a-
+  single-ticket" would be two systems pretending to be one — the same
+  reasoning `docs/adr/0003-alert-ingestion.md` used to keep alerts on `Ticket`
+  instead of a new `Incident` model.
+- **Release Management (ITIL).** ITIL 4 treats this as its own practice,
+  distinct from Change Enablement: a Change is the *decision and approval* to
+  make a change; a Release is *actually making it available to users*. Same
+  reuse story as Change Enablement above — a release is another
+  `ProcessTemplate` shape (build → stage → deploy → confirm), not a new
+  subsystem — and it's the natural place a future Change Enablement instance
+  hands off to once approved. Sequenced right after Change Enablement for
+  that reason.
 - **Problem Management (ITIL).** Distinguishing a root cause ("Problem") from
   the individual incidents it's causing — Jira Service Management treats this
   as a first-class, separate concept from ticket/incident. Not yet designed in
   as much detail as the item above: likely a lightweight `Problem` record that
   several `Ticket`s can link to (many incidents, one root cause), surfaced as
   "N linked incidents" on the problem and "linked to Problem #X" on each
-  ticket. Sequenced after Change Management above since a real problem
+  ticket. Sequenced after Change Enablement above since a real problem
   management workflow usually *produces* a change request as its fix.
+- **Service Configuration Management (ITIL).** Sharper and more specific than
+  the general "CMDB relationship depth" concern already flagged in Phase 1/2
+  — this is the ITIL practice of mapping which technical assets actually
+  underpin which *business service*, not just asset-to-asset or asset-to-
+  contact links. Concretely: a `Service` record (the business-facing thing,
+  e.g. "Email," "Payroll") that `Asset`s link to as dependencies, so an
+  incident on an asset can show "this affects: Payroll" instead of just
+  showing the asset itself. Depends on Asset Management (Phase 1/2 ✅) as its
+  foundation; nothing here yet beyond that foundation.
 - **Self-service portal + a browsable knowledge base.** A real gap, not a
   duplicate of Phase 3's RAG plan below: this needs `KbArticle` as a plain,
   human-browsable CRUD resource (a contact can read and search it directly)
