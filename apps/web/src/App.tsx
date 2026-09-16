@@ -17,6 +17,8 @@ import { ProcessDetail } from './pages/ProcessDetail';
 import { ProcessTemplates } from './pages/ProcessTemplates';
 import { Webhooks } from './pages/Webhooks';
 import { Macros } from './pages/Macros';
+import { SlaPolicies } from './pages/SlaPolicies';
+import { BusinessHoursPage } from './pages/BusinessHoursPage';
 
 export function App() {
   return (
@@ -41,6 +43,8 @@ export function App() {
             <Route path="/process-templates" element={<ProcessTemplates />} />
             <Route path="/webhooks" element={<Webhooks />} />
             <Route path="/macros" element={<Macros />} />
+            <Route path="/sla-policies" element={<SlaPolicies />} />
+            <Route path="/business-hours" element={<BusinessHoursPage />} />
           </Route>
         </Route>
 

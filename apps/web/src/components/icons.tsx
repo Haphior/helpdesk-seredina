@@ -174,3 +174,21 @@ export function SparkleIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function ClockIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="10" cy="10" r="7" />
+      <path d="M10 6v4l3 2" />
+    </Icon>
+  );
+}
+
+export function CalendarIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="4.5" width="14" height="12" rx="1.5" />
+      <path d="M3 8h14M7 3v3M13 3v3" />
+    </Icon>
+  );
+}

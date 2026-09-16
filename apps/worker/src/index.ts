@@ -3,15 +3,18 @@ import { Worker } from 'bullmq';
 import {
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
+  SLA_BREACH_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
+  type SlaBreachCheckJobPayload,
   type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
 import { runDiscoveryJob } from './discovery/processor';
 import { pollActiveEmailChannels } from './email/poll';
 import { sendEmailMessage } from './email/send';
 import { deliverWebhook, markWebhookDeliveryFailed } from './webhooks/deliver';
+import { checkSlaBreach } from './sla/checkBreach';
 import { captureError, initErrorTracking } from './lib/errorTracking';
 
 initErrorTracking();
@@ -54,6 +57,14 @@ const webhookDeliveryWorker = new Worker<WebhookDeliveryJobPayload>(
   { connection, concurrency: 8 },
 );
 
+const slaBreachWorker = new Worker<SlaBreachCheckJobPayload>(
+  SLA_BREACH_QUEUE_NAME,
+  async (job) => {
+    await checkSlaBreach(job.data);
+  },
+  { connection, concurrency: 4 },
+);
+
 discoveryWorker.on('failed', (job, err) => {
   console.error(`[worker] discovery job ${job?.id} failed:`, err);
   captureError(err);
@@ -71,6 +82,10 @@ webhookDeliveryWorker.on('failed', (job, err) => {
   if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
     markWebhookDeliveryFailed(job.data);
   }
+});
+slaBreachWorker.on('failed', (job, err) => {
+  console.error(`[worker] sla breach check ${job?.id} failed:`, err);
+  captureError(err);
 });
 
 // Inbound email is a plain interval loop across every tenant's channels, not a
@@ -95,5 +110,5 @@ async function pollLoop() {
 
 pollLoop();
 
-console.log('[worker] listening on queues:', DISCOVERY_QUEUE_NAME, EMAIL_SEND_QUEUE_NAME, WEBHOOK_DELIVERY_QUEUE_NAME);
+console.log('[worker] listening on queues:', DISCOVERY_QUEUE_NAME, EMAIL_SEND_QUEUE_NAME, WEBHOOK_DELIVERY_QUEUE_NAME, SLA_BREACH_QUEUE_NAME);
 console.log('[worker] polling email channels every', EMAIL_POLL_INTERVAL_MS, 'ms');

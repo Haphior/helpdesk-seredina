@@ -58,7 +58,7 @@ phase: [docs/ROADMAP.md](ROADMAP.md). Summary:
 |---|---|---|
 | 0 — Foundations | Multi-tenant RLS + Prisma isolation, JWT auth, Docker Compose | ✅ Done |
 | 1 — MVP | Ticketing core, API + email channels, agent console UI, CMDB + agentless discovery, multi-user tenants, UI visual refresh, AI copilot v1 | ✅ Done |
-| 2 — Configurability & SLA | Alert ingestion (NOC/SOC) ✅, custom fields ✅, hardware/equipment catalog ✅, IT processes/procedures ✅, outbound webhooks ✅, macros ✅; SLA engine, reporting v1 — not yet started (plugin/extension architecture: webhooks are the concrete first piece, the rest is still a recommendation) | 🚧 In progress |
+| 2 — Configurability & SLA | Alert ingestion (NOC/SOC) ✅, custom fields ✅, hardware/equipment catalog ✅, IT processes/procedures ✅, outbound webhooks ✅, macros ✅, SLA engine ✅; reporting v1 — not yet started (plugin/extension architecture: webhooks are the concrete first piece, the rest is still a recommendation) | 🚧 In progress |
 | 3 — AI depth | RAG (pgvector), shared AI tool catalog, autonomous mode + `AutonomyPolicy`, MCP server, second LLM provider | Not started |
 | 4 — Cloud hardening | Tenant self-signup, BYO AI key, widget/WhatsApp channels, custom roles, RLS fuzz tests in CI, multi-replica load verification | Not started |
 | 5 — Endpoint agents | Windows/Linux/macOS inventory + opt-in remote execution/deployment agent, capability-tiered like Phase 3's `AutonomyPolicy`, desktop-only (not mobile MDM) | Not started |

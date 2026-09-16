@@ -74,6 +74,38 @@ export interface Ticket {
   resolvedAt: string | null;
   closedAt: string | null;
   customFields: Record<string, unknown> | null;
+  firstResponseDueAt: string | null;
+  firstRespondedAt: string | null;
+  resolutionDueAt: string | null;
+}
+
+export interface SlaPolicy {
+  id: string;
+  priority: TicketPriority;
+  firstResponseMinutes: number;
+  resolutionMinutes: number;
+  businessHoursOnly: boolean;
+}
+
+export interface DayWindow {
+  start: string;
+  end: string;
+}
+
+export interface BusinessHoursSchedule {
+  sun?: DayWindow[];
+  mon?: DayWindow[];
+  tue?: DayWindow[];
+  wed?: DayWindow[];
+  thu?: DayWindow[];
+  fri?: DayWindow[];
+  sat?: DayWindow[];
+}
+
+export interface BusinessHours {
+  id: string;
+  timezone: string;
+  schedule: BusinessHoursSchedule;
 }
 
 export type CustomFieldType = 'TEXT' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'SELECT';

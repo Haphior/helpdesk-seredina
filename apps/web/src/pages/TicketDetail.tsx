@@ -13,8 +13,8 @@ import type {
 } from '../lib/types';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
-import { BackArrowIcon, BoltIcon, ChevronDownIcon, LockIcon, SparkleIcon } from '../components/icons';
-import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
+import { BackArrowIcon, BoltIcon, ChevronDownIcon, ClockIcon, LockIcon, SparkleIcon } from '../components/icons';
+import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime, isFirstResponseOverdue, isResolutionOverdue } from '../lib/format';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 
@@ -179,6 +179,18 @@ export function TicketDetail() {
             </Badge>
             <Badge tone={ticket.channel === 'alert' ? 'rose' : 'slate'}>{ticket.channel}</Badge>
             {ticket.externalId && <span className="text-xs text-slate-400">ref: {ticket.externalId}</span>}
+            {isFirstResponseOverdue(ticket) && (
+              <Badge tone="rose">
+                <ClockIcon width={11} height={11} />
+                First response overdue
+              </Badge>
+            )}
+            {isResolutionOverdue(ticket) && (
+              <Badge tone="rose">
+                <ClockIcon width={11} height={11} />
+                Resolution overdue
+              </Badge>
+            )}
 
             <div className="ml-auto flex items-center gap-2">
               {macros.length > 0 && (
@@ -345,6 +357,36 @@ export function TicketDetail() {
             </PropertySelect>
           </PropertyRow>
         </div>
+
+        {(ticket.firstResponseDueAt || ticket.resolutionDueAt) && (
+          <>
+            <div className="my-[18px] h-px bg-slate-100" />
+            <div className="flex flex-col gap-3.5">
+              {ticket.firstResponseDueAt && (
+                <PropertyRow label="First response">
+                  {ticket.firstRespondedAt ? (
+                    <span className="text-[13px] font-medium text-emerald-600">Met {formatDateTime(ticket.firstRespondedAt)}</span>
+                  ) : (
+                    <span className={`text-[13px] font-medium ${isFirstResponseOverdue(ticket) ? 'text-rose-600' : 'text-slate-700'}`}>
+                      Due {formatDateTime(ticket.firstResponseDueAt)}
+                    </span>
+                  )}
+                </PropertyRow>
+              )}
+              {ticket.resolutionDueAt && (
+                <PropertyRow label="Resolution">
+                  {ticket.resolvedAt ? (
+                    <span className="text-[13px] font-medium text-emerald-600">Met {formatDateTime(ticket.resolvedAt)}</span>
+                  ) : (
+                    <span className={`text-[13px] font-medium ${isResolutionOverdue(ticket) ? 'text-rose-600' : 'text-slate-700'}`}>
+                      Due {formatDateTime(ticket.resolutionDueAt)}
+                    </span>
+                  )}
+                </PropertyRow>
+              )}
+            </div>
+          </>
+        )}
 
         {customFieldDefs.length > 0 && (
           <>

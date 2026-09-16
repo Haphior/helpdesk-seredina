@@ -6,3 +6,4 @@ export * from './email';
 export * from './crypto';
 export * from './webhooks';
 export * from './ssrf';
+export * from './sla';

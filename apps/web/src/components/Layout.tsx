@@ -6,7 +6,9 @@ import { Avatar } from './Avatar';
 import {
   AssetsIcon,
   BoltIcon,
+  CalendarIcon,
   ChecklistIcon,
+  ClockIcon,
   KeyIcon,
   LayersIcon,
   LogoutIcon,
@@ -37,6 +39,8 @@ const navItems = [
   { to: '/process-templates', label: 'Process Templates', icon: ChecklistIcon, permission: 'tickets:manage_all' as const },
   { to: '/webhooks', label: 'Webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' as const },
   { to: '/macros', label: 'Macros', icon: BoltIcon, permission: 'tickets:manage_all' as const },
+  { to: '/sla-policies', label: 'SLA Policies', icon: ClockIcon, permission: 'tickets:manage_all' as const },
+  { to: '/business-hours', label: 'Business Hours', icon: CalendarIcon, permission: 'tickets:manage_all' as const },
 ];
 
 export function Layout() {

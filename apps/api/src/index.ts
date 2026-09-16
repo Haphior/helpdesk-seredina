@@ -18,6 +18,7 @@ import assetCatalogRoutes from './modules/assetcatalog/routes';
 import processRoutes from './modules/processes/routes';
 import webhookRoutes from './modules/webhooks/routes';
 import macroRoutes from './modules/macros/routes';
+import slaRoutes from './modules/sla/routes';
 
 initErrorTracking();
 
@@ -59,6 +60,7 @@ export function buildApp() {
   app.register(processRoutes);
   app.register(webhookRoutes);
   app.register(macroRoutes);
+  app.register(slaRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

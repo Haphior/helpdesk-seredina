@@ -51,6 +51,8 @@ model Tenant {
   processStepInstances  ProcessStepInstance[]
   webhooks              Webhook[]
   macros                Macro[]
+  slaPolicies           SlaPolicy[]
+  businessHours         BusinessHours?
 
   @@map("tenants")
 }
@@ -209,6 +211,16 @@ model Ticket {
   updatedAt  DateTime       @updatedAt @map("updated_at")
   resolvedAt DateTime?      @map("resolved_at")
   closedAt   DateTime?      @map("closed_at")
+
+  // SLA clock, computed from the matching SlaPolicy (by current priority) at
+  // creation and recomputed on every priority change -- null when the tenant has
+  // no SlaPolicy for that priority, which is how SLA tracking stays fully opt-in.
+  // "Met" is resolvedAt (already existed) and firstRespondedAt below; a milestone
+  // is breached when its due-at has passed and the matching "met" timestamp is
+  // still null. See docs/adr/0011-sla-engine.md.
+  firstResponseDueAt DateTime? @map("first_response_due_at")
+  firstRespondedAt   DateTime? @map("first_responded_at")
+  resolutionDueAt    DateTime? @map("resolution_due_at")
 
   // Tenant-defined field values, keyed by CustomFieldDefinition.key. jsonb only --
   // no typed mirror table yet (see docs/adr/0006-custom-fields.md for why that's a
@@ -611,4 +623,42 @@ model Macro {
 
   @@unique([tenantId, name])
   @@map("macros")
+}
+
+// One row per (tenant, priority) -- deliberately not a general rule-based policy
+// engine matching on team/channel/etc. A tenant with no policy for a priority has
+// no SLA tracking for tickets at that priority; that's the intended default, not
+// a misconfiguration. See docs/adr/0011-sla-engine.md.
+model SlaPolicy {
+  id                   String         @id @default(uuid()) @db.Uuid
+  tenantId             String         @map("tenant_id") @db.Uuid
+  tenant               Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  priority             TicketPriority
+  firstResponseMinutes Int            @map("first_response_minutes")
+  resolutionMinutes    Int            @map("resolution_minutes")
+  businessHoursOnly    Boolean        @default(false) @map("business_hours_only")
+  createdAt            DateTime       @default(now()) @map("created_at")
+
+  @@unique([tenantId, priority])
+  @@map("sla_policies")
+}
+
+// At most one per tenant. `schedule` is a fixed-shape jsonb blob (one optional
+// array of {start,end} 24h "HH:mm" windows per weekday key mon..sun) -- jsonb here
+// isn't for schema flexibility (the shape never varies), it's just less code than
+// 14 nullable time columns for the same validated-at-the-boundary data. Only
+// consulted when a SlaPolicy has businessHoursOnly=true; a tenant with SLA
+// policies but no BusinessHours row gets calendar-time (24/7) due dates for all of
+// them. See docs/adr/0011-sla-engine.md for the UTC-offset math and its known
+// DST-transition limitation.
+model BusinessHours {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  timezone  String
+  schedule  Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId])
+  @@map("business_hours")
 }

@@ -533,7 +533,40 @@ applied the macro via the dropdown, and confirmed both the priority badge
 updated to URGENT and the canned reply appeared in the thread — zero console
 errors.
 
-- `SlaPolicy` + `BusinessHours` + breach escalations.
+**SLA engine ✅ (this pass)** — `SlaPolicy` (one row per tenant+priority: first-
+response/resolution targets in minutes, optional business-hours-only gating) +
+`BusinessHours` (one schedule per tenant: IANA timezone + a window per weekday).
+Due dates (`Ticket.firstResponseDueAt`/`resolutionDueAt`) are computed at ticket
+creation and recomputed whenever priority changes (from the moment of the
+change, not the original creation — see `docs/adr/0011-sla-engine.md`), and are
+null (no tracking) for any priority with no configured policy — opt-in by
+construction. Breach detection is two-layered: a passive, always-accurate
+"overdue" badge computed at render time (ticket queue clock icon, ticket-detail
+header badges, a red due-date row in the details panel), and an active
+`sla.first_response_breached`/`sla.resolution_breached` webhook fired by a
+delayed BullMQ job that re-checks live ticket state before ever firing, so a
+stale job is never wrong, only sometimes a harmless no-op.
+
+Verified: 7 integration tests against real Postgres (no-policy → null due-ats,
+matching-policy → correct calendar-time due-ats within tolerance of `Date.now()`,
+a priority change recomputing from now while an unrelated patch leaves an
+already-set due-at untouched, a business-hours-gated due-at genuinely landing
+inside the configured window, `firstRespondedAt` stamped once and never by an
+internal note) plus 6 pure-function tests for the business-hours date math
+(same-day, before-window-opens, same-day gap between two windows, weekend
+rollover, a fixed-offset timezone changing the local weekday). Full suite
+29/29 green (skips are pre-existing, unrelated tenant-isolation opt-in tests),
+both `apps/api` and `apps/worker` typecheck clean. Browser-verified end to end:
+configured a Business Hours schedule and a LOW-priority SLA policy through the
+UI, confirmed a real ticket created afterward picked up the right due-ats, and
+(since waiting out a real SLA window isn't practical) backdated a real ticket's
+due-ats in Postgres to confirm the overdue badges and clock icon render
+correctly — zero console errors. Also surfaced and fixed an unrelated dev-
+environment issue: several stale orphaned `tsx watch` processes had
+accumulated across the session, and the generic (deliberately vague, to avoid
+leaking which part of a login attempt failed) `/auth/login` error handling
+was masking a `DATABASE_URL` mismatch on one restart as an ordinary wrong-
+password error — see the ADR for how that was diagnosed.
 
 **Outbound webhooks ✅ (this pass)** — the opposite direction from `POST
 /v1/alerts` above (Seredina notifying something else vs. something else
@@ -708,3 +741,18 @@ into the contract-based extension recommendation in Phase 2 above.)
   see Phase 2) would have been a direct route around the RLS + Prisma-extension
   tenant isolation this whole project is built on — worth remembering if a future
   session is ever tempted to add one for convenience.
+- The SLA engine's business-hours math (`packages/shared/src/sla.ts`) holds a
+  single UTC-offset constant for an entire due-date calculation rather than
+  using a real timezone library — a calculation that straddles a DST transition
+  in a DST-observing timezone can be off by that transition's shift. See
+  `docs/adr/0011-sla-engine.md`. Fine for now (SLA windows are hours to days,
+  DST-straddling is rare, the failure mode is a due date off by an hour); revisit
+  if a tenant in a DST-observing region reports it.
+- Dev-environment hygiene: `npm run dev` restarts across a long session leave
+  orphaned `tsx watch` processes behind rather than actually freeing the port
+  (only the newest one ever wins `EADDRINUSE`), and `/auth/login`'s deliberately
+  generic error response can mask an underlying `DATABASE_URL`/infra problem as
+  an ordinary wrong-password error. Neither is a product bug, but both cost real
+  debugging time this pass (see `docs/adr/0011-sla-engine.md`) — worth a real
+  `npm run dev:clean`-style script (kill-by-port before start) if this keeps
+  costing time.

@@ -1,6 +1,7 @@
 import { prisma, withTenantTx, type Prisma, type TicketPriority, type TicketStatusCategory } from '@seredina/db';
 import { emailSendQueue } from '../../lib/queue';
 import { dispatchWebhookEvent } from '../../lib/webhookDispatch';
+import { computeSlaDueAts, scheduleSlaBreachChecks } from '../sla/service';
 
 const DEFAULT_TICKET_STATUSES: { key: string; label: string; category: TicketStatusCategory; sortOrder: number }[] = [
   { key: 'open', label: 'Open', category: 'OPEN', sortOrder: 0 },
@@ -43,15 +44,22 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
       data: { lastTicketNumber: { increment: 1 } },
     });
 
+    const priority = input.priority ?? 'NORMAL';
+    const createdAt = new Date();
+    const dueAts = await computeSlaDueAts(tx, tenantId, priority, createdAt);
+
     const ticket = await tx.ticket.create({
       data: {
         tenantId,
         number: tenant.lastTicketNumber,
         subject: input.subject,
-        priority: input.priority ?? 'NORMAL',
+        priority,
         statusId: openStatus.id,
         contactId: contact.id,
         channel: 'api',
+        createdAt,
+        firstResponseDueAt: dueAts.firstResponseDueAt,
+        resolutionDueAt: dueAts.resolutionDueAt,
       },
     });
 
@@ -63,6 +71,7 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
   });
 
   await dispatchWebhookEvent(tenantId, 'ticket.created', { ticketId: ticket.id, number: ticket.number, subject: ticket.subject, channel: ticket.channel });
+  await scheduleSlaBreachChecks(tenantId, ticket.id, { firstResponseDueAt: ticket.firstResponseDueAt, resolutionDueAt: ticket.resolutionDueAt });
   return ticket;
 }
 
@@ -133,16 +142,23 @@ export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
 
     const tenant = await tx.tenant.update({ where: { id: tenantId }, data: { lastTicketNumber: { increment: 1 } } });
 
+    const priority = input.severity ? SEVERITY_TO_PRIORITY[input.severity] : 'NORMAL';
+    const createdAt = new Date();
+    const dueAts = await computeSlaDueAts(tx, tenantId, priority, createdAt);
+
     const ticket = await tx.ticket.create({
       data: {
         tenantId,
         number: tenant.lastTicketNumber,
         subject: input.title,
-        priority: input.severity ? SEVERITY_TO_PRIORITY[input.severity] : 'NORMAL',
+        priority,
         statusId: openStatus.id,
         contactId: contact.id,
         channel: 'alert',
         externalId: input.externalId,
+        createdAt,
+        firstResponseDueAt: dueAts.firstResponseDueAt,
+        resolutionDueAt: dueAts.resolutionDueAt,
       },
     });
 
@@ -163,6 +179,7 @@ export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
     await dispatchWebhookEvent(tenantId, 'message.created', refiredMessageEvent);
   } else {
     await dispatchWebhookEvent(tenantId, 'ticket.created', { ticketId: ticket.id, number: ticket.number, subject: ticket.subject, channel: ticket.channel });
+    await scheduleSlaBreachChecks(tenantId, ticket.id, { firstResponseDueAt: ticket.firstResponseDueAt, resolutionDueAt: ticket.resolutionDueAt });
   }
   return ticket;
 }
@@ -229,6 +246,12 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
       },
     });
 
+    // The SLA "first response" milestone is the first public (non-internal-note)
+    // reply an agent posts -- stamped once, never overwritten by later replies.
+    if (!input.isPrivateNote && !ticket.firstRespondedAt) {
+      await tx.ticket.update({ where: { id: ticketId }, data: { firstRespondedAt: new Date() } });
+    }
+
     // Internal notes never leave Seredina; only a public reply on an email-sourced
     // ticket needs to actually go out as an email.
     return { message, shouldEmail: ticket.channel === 'email' && !input.isPrivateNote };
@@ -259,6 +282,8 @@ export interface UpdateTicketInput {
 }
 
 export async function updateTicket(tenantId: string, ticketId: string, input: UpdateTicketInput) {
+  let priorityChanged = false;
+
   const updated = await withTenantTx(prisma, tenantId, async (tx) => {
     const ticket = await tx.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) throw new Error('ticket not found');
@@ -271,6 +296,18 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
         ? ({ ...((ticket.customFields as Record<string, unknown> | null) ?? {}), ...input.customFields } as Prisma.InputJsonValue)
         : undefined,
     };
+
+    // A priority change restarts the SLA clock from now, not from the ticket's
+    // original creation -- the ticket's urgency was just reclassified, so its
+    // targets should measure from that reclassification. Only actually recomputed
+    // when the priority is genuinely changing, so patching e.g. just the assignee
+    // never touches an already-running clock.
+    if (input.priority && input.priority !== ticket.priority) {
+      priorityChanged = true;
+      const dueAts = await computeSlaDueAts(tx, tenantId, input.priority, new Date());
+      data.firstResponseDueAt = dueAts.firstResponseDueAt;
+      data.resolutionDueAt = dueAts.resolutionDueAt;
+    }
 
     if (input.statusId) {
       const newStatus = await tx.ticketStatus.findUnique({ where: { id: input.statusId } });
@@ -296,5 +333,8 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
     priority: updated.priority,
     assigneeId: updated.assigneeId,
   });
+  if (priorityChanged) {
+    await scheduleSlaBreachChecks(tenantId, updated.id, { firstResponseDueAt: updated.firstResponseDueAt, resolutionDueAt: updated.resolutionDueAt });
+  }
   return updated;
 }

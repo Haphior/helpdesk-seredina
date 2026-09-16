@@ -46,6 +46,8 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   ProcessStepInstance: 'tenantId',
   Webhook: 'tenantId',
   Macro: 'tenantId',
+  SlaPolicy: 'tenantId',
+  BusinessHours: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

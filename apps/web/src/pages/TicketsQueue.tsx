@@ -4,8 +4,8 @@ import { apiGet } from '../lib/api';
 import type { Ticket, TicketStatusCategory } from '../lib/types';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
-import { SearchIcon } from '../components/icons';
-import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
+import { ClockIcon, SearchIcon } from '../components/icons';
+import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime, isTicketOverdue } from '../lib/format';
 
 const TABS: { key: TicketStatusCategory | 'ALL'; label: string }[] = [
   { key: 'ALL', label: 'All' },
@@ -92,7 +92,14 @@ export function TicketsQueue() {
                 >
                   <span className="text-[13px] font-medium text-slate-400">{ticket.number}</span>
                   <div className="min-w-0">
-                    <div className="truncate text-[14px] font-semibold text-slate-800">{ticket.subject}</div>
+                    <div className="flex items-center gap-1.5">
+                      {isTicketOverdue(ticket) && (
+                        <span title="SLA overdue">
+                          <ClockIcon width={13} height={13} className="flex-shrink-0 text-rose-500" />
+                        </span>
+                      )}
+                      <span className="truncate text-[14px] font-semibold text-slate-800">{ticket.subject}</span>
+                    </div>
                     <div className="truncate text-[12.5px] text-slate-400">{ticket.contact.name}</div>
                   </div>
                   <span className="w-fit">
