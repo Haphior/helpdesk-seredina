@@ -492,10 +492,11 @@ template (one requiring approval), started an instance, drove it through all
 three steps — confirming the approval step's dropdown never even offers `DONE`
 as an option — and confirmed the instance auto-completed, zero console errors.
 
-**Plugin/extension architecture (recommendation, not yet built) — resolves the
-vague "third-party plugin marketplace" backlog mention below.** Recommending a
-**contract-based** model over native in-process code-loading: outbound `Webhook`s
-(already planned above) for "notify an external system," the existing scoped
+**Plugin/extension architecture (recommendation; the webhook piece is now real,
+the rest isn't) — resolves the vague "third-party plugin marketplace" backlog
+mention below.** Recommending a **contract-based** model over native in-process
+code-loading: outbound `Webhook`s (✅ shipped, see below) for "notify an
+external system," the existing scoped
 `ApiKey` + REST API for "let an external system act on Seredina," and the planned
 MCP server (Phase 3) as the structured interface for AI-era integrations (n8n,
 a customer's own agent, Zapier-style tools). Deliberately **not** a GLPI/WordPress-
@@ -512,11 +513,33 @@ unilaterally.
 
 - `Macro` with a typed action union (not arbitrary code).
 - `SlaPolicy` + `BusinessHours` + breach escalations.
-- Outbound `Webhook`s (doubles as groundwork for Phase 3's "open framework") — note
-  this is the *opposite* direction from `POST /v1/alerts` above (Seredina notifying
-  something else vs. something else notifying Seredina); both will likely end up
-  called "Webhook" in the UI eventually, worth a naming pass when both exist to avoid
-  confusing the two directions.
+
+**Outbound webhooks ✅ (this pass)** — the opposite direction from `POST
+/v1/alerts` above (Seredina notifying something else vs. something else
+notifying Seredina); the naming-pass concern flagged when this was still just
+a roadmap note (both directions ending up called "Webhook" in the UI) turned
+out fine in practice — `/webhooks` (outbound, tenant-configured) and
+`/v1/alerts` (inbound, monitoring-tool-configured) are different enough pages
+that confusing them hasn't been an issue. `Webhook` (url, HMAC secret
+encrypted at rest, subscribed events) fires on `ticket.created`,
+`ticket.updated`, `message.created` (internal notes excluded, same reasoning
+as the AI copilot's prompt-building). https-only, with a best-effort SSRF
+guard checked at both creation and delivery time — see
+`docs/adr/0009-outbound-webhooks.md`, including a real mistake caught and
+fixed before shipping: BullMQ's retry/backoff options were first placed on
+the Worker constructor, which silently ignores them — they belong on the job
+at enqueue time.
+
+Verified: 4 automated tests (https-only rejection, secret-shown-once, and the
+dispatch filtering logic) plus 4 pure-function tests for the SSRF range
+checks, full suite 27/27 green. Beyond that, directly against real
+infrastructure: confirmed the SSRF guard actually blocks a delivery to
+`127.0.0.1`, confirmed a real delivery to a live public HTTPS endpoint
+succeeds and is recorded, and confirmed the full pipeline end to end through
+the real worker process — created a webhook via the browser, created a real
+ticket via the API, and watched the webhook's delivery status update to
+match, not a direct function call standing in for the real path.
+
 - Reporting v1: volume, first-response/resolution time, SLA compliance, agent
   workload, plus asset counts/types once Asset Management has enough data to report
   on, plus alert-channel volume (how many tickets came from monitoring vs. real

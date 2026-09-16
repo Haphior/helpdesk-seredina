@@ -119,6 +119,17 @@ export function CloseIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function WebhookIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="6" cy="14.5" r="2" />
+      <circle cx="14.5" cy="14.5" r="2" />
+      <circle cx="10" cy="5" r="2" />
+      <path d="M10 7v3.5M8.2 13 9.3 11M11.8 13 10.7 11M8 14.5h4.5" />
+    </Icon>
+  );
+}
+
 export function ChecklistIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>

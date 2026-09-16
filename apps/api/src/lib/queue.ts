@@ -3,8 +3,10 @@ import { Queue } from 'bullmq';
 import {
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
+  WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
+  type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
 
 const redisUrl = process.env.REDIS_URL;
@@ -22,3 +24,4 @@ const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null, lazyConne
 
 export const discoveryQueue = new Queue<DiscoveryJobPayload>(DISCOVERY_QUEUE_NAME, { connection });
 export const emailSendQueue = new Queue<EmailSendJobPayload>(EMAIL_SEND_QUEUE_NAME, { connection });
+export const webhookDeliveryQueue = new Queue<WebhookDeliveryJobPayload>(WEBHOOK_DELIVERY_QUEUE_NAME, { connection });

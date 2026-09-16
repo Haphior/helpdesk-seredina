@@ -1,5 +1,6 @@
 import { prisma, withTenantTx, type Prisma, type TicketPriority, type TicketStatusCategory } from '@seredina/db';
 import { emailSendQueue } from '../../lib/queue';
+import { dispatchWebhookEvent } from '../../lib/webhookDispatch';
 
 const DEFAULT_TICKET_STATUSES: { key: string; label: string; category: TicketStatusCategory; sortOrder: number }[] = [
   { key: 'open', label: 'Open', category: 'OPEN', sortOrder: 0 },
@@ -27,7 +28,7 @@ export interface CreateTicketFromApiInput {
 
 /** The API channel: POST /v1/tickets, authenticated by ApiKey -- see plugins/apiKeyAuth.ts. */
 export async function createTicketFromApi(tenantId: string, input: CreateTicketFromApiInput) {
-  return withTenantTx(prisma, tenantId, async (tx) => {
+  const ticket = await withTenantTx(prisma, tenantId, async (tx) => {
     const contact = await tx.contact.upsert({
       where: { tenantId_email: { tenantId, email: input.contactEmail } },
       create: { tenantId, email: input.contactEmail, name: input.contactName },
@@ -60,6 +61,9 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
 
     return ticket;
   });
+
+  await dispatchWebhookEvent(tenantId, 'ticket.created', { ticketId: ticket.id, number: ticket.number, subject: ticket.subject, channel: ticket.channel });
+  return ticket;
 }
 
 export type AlertSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
@@ -94,7 +98,9 @@ export interface IngestAlertInput {
  * kept out of Seredina to stay tool-agnostic.
  */
 export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
-  return withTenantTx(prisma, tenantId, async (tx) => {
+  let refiredMessageEvent: { ticketId: string; body: string } | null = null;
+
+  const ticket = await withTenantTx(prisma, tenantId, async (tx) => {
     // A re-fired alert for a problem that's still open folds into the existing
     // ticket instead of spawning a duplicate -- without this, an alert storm (a
     // flapping service re-notifying every few minutes) would be unusable. A CLOSED
@@ -107,15 +113,11 @@ export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
       });
 
       if (existing) {
+        const body = `Alert re-triggered by ${input.source}: ${input.title}${input.description ? `\n\n${input.description}` : ''}`;
         await tx.message.create({
-          data: {
-            tenantId,
-            ticketId: existing.id,
-            authorType: 'SYSTEM',
-            body: `Alert re-triggered by ${input.source}: ${input.title}${input.description ? `\n\n${input.description}` : ''}`,
-            isPrivateNote: false,
-          },
+          data: { tenantId, ticketId: existing.id, authorType: 'SYSTEM', body, isPrivateNote: false },
         });
+        refiredMessageEvent = { ticketId: existing.id, body };
         return existing;
       }
     }
@@ -156,6 +158,13 @@ export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
 
     return ticket;
   });
+
+  if (refiredMessageEvent) {
+    await dispatchWebhookEvent(tenantId, 'message.created', refiredMessageEvent);
+  } else {
+    await dispatchWebhookEvent(tenantId, 'ticket.created', { ticketId: ticket.id, number: ticket.number, subject: ticket.subject, channel: ticket.channel });
+  }
+  return ticket;
 }
 
 export async function listTicketStatuses(tenantId: string) {
@@ -229,6 +238,13 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
     await emailSendQueue.add('send', { tenantId, ticketId, messageId: message.id });
   }
 
+  // Internal notes are excluded here too, same reasoning as the AI copilot's
+  // prompt-building -- a private note must never reach an external system a
+  // tenant's own webhook receiver might not be trusted with.
+  if (!message.isPrivateNote) {
+    await dispatchWebhookEvent(tenantId, 'message.created', { ticketId, messageId: message.id, body: message.body });
+  }
+
   return message;
 }
 
@@ -243,7 +259,7 @@ export interface UpdateTicketInput {
 }
 
 export async function updateTicket(tenantId: string, ticketId: string, input: UpdateTicketInput) {
-  return withTenantTx(prisma, tenantId, async (tx) => {
+  const updated = await withTenantTx(prisma, tenantId, async (tx) => {
     const ticket = await tx.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) throw new Error('ticket not found');
 
@@ -272,4 +288,13 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
 
     return tx.ticket.update({ where: { id: ticketId }, data });
   });
+
+  await dispatchWebhookEvent(tenantId, 'ticket.updated', {
+    ticketId: updated.id,
+    number: updated.number,
+    statusId: updated.statusId,
+    priority: updated.priority,
+    assigneeId: updated.assigneeId,
+  });
+  return updated;
 }

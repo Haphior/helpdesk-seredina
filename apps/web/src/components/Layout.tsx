@@ -13,6 +13,7 @@ import {
   SlidersIcon,
   TicketIcon,
   UsersIcon,
+  WebhookIcon,
 } from './icons';
 import { Logo } from './Logo';
 
@@ -33,6 +34,7 @@ const navItems = [
   { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' as const },
   { to: '/custom-fields', label: 'Custom Fields', icon: SlidersIcon, permission: 'tickets:manage_all' as const },
   { to: '/process-templates', label: 'Process Templates', icon: ChecklistIcon, permission: 'tickets:manage_all' as const },
+  { to: '/webhooks', label: 'Webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' as const },
 ];
 
 export function Layout() {

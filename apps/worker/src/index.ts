@@ -3,12 +3,15 @@ import { Worker } from 'bullmq';
 import {
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
+  WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
+  type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
 import { runDiscoveryJob } from './discovery/processor';
 import { pollActiveEmailChannels } from './email/poll';
 import { sendEmailMessage } from './email/send';
+import { deliverWebhook, markWebhookDeliveryFailed } from './webhooks/deliver';
 import { captureError, initErrorTracking } from './lib/errorTracking';
 
 initErrorTracking();
@@ -40,6 +43,17 @@ const emailSendWorker = new Worker<EmailSendJobPayload>(
   { connection, concurrency: 4 },
 );
 
+// Retry/backoff (5 attempts, exponential) is set on the job at enqueue time --
+// see lib/webhookDispatch.ts -- not here; Worker's own options have no such
+// fields, they only apply per-job.
+const webhookDeliveryWorker = new Worker<WebhookDeliveryJobPayload>(
+  WEBHOOK_DELIVERY_QUEUE_NAME,
+  async (job) => {
+    await deliverWebhook(job.data);
+  },
+  { connection, concurrency: 8 },
+);
+
 discoveryWorker.on('failed', (job, err) => {
   console.error(`[worker] discovery job ${job?.id} failed:`, err);
   captureError(err);
@@ -47,6 +61,16 @@ discoveryWorker.on('failed', (job, err) => {
 emailSendWorker.on('failed', (job, err) => {
   console.error(`[worker] email-send job ${job?.id} failed:`, err);
   captureError(err);
+});
+webhookDeliveryWorker.on('failed', (job, err) => {
+  console.error(`[worker] webhook delivery ${job?.id} failed:`, err);
+  captureError(err);
+  // job.opts.attempts belongs on the job's own options in BullMQ, not the worker's
+  // -- only record a terminal failure once every retry is exhausted, not on each
+  // intermediate attempt.
+  if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+    markWebhookDeliveryFailed(job.data);
+  }
 });
 
 // Inbound email is a plain interval loop across every tenant's channels, not a
@@ -71,5 +95,5 @@ async function pollLoop() {
 
 pollLoop();
 
-console.log('[worker] listening on queues:', DISCOVERY_QUEUE_NAME, EMAIL_SEND_QUEUE_NAME);
+console.log('[worker] listening on queues:', DISCOVERY_QUEUE_NAME, EMAIL_SEND_QUEUE_NAME, WEBHOOK_DELIVERY_QUEUE_NAME);
 console.log('[worker] polling email channels every', EMAIL_POLL_INTERVAL_MS, 'ms');

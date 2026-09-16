@@ -15,6 +15,7 @@ import { EquipmentCatalog } from './pages/EquipmentCatalog';
 import { Processes } from './pages/Processes';
 import { ProcessDetail } from './pages/ProcessDetail';
 import { ProcessTemplates } from './pages/ProcessTemplates';
+import { Webhooks } from './pages/Webhooks';
 
 export function App() {
   return (
@@ -37,6 +38,7 @@ export function App() {
             <Route path="/processes" element={<Processes />} />
             <Route path="/processes/:id" element={<ProcessDetail />} />
             <Route path="/process-templates" element={<ProcessTemplates />} />
+            <Route path="/webhooks" element={<Webhooks />} />
           </Route>
         </Route>
 

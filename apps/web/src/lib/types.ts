@@ -174,6 +174,18 @@ export interface EmailChannel {
   createdAt: string;
 }
 
+export type WebhookEvent = 'ticket.created' | 'ticket.updated' | 'message.created';
+
+export interface Webhook {
+  id: string;
+  url: string;
+  events: WebhookEvent[];
+  isActive: boolean;
+  createdAt: string;
+  lastDeliveryAt: string | null;
+  lastDeliveryStatus: 'success' | 'failed' | null;
+}
+
 export type ProcessInstanceStatus = 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type ProcessStepStatus = 'PENDING' | 'DONE' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
 

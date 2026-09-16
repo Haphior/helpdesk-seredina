@@ -28,7 +28,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   teams, contacts, ticket_statuses, tickets, messages, api_keys,
   assets, ticket_assets, discovery_jobs, email_channels, custom_field_definitions,
   manufacturers, asset_models, process_templates, process_step_templates,
-  process_instances, process_step_instances
+  process_instances, process_step_instances, webhooks
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -55,7 +55,7 @@ BEGIN
     'assets', 'ticket_assets', 'discovery_jobs', 'email_channels',
     'custom_field_definitions', 'manufacturers', 'asset_models',
     'process_templates', 'process_step_templates', 'process_instances',
-    'process_step_instances'
+    'process_step_instances', 'webhooks'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
