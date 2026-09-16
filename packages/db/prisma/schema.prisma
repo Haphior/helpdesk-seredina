@@ -92,6 +92,12 @@ model User {
   role         Role?    @relation(fields: [roleId], references: [id])
   createdAt    DateTime @default(now()) @map("created_at")
 
+  // Account lockout after repeated failed logins -- see modules/auth/service.ts's
+  // login(). failedLoginAttempts resets to 0 on a successful login or once a
+  // lockout is applied; lockedUntil null means not currently locked.
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+
   assignedTickets  Ticket[]  @relation("TicketAssignee")
   authoredMessages Message[] @relation("MessageAuthorUser")
 

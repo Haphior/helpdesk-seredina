@@ -69,27 +69,62 @@ export interface LoginInput {
   password: string;
 }
 
+// Account lockout after repeated failed logins. The error thrown on a locked
+// account is identical to a wrong password ('invalid credentials') -- same
+// anti-enumeration reasoning as everywhere else in this function: a client
+// shouldn't be able to distinguish "wrong password," "no such user," or "locked
+// out" from the response alone.
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
 export async function login(input: LoginInput): Promise<AuthResult> {
   const tenantId = await resolveTenantIdBySlug(input.tenantSlug);
   if (!tenantId) {
     throw new Error('invalid credentials');
   }
 
-  return withTenantTx(prisma, tenantId, async (tx) => {
+  // Returns null on any failure rather than throwing inside the transaction --
+  // throwing here would roll back the whole interactive transaction, INCLUDING the
+  // failed-attempt-counter update a few lines below it, silently defeating the
+  // lockout this function exists to enforce. Only throw after withTenantTx has
+  // returned (and therefore committed).
+  const result = await withTenantTx(prisma, tenantId, async (tx) => {
     const user = await tx.user.findUnique({
       where: { tenantId_email: { tenantId, email: input.email } },
       include: { role: { include: { permissions: { include: { permission: true } } } } },
     });
 
-    if (!user) throw new Error('invalid credentials');
+    if (!user) return null;
+
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      return null;
+    }
 
     const valid = await bcrypt.compare(input.password, user.passwordHash);
-    if (!valid) throw new Error('invalid credentials');
+    if (!valid) {
+      const failedLoginAttempts = user.failedLoginAttempts + 1;
+      const lockedOut = failedLoginAttempts >= MAX_FAILED_LOGIN_ATTEMPTS;
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: lockedOut ? 0 : failedLoginAttempts,
+          lockedUntil: lockedOut ? new Date(Date.now() + LOCKOUT_DURATION_MS) : null,
+        },
+      });
+      return null;
+    }
+
+    if (user.failedLoginAttempts > 0) {
+      await tx.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+    }
 
     const permissions = (user.role?.permissions.map((rp) => rp.permission.key) ?? []) as Permission[];
 
     return { tenantId, userId: user.id, permissions };
   });
+
+  if (!result) throw new Error('invalid credentials');
+  return result;
 }
 
 export async function getMe(tenantId: string, userId: string) {
