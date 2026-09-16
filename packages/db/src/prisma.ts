@@ -48,6 +48,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   Macro: 'tenantId',
   SlaPolicy: 'tenantId',
   BusinessHours: 'tenantId',
+  DashboardWidget: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

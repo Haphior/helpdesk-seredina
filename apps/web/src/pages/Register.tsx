@@ -21,7 +21,7 @@ export function Register() {
     setSubmitting(true);
     try {
       await register({ tenantSlug, tenantName, adminEmail, adminName, password });
-      navigate('/tickets');
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Registration failed');
     } finally {

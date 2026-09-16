@@ -609,20 +609,35 @@ the real worker process — created a webhook via the browser, created a real
 ticket via the API, and watched the webhook's delivery status update to
 match, not a direct function call standing in for the real path.
 
-- **Reporting v1 + an interactive, configurable home dashboard (expanded
-  2026-09-16 at the user's request).** The metrics were already scoped —
-  volume, first-response/resolution time, SLA compliance, agent workload,
-  asset counts/types once Asset Management has enough data, alert-channel
-  volume now that there's a `channel` to group by. What's new is the UI this
-  data actually lives in: a per-user, drag-and-drop dashboard
-  (`DashboardWidget`: type, position/size, config — a saved layout, not a
-  fixed page) built from a small library of widget types (a chart, a
-  single-number KPI, a leaderboard, a recent-activity feed) that each read
-  from the same Reporting v1 aggregation queries, never a separate data path.
-  Sensible tenant-wide defaults an admin sets up, individually rearrangeable
-  per agent from there — the same "tenant default, user can override" shape
-  already used for statuses/priorities elsewhere in the schema. This is the
-  UI layer; it has no reason to exist before the underlying queries above do.
+**Reporting v1 + an interactive, configurable home dashboard ✅ (this pass)** —
+`modules/reporting/service.ts` aggregates ticket volume (daily, 14-day window),
+open-ticket priority breakdown, SLA compliance (met vs. breached, comparing
+`resolvedAt` to `resolutionDueAt`), agent workload (open tickets per assignee
+plus unassigned), channel breakdown, and recent activity — all in JS after a
+single `findMany` through the normal RLS-gated path, not SQL `GROUP BY` (see
+`docs/adr/0012-reporting-and-dashboard.md` for why that's a deliberate scope cut
+tied to a future cost signal, not an oversight). `/dashboard` is now the default
+landing page (`/` and both `Login.tsx`/`Register.tsx`'s post-auth redirect all
+point there), built from a fixed catalog of five widgets — a hand-rolled SVG bar
+chart for volume, progress-bar/list widgets for the rest, no charting library.
+"Configurable" means show/hide and reorder per user (`DashboardWidget`, the same
+"no row = default" shape `SlaPolicy` already established), not free-form
+drag-and-drop positioning — a real scope cut for a five-widget first pass, not
+what was originally sketched as a drag-and-drop grid, revisit if the widget
+catalog ever grows enough to need it.
+
+Verified: 10 integration tests against real Postgres covering every aggregation
+function's edge cases (empty days still bucketed, closed tickets excluded from
+priority/workload, SLA compliance excluding not-yet-resolved and no-target
+tickets, recent-activity ordering and limit) plus the dashboard-prefs default/
+override/reject-unknown-type behavior. Full suite 39/39 green. Browser-verified
+end to end against real demo data: login now lands on `/dashboard` (a real bug
+caught in the first verification pass — both auth pages had a hardcoded
+`/tickets` redirect that bypassed the new default entirely), all five widgets
+render real aggregated data including an honest empty state where the demo data
+genuinely has none yet, and hiding a widget survives a full page reload —
+proving the per-user preference actually round-trips through the API, not just
+local state. Zero console errors.
 
 **Deep customization, as an explicit cross-cutting goal (added 2026-09-16 at
 the user's request), not just a side effect of individual features.** Already

@@ -1,0 +1,298 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { apiGet, apiPut, ApiError } from '../lib/api';
+import type {
+  AgentWorkloadReport,
+  DashboardPref,
+  SlaComplianceReport,
+  Ticket,
+  TicketVolumePoint,
+  WidgetType,
+} from '../lib/types';
+import { Badge } from '../components/Badge';
+import { ChevronDownIcon, ChevronUpIcon, EyeIcon, EyeOffIcon } from '../components/icons';
+import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
+
+const WIDGET_LABEL: Record<WidgetType, string> = {
+  ticket_volume: 'Ticket volume',
+  priority_breakdown: 'Open tickets by priority',
+  sla_compliance: 'SLA compliance',
+  agent_workload: 'Agent workload',
+  recent_activity: 'Recent activity',
+};
+
+interface DashboardData {
+  volume: TicketVolumePoint[];
+  priority: Record<string, number>;
+  sla: SlaComplianceReport;
+  workload: AgentWorkloadReport;
+  recent: Ticket[];
+}
+
+export function Dashboard() {
+  const [prefs, setPrefs] = useState<DashboardPref[] | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function load() {
+    setError(null);
+    Promise.all([
+      apiGet<{ widgets: DashboardPref[] }>('/dashboard-widgets'),
+      apiGet<{ volume: TicketVolumePoint[] }>('/reporting/ticket-volume?days=14'),
+      apiGet<{ breakdown: Record<string, number> }>('/reporting/priority-breakdown'),
+      apiGet<SlaComplianceReport>('/reporting/sla-compliance'),
+      apiGet<AgentWorkloadReport>('/reporting/agent-workload'),
+      apiGet<{ tickets: Ticket[] }>('/reporting/recent-activity'),
+    ])
+      .then(([p, v, pr, s, w, r]) => {
+        setPrefs(p.widgets);
+        setData({ volume: v.volume, priority: pr.breakdown, sla: s, workload: w, recent: r.tickets });
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load dashboard'));
+  }
+
+  useEffect(load, []);
+
+  async function setVisible(widgetType: WidgetType, visible: boolean) {
+    if (!prefs) return;
+    setPrefs(prefs.map((p) => (p.widgetType === widgetType ? { ...p, visible } : p)));
+    try {
+      await apiPut('/dashboard-widgets', { widgetType, visible });
+    } catch {
+      load(); // revert to server truth on failure
+    }
+  }
+
+  async function move(widgetType: WidgetType, direction: -1 | 1) {
+    if (!prefs) return;
+    const i = prefs.findIndex((p) => p.widgetType === widgetType);
+    const j = i + direction;
+    if (i < 0 || j < 0 || j >= prefs.length) return;
+
+    const a = prefs[i];
+    const b = prefs[j];
+    const next = [...prefs];
+    next[i] = { ...a, sortOrder: b.sortOrder };
+    next[j] = { ...b, sortOrder: a.sortOrder };
+    next.sort((x, y) => x.sortOrder - y.sortOrder);
+    setPrefs(next);
+
+    try {
+      await Promise.all([
+        apiPut('/dashboard-widgets', { widgetType: a.widgetType, sortOrder: b.sortOrder }),
+        apiPut('/dashboard-widgets', { widgetType: b.widgetType, sortOrder: a.sortOrder }),
+      ]);
+    } catch {
+      load();
+    }
+  }
+
+  return (
+    <div className="p-6">
+      <h1 className="mb-1 text-2xl font-semibold text-slate-900">Dashboard</h1>
+      <p className="mb-5 text-sm text-slate-500">
+        Hide or reorder widgets with the controls that appear on hover — it's saved per person, not tenant-wide.
+      </p>
+
+      {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
+      {(!prefs || !data) && !error && <p className="text-sm text-slate-500">Loading…</p>}
+
+      {prefs && data && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {prefs.map((pref, i) => (
+            <WidgetCard
+              key={pref.widgetType}
+              pref={pref}
+              canMoveUp={i > 0}
+              canMoveDown={i < prefs.length - 1}
+              onToggle={() => setVisible(pref.widgetType, !pref.visible)}
+              onMoveUp={() => move(pref.widgetType, -1)}
+              onMoveDown={() => move(pref.widgetType, 1)}
+            >
+              {pref.visible && renderWidget(pref.widgetType, data)}
+            </WidgetCard>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WidgetCard({
+  pref,
+  canMoveUp,
+  canMoveDown,
+  onToggle,
+  onMoveUp,
+  onMoveDown,
+  children,
+}: {
+  pref: DashboardPref;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onToggle: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`group rounded-xl border border-slate-200 bg-white p-4 shadow-sm ${!pref.visible ? 'opacity-50' : ''}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-[13.5px] font-semibold text-slate-700">{WIDGET_LABEL[pref.widgetType]}</h2>
+        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <button onClick={onMoveUp} disabled={!canMoveUp} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30">
+            <ChevronUpIcon width={13} height={13} />
+          </button>
+          <button onClick={onMoveDown} disabled={!canMoveDown} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30">
+            <ChevronDownIcon width={13} height={13} />
+          </button>
+          <button onClick={onToggle} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+            {pref.visible ? <EyeIcon width={13} height={13} /> : <EyeOffIcon width={13} height={13} />}
+          </button>
+        </div>
+      </div>
+      {pref.visible ? children : <p className="text-xs text-slate-400">Hidden</p>}
+    </div>
+  );
+}
+
+function renderWidget(type: WidgetType, data: DashboardData) {
+  switch (type) {
+    case 'ticket_volume':
+      return <TicketVolumeWidget points={data.volume} />;
+    case 'priority_breakdown':
+      return <PriorityBreakdownWidget counts={data.priority} />;
+    case 'sla_compliance':
+      return <SlaComplianceWidget report={data.sla} />;
+    case 'agent_workload':
+      return <AgentWorkloadWidget report={data.workload} />;
+    case 'recent_activity':
+      return <RecentActivityWidget tickets={data.recent} />;
+  }
+}
+
+function TicketVolumeWidget({ points }: { points: TicketVolumePoint[] }) {
+  const max = Math.max(1, ...points.map((p) => p.count));
+  const barW = 100 / points.length;
+  return (
+    <div>
+      <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-24 w-full">
+        {points.map((p, i) => {
+          const h = (p.count / max) * 34;
+          return (
+            <rect
+              key={p.date}
+              x={i * barW + barW * 0.18}
+              y={38 - h}
+              width={barW * 0.64}
+              height={Math.max(h, 1)}
+              rx={0.6}
+              fill="#6366f1"
+            />
+          );
+        })}
+      </svg>
+      <div className="mt-1.5 flex justify-between text-[11px] text-slate-400">
+        <span>{formatShortDate(points[0]?.date)}</span>
+        <span>{formatShortDate(points[points.length - 1]?.date)}</span>
+      </div>
+    </div>
+  );
+}
+
+function formatShortDate(iso?: string) {
+  if (!iso) return '';
+  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+const PRIORITY_ORDER = ['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const;
+
+function PriorityBreakdownWidget({ counts }: { counts: Record<string, number> }) {
+  const max = Math.max(1, ...PRIORITY_ORDER.map((p) => counts[p] ?? 0));
+  return (
+    <div className="flex flex-col gap-2">
+      {PRIORITY_ORDER.map((p) => {
+        const count = counts[p] ?? 0;
+        return (
+          <div key={p} className="flex items-center gap-2.5">
+            <Badge tone={PRIORITY_TONE[p]} dot>
+              {p}
+            </Badge>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-indigo-400" style={{ width: `${(count / max) * 100}%` }} />
+            </div>
+            <span className="w-6 text-right text-[12.5px] font-medium text-slate-600">{count}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SlaComplianceWidget({ report }: { report: SlaComplianceReport }) {
+  if (report.total === 0) {
+    return <p className="text-xs text-slate-400">No resolved tickets with an SLA target yet.</p>;
+  }
+  const pct = report.percentMet ?? 0;
+  return (
+    <div>
+      <div className="mb-2 flex items-baseline gap-2">
+        <span className="text-3xl font-bold text-slate-900">{pct}%</span>
+        <span className="text-xs text-slate-400">met on time ({report.total} resolved)</span>
+      </div>
+      <div className="flex h-2 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+        <div className="h-full bg-rose-400" style={{ width: `${100 - pct}%` }} />
+      </div>
+      <div className="mt-1.5 flex justify-between text-[11px] text-slate-400">
+        <span>{report.met} met</span>
+        <span>{report.breached} breached</span>
+      </div>
+    </div>
+  );
+}
+
+function AgentWorkloadWidget({ report }: { report: AgentWorkloadReport }) {
+  const max = Math.max(1, report.unassigned, ...report.agents.map((a) => a.count));
+  return (
+    <div className="flex flex-col gap-2">
+      {report.agents.map((a) => (
+        <div key={a.userId} className="flex items-center gap-2.5">
+          <span className="w-24 truncate text-[12.5px] text-slate-600">{a.name}</span>
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-indigo-400" style={{ width: `${(a.count / max) * 100}%` }} />
+          </div>
+          <span className="w-6 text-right text-[12.5px] font-medium text-slate-600">{a.count}</span>
+        </div>
+      ))}
+      {report.unassigned > 0 && (
+        <div className="flex items-center gap-2.5">
+          <span className="w-24 truncate text-[12.5px] text-slate-400">Unassigned</span>
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-slate-300" style={{ width: `${(report.unassigned / max) * 100}%` }} />
+          </div>
+          <span className="w-6 text-right text-[12.5px] font-medium text-slate-400">{report.unassigned}</span>
+        </div>
+      )}
+      {report.agents.length === 0 && report.unassigned === 0 && <p className="text-xs text-slate-400">No open tickets.</p>}
+    </div>
+  );
+}
+
+function RecentActivityWidget({ tickets }: { tickets: Ticket[] }) {
+  if (tickets.length === 0) return <p className="text-xs text-slate-400">No tickets yet.</p>;
+  return (
+    <div className="flex flex-col gap-2">
+      {tickets.map((t) => (
+        <Link key={t.id} to={`/tickets/${t.id}`} className="flex items-center justify-between gap-2 rounded-lg px-1.5 py-1 hover:bg-slate-50">
+          <span className="truncate text-[12.5px] text-slate-700">
+            <span className="text-slate-400">#{t.number}</span> {t.subject}
+          </span>
+          <Badge tone={STATUS_CATEGORY_TONE[t.status.category]} dot>
+            {t.status.label}
+          </Badge>
+        </Link>
+      ))}
+    </div>
+  );
+}

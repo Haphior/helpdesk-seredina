@@ -274,3 +274,28 @@ export interface ProcessInstance {
   completedAt: string | null;
   steps: ProcessStepInstance[];
 }
+
+export type WidgetType = 'ticket_volume' | 'priority_breakdown' | 'sla_compliance' | 'agent_workload' | 'recent_activity';
+
+export interface DashboardPref {
+  widgetType: WidgetType;
+  visible: boolean;
+  sortOrder: number;
+}
+
+export interface TicketVolumePoint {
+  date: string;
+  count: number;
+}
+
+export interface SlaComplianceReport {
+  met: number;
+  breached: number;
+  total: number;
+  percentMet: number | null;
+}
+
+export interface AgentWorkloadReport {
+  agents: { userId: string; name: string; count: number }[];
+  unassigned: number;
+}

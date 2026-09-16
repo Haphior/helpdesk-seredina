@@ -9,6 +9,7 @@ import {
   CalendarIcon,
   ChecklistIcon,
   ClockIcon,
+  DashboardIcon,
   KeyIcon,
   LayersIcon,
   LogoutIcon,
@@ -28,6 +29,7 @@ interface Me {
 }
 
 const navItems = [
+  { to: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { to: '/tickets', label: 'Tickets', icon: TicketIcon },
   { to: '/processes', label: 'Processes', icon: ChecklistIcon, permission: 'tickets:write' as const },
   { to: '/assets', label: 'Assets', icon: AssetsIcon },

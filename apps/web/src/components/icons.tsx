@@ -192,3 +192,41 @@ export function CalendarIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function DashboardIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="3" width="7" height="7" rx="1.3" />
+      <rect x="12" y="3" width="5" height="4.5" rx="1.3" />
+      <rect x="12" y="9.5" width="5" height="7.5" rx="1.3" />
+      <rect x="3" y="12" width="7" height="5" rx="1.3" />
+    </Icon>
+  );
+}
+
+export function EyeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M2 10c1.8-3.5 4.8-5.5 8-5.5s6.2 2 8 5.5c-1.8 3.5-4.8 5.5-8 5.5S3.8 13.5 2 10Z" />
+      <circle cx="10" cy="10" r="2.4" />
+    </Icon>
+  );
+}
+
+export function EyeOffIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M2 10c1.8-3.5 4.8-5.5 8-5.5s6.2 2 8 5.5c-1.8 3.5-4.8 5.5-8 5.5S3.8 13.5 2 10Z" />
+      <circle cx="10" cy="10" r="2.4" />
+      <path d="M3 3l14 14" />
+    </Icon>
+  );
+}
+
+export function ChevronUpIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12.5 10 7.5 15 12.5" />
+    </Icon>
+  );
+}

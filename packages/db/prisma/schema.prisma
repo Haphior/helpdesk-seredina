@@ -53,6 +53,7 @@ model Tenant {
   macros                Macro[]
   slaPolicies           SlaPolicy[]
   businessHours         BusinessHours?
+  dashboardWidgets      DashboardWidget[]
 
   @@map("tenants")
 }
@@ -112,6 +113,7 @@ model User {
   assignedTickets      Ticket[]              @relation("TicketAssignee")
   authoredMessages     Message[]             @relation("MessageAuthorUser")
   processStepAssignments ProcessStepInstance[]
+  dashboardWidgets     DashboardWidget[]
 
   @@unique([tenantId, email])
   @@map("users")
@@ -661,4 +663,26 @@ model BusinessHours {
 
   @@unique([tenantId])
   @@map("business_hours")
+}
+
+// Per-USER dashboard preferences, not per-tenant -- two agents at the same
+// tenant can hide different widgets or reorder them differently. Only rows
+// for a widget the user actually customized exist; a widget type with no row
+// shows at its default position/visibility, the same "no row = default" shape
+// already used by SlaPolicy. widgetType is validated against a fixed catalog
+// at the service layer (zod), not a DB enum, same posture as everywhere else
+// a fixed set of string values is checked in this codebase.
+model DashboardWidget {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  widgetType String   @map("widget_type")
+  sortOrder  Int      @default(0) @map("sort_order")
+  visible    Boolean  @default(true)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, widgetType])
+  @@map("dashboard_widgets")
 }

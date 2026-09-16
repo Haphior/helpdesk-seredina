@@ -19,7 +19,7 @@ export function Login() {
     setSubmitting(true);
     try {
       await login({ tenantSlug, email, password });
-      navigate('/tickets');
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed');
     } finally {
