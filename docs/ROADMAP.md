@@ -466,19 +466,31 @@ manufacturer + model in one step, picked it from a real asset's form, confirmed
 via a direct API read that the asset's `modelId`/`catalogModel` link and its
 prefilled fields were all correct.
 
-**IT processes / procedures (not yet built) — resolves the "Governance Helping"
+**IT processes / procedures ✅ (this pass) — resolves the "Governance Helping"
 item below**, now that there's concrete direction instead of GLPI's broad label:
-a `ProcessTemplate` (name, description, ordered steps — each with a label, an
-assigned role/team, and whether it needs a document or an approval) that spawns a
-`ProcessInstance` tracking per-step completion/approval/assignee over however long
-it actually takes (days, sometimes weeks) — think employee onboarding (accounts,
-equipment assignment, badge) or a commercial document approval chain (vendor
-onboarding, contract sign-off). Deliberately **not** the same model as `Macro`:
+`ProcessTemplate`/`ProcessStepTemplate` (ordered steps, each optionally assigned
+to a team, optionally requiring approval) spawns a `ProcessInstance`/
+`ProcessStepInstance` tracking per-step completion/approval/assignee over
+however long it actually takes — employee onboarding, a commercial document
+approval chain. Deliberately **not** the same model as `Macro` (still unbuilt):
 a Macro is a one-shot bundle of actions applied instantly to a single ticket;
 a Process is a multi-step, multi-person checklist that outlives any single
-conversation. A process step that needs IT action can link or spawn a `Ticket`,
-but the process itself is tracked as its own record, not shoehorned into the
-ticket/message model — a process isn't a conversation thread.
+conversation. `ProcessStepInstance.ticketId` exists for linking real IT work,
+but the picker UI for it isn't built yet — backend capability shipped ahead of
+the frontend for it, honestly, not silently dropped. See
+`docs/adr/0008-it-processes.md`, including a real bug caught before it
+shipped: Prisma's default `onDelete` behavior for a required relation would
+have made deleting a template cascade-delete every instance ever started from
+it — fixed to `SET NULL` plus a `templateName` snapshot before any service code
+was written against it.
+
+Verified: 5 automated tests against a real Postgres (step ordering, duplicate-
+name/empty-steps rejection, the template-delete-preserves-instances fix, the
+approval-guard rejecting a plain `DONE`, and the auto-complete/auto-reopen
+symmetry), full suite 23/23 green. Browser-verified end to end: built a 3-step
+template (one requiring approval), started an instance, drove it through all
+three steps — confirming the approval step's dropdown never even offers `DONE`
+as an option — and confirmed the instance auto-completed, zero console errors.
 
 **Plugin/extension architecture (recommendation, not yet built) — resolves the
 vague "third-party plugin marketplace" backlog mention below.** Recommending a

@@ -40,6 +40,10 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   CustomFieldDefinition: 'tenantId',
   Manufacturer: 'tenantId',
   AssetModel: 'tenantId',
+  ProcessTemplate: 'tenantId',
+  ProcessStepTemplate: 'tenantId',
+  ProcessInstance: 'tenantId',
+  ProcessStepInstance: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

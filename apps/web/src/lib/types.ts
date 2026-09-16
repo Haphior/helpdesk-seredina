@@ -173,3 +173,45 @@ export interface EmailChannel {
   lastPolledAt: string | null;
   createdAt: string;
 }
+
+export type ProcessInstanceStatus = 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type ProcessStepStatus = 'PENDING' | 'DONE' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
+
+export interface ProcessStepTemplate {
+  id: string;
+  label: string;
+  sortOrder: number;
+  requiresApproval: boolean;
+  team: Team | null;
+}
+
+export interface ProcessTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  steps: ProcessStepTemplate[];
+}
+
+export interface ProcessStepInstance {
+  id: string;
+  label: string;
+  sortOrder: number;
+  requiresApproval: boolean;
+  status: ProcessStepStatus;
+  assigneeId: string | null;
+  assignee?: { id: string; name: string } | null;
+  completedAt: string | null;
+  ticketId: string | null;
+  ticket?: { id: string; number: number; subject: string } | null;
+}
+
+export interface ProcessInstance {
+  id: string;
+  processTemplateId: string | null;
+  templateName: string;
+  subject: string;
+  status: ProcessInstanceStatus;
+  createdAt: string;
+  completedAt: string | null;
+  steps: ProcessStepInstance[];
+}

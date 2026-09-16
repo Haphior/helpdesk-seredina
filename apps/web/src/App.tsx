@@ -12,6 +12,9 @@ import { Users } from './pages/Users';
 import { EmailChannels } from './pages/EmailChannels';
 import { CustomFields } from './pages/CustomFields';
 import { EquipmentCatalog } from './pages/EquipmentCatalog';
+import { Processes } from './pages/Processes';
+import { ProcessDetail } from './pages/ProcessDetail';
+import { ProcessTemplates } from './pages/ProcessTemplates';
 
 export function App() {
   return (
@@ -31,6 +34,9 @@ export function App() {
             <Route path="/email-channels" element={<EmailChannels />} />
             <Route path="/custom-fields" element={<CustomFields />} />
             <Route path="/equipment-catalog" element={<EquipmentCatalog />} />
+            <Route path="/processes" element={<Processes />} />
+            <Route path="/processes/:id" element={<ProcessDetail />} />
+            <Route path="/process-templates" element={<ProcessTemplates />} />
           </Route>
         </Route>
 

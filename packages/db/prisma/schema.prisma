@@ -45,6 +45,10 @@ model Tenant {
   customFieldDefinitions CustomFieldDefinition[]
   manufacturers   Manufacturer[]
   assetModels     AssetModel[]
+  processTemplates      ProcessTemplate[]
+  processStepTemplates  ProcessStepTemplate[]
+  processInstances      ProcessInstance[]
+  processStepInstances  ProcessStepInstance[]
 
   @@map("tenants")
 }
@@ -101,8 +105,9 @@ model User {
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until")
 
-  assignedTickets  Ticket[]  @relation("TicketAssignee")
-  authoredMessages Message[] @relation("MessageAuthorUser")
+  assignedTickets      Ticket[]              @relation("TicketAssignee")
+  authoredMessages     Message[]             @relation("MessageAuthorUser")
+  processStepAssignments ProcessStepInstance[]
 
   @@unique([tenantId, email])
   @@map("users")
@@ -118,7 +123,8 @@ model Team {
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name     String
 
-  tickets Ticket[]
+  tickets      Ticket[]
+  processSteps ProcessStepTemplate[]
 
   @@unique([tenantId, name])
   @@map("teams")
@@ -209,8 +215,9 @@ model Ticket {
   // rendered -- the value is orphaned but harmless, not cleaned up automatically.
   customFields Json? @map("custom_fields")
 
-  messages Message[]
-  assets   TicketAsset[]
+  messages     Message[]
+  assets       TicketAsset[]
+  processSteps ProcessStepInstance[]
 
   @@unique([tenantId, number])
   @@index([tenantId, channel, externalId])
@@ -466,4 +473,102 @@ model DiscoveryJob {
   completedAt     DateTime?          @map("completed_at")
 
   @@map("discovery_jobs")
+}
+
+// IT processes/procedures -- multi-step, multi-person checklists that outlive any
+// single conversation (employee onboarding, a commercial document approval chain).
+// Deliberately NOT the same model as Macro (a one-shot bundle of actions applied
+// instantly to a single ticket) -- see docs/adr/0008-it-processes.md.
+model ProcessTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  steps     ProcessStepTemplate[]
+  instances ProcessInstance[]
+
+  @@unique([tenantId, name])
+  @@map("process_templates")
+}
+
+model ProcessStepTemplate {
+  id                String          @id @default(uuid()) @db.Uuid
+  tenantId          String          @map("tenant_id") @db.Uuid
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  processTemplateId String          @map("process_template_id") @db.Uuid
+  processTemplate   ProcessTemplate @relation(fields: [processTemplateId], references: [id], onDelete: Cascade)
+  label             String
+  sortOrder         Int             @default(0) @map("sort_order")
+  teamId            String?         @map("team_id") @db.Uuid
+  team              Team?           @relation(fields: [teamId], references: [id])
+  requiresApproval  Boolean         @default(false) @map("requires_approval")
+
+  @@map("process_step_templates")
+}
+
+enum ProcessInstanceStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Spawned from a ProcessTemplate -- its steps are copied into ProcessStepInstance
+// rows at creation time (label included), so editing the template later never
+// rewrites an already-running instance's history.
+model ProcessInstance {
+  id                String                @id @default(uuid()) @db.Uuid
+  tenantId          String                @map("tenant_id") @db.Uuid
+  tenant            Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Nullable + SET NULL, not the schema default of Cascade for a required
+  // relation -- a running or completed instance (e.g. "Jane Doe's onboarding")
+  // must survive a template being deleted later; only the back-link to the
+  // template is lost, never the instance or its steps.
+  processTemplateId String?               @map("process_template_id") @db.Uuid
+  processTemplate   ProcessTemplate?      @relation(fields: [processTemplateId], references: [id], onDelete: SetNull)
+  // Copied from the template at creation time, same reasoning as step labels --
+  // stays readable even after processTemplateId goes null.
+  templateName      String                @map("template_name")
+  subject           String
+  status            ProcessInstanceStatus @default(IN_PROGRESS)
+  createdAt         DateTime              @default(now()) @map("created_at")
+  completedAt       DateTime?             @map("completed_at")
+
+  steps ProcessStepInstance[]
+
+  @@map("process_instances")
+}
+
+enum ProcessStepStatus {
+  PENDING
+  DONE
+  APPROVED
+  REJECTED
+  SKIPPED
+}
+
+model ProcessStepInstance {
+  id                String          @id @default(uuid()) @db.Uuid
+  tenantId          String          @map("tenant_id") @db.Uuid
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  processInstanceId String          @map("process_instance_id") @db.Uuid
+  processInstance   ProcessInstance @relation(fields: [processInstanceId], references: [id], onDelete: Cascade)
+  // Copied from the step template at instance-creation time -- see the comment on
+  // ProcessInstance above for why. Never re-read from the template afterward.
+  label             String
+  sortOrder         Int             @default(0) @map("sort_order")
+  requiresApproval  Boolean         @default(false) @map("requires_approval")
+  status            ProcessStepStatus @default(PENDING)
+  assigneeId        String?         @map("assignee_id") @db.Uuid
+  assignee          User?           @relation(fields: [assigneeId], references: [id])
+  completedAt       DateTime?       @map("completed_at")
+  // A step that needs real IT work can link an existing ticket, or the frontend
+  // can create one and link it here -- the process stays its own record either
+  // way, never shoehorned into the ticket/message model.
+  ticketId          String?         @map("ticket_id") @db.Uuid
+  ticket            Ticket?         @relation(fields: [ticketId], references: [id])
+
+  @@map("process_step_instances")
 }

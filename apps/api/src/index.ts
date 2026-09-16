@@ -15,6 +15,7 @@ import emailChannelRoutes from './modules/emailchannels/routes';
 import aiRoutes from './modules/ai/routes';
 import customFieldRoutes from './modules/customfields/routes';
 import assetCatalogRoutes from './modules/assetcatalog/routes';
+import processRoutes from './modules/processes/routes';
 
 initErrorTracking();
 
@@ -53,6 +54,7 @@ export function buildApp() {
   app.register(aiRoutes);
   app.register(customFieldRoutes);
   app.register(assetCatalogRoutes);
+  app.register(processRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

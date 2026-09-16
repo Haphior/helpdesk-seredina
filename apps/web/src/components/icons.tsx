@@ -119,6 +119,16 @@ export function CloseIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function ChecklistIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 5.5 5.2 6.7 7.5 4.4" />
+      <path d="M4 11.5 5.2 12.7 7.5 10.4" />
+      <path d="M10 5.5h6M10 12h6" />
+    </Icon>
+  );
+}
+
 export function LayersIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Icon {...props}>
