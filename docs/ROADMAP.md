@@ -726,6 +726,38 @@ shipped, not by external priority:**
   for Phase 3, given how consistently "the KB is incomplete/impossible to
   search live" showed up as a real agent pain point in the research pass.
 
+**Differentiators (added 2026-09-16, at the user's explicit request for
+"what would set this apart, not just close the gap") — deliberately NOT
+competitive parity. The point of everything else in this phase is closing
+gaps against Jira SM/GLPI/ServiceDesk Plus; these two are things none of
+them do, chosen because each one is cheap specifically because it reuses a
+piece already being built for another reason:**
+
+- **A public status page, auto-driven by Service Configuration Management +
+  the alert channel.** Shows which business `Service`s are currently affected
+  and why, in real time, with zero manual maintenance — Atlassian sells this
+  as a separate product (Statuspage) on top of Jira SM; GLPI and ServiceDesk
+  Plus don't offer it at all. Buildable almost entirely from two things
+  already planned above: `Service`→`Asset` links (Service Configuration
+  Management) and open `channel: 'alert'` tickets already flowing in from
+  monitoring tools — a status page is mostly a public, unauthenticated,
+  read-only view over "which Services have an open alert-linked ticket right
+  now," not a new data model. The real work is deciding exactly what an
+  anonymous visitor is allowed to see (ticket subjects/descriptions almost
+  certainly not — a service name and a status color, probably yes) — a
+  privacy/scoping design question, not a technical one.
+- **AI cost transparency, per ticket and per tenant.** Because the
+  `LlmProviderAdapter` is already a bring-your-own-key design (Phase 1 ✅,
+  deepened in Phase 3), Seredina is structurally able to show a tenant exactly
+  what each AI action cost in real dollars — something no per-seat SaaS
+  competitor bundling AI into its price can offer, because the incentive runs
+  the other way for them. Doesn't need to wait for Phase 3's full
+  `AiAgentRun`/`AutonomyPolicy` audit engine: a lightweight `AiUsageLog`
+  (tenantId, ticketId, action, input/output token counts, estimated cost)
+  written by the copilot calls that already exist today (Phase 1's summarize/
+  suggest-reply) is enough to start, with Phase 3's fuller audit trail
+  extending the same table rather than replacing it.
+
 ## Phase 3 — AI depth: RAG + MCP + autonomous mode
 
 - pgvector `KbChunk` embeddings + a `search_knowledge_base` RAG tool, layered
