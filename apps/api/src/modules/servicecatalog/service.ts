@@ -41,6 +41,35 @@ export async function deleteServiceCatalogItem(tenantId: string, id: string) {
   });
 }
 
+export interface UpdateServiceCatalogItemInput {
+  name?: string;
+  description?: string | null;
+  icon?: string | null;
+  customFieldKeys?: string[];
+  sortOrder?: number;
+}
+
+export async function updateServiceCatalogItem(tenantId: string, id: string, input: UpdateServiceCatalogItemInput) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.serviceCatalogItem.findUnique({ where: { id } });
+    if (!existing) throw new Error('service catalog item not found');
+    if (input.name && input.name !== existing.name) {
+      const nameTaken = await tx.serviceCatalogItem.findUnique({ where: { tenantId_name: { tenantId, name: input.name } } });
+      if (nameTaken) throw new Error('a service catalog item with this name already exists');
+    }
+    return tx.serviceCatalogItem.update({
+      where: { id },
+      data: {
+        name: input.name,
+        description: input.description,
+        icon: input.icon,
+        customFieldKeys: input.customFieldKeys,
+        sortOrder: input.sortOrder,
+      },
+    });
+  });
+}
+
 export interface RequestFromCatalogInput {
   contactEmail: string;
   contactName: string;

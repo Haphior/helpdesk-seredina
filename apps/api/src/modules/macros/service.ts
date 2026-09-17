@@ -53,6 +53,32 @@ export async function deleteMacro(tenantId: string, id: string) {
   });
 }
 
+export interface UpdateMacroInput {
+  name?: string;
+  actions?: MacroActions;
+}
+
+export async function updateMacro(tenantId: string, id: string, input: UpdateMacroInput) {
+  if (input.actions && !hasAnyAction(input.actions)) {
+    throw new Error('a macro needs at least one action');
+  }
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.macro.findUnique({ where: { id } });
+    if (!existing) throw new Error('macro not found');
+    if (input.name && input.name !== existing.name) {
+      const nameTaken = await tx.macro.findUnique({ where: { tenantId_name: { tenantId, name: input.name } } });
+      if (nameTaken) throw new Error('a macro with this name already exists');
+    }
+    return tx.macro.update({
+      where: { id },
+      data: {
+        name: input.name,
+        actions: input.actions ? (input.actions as Prisma.InputJsonValue) : undefined,
+      },
+    });
+  });
+}
+
 /**
  * Reuses updateTicket/addMessage rather than duplicating their logic -- a
  * macro's effects get webhook dispatch, resolvedAt/closedAt stamping, and

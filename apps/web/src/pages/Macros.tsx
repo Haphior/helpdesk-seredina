@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Macro, Team, TicketPriority, TicketStatus, UserSummary } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
@@ -24,6 +24,7 @@ export function Macros() {
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing] = useState<Macro | null>(null);
 
   function load() {
     Promise.all([
@@ -86,46 +87,64 @@ export function Macros() {
                   ))}
                 </div>
               </div>
-              <button onClick={() => remove(m)} className="text-xs text-slate-400 hover:text-rose-600">
-                delete
-              </button>
+              <div className="flex flex-shrink-0 items-center gap-3">
+                <button onClick={() => setEditing(m)} className="text-xs text-slate-400 hover:text-indigo-600">
+                  edit
+                </button>
+                <button onClick={() => remove(m)} className="text-xs text-slate-400 hover:text-rose-600">
+                  delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
       {showCreate && (
-        <CreateMacroModal statuses={statuses} teams={teams} users={users} onClose={() => setShowCreate(false)} onCreated={load} />
+        <MacroModal statuses={statuses} teams={teams} users={users} onClose={() => setShowCreate(false)} onSaved={load} />
+      )}
+      {editing && (
+        <MacroModal
+          macro={editing}
+          statuses={statuses}
+          teams={teams}
+          users={users}
+          onClose={() => setEditing(null)}
+          onSaved={load}
+        />
       )}
     </div>
   );
 }
 
-function CreateMacroModal({
+function MacroModal({
+  macro,
   statuses,
   teams,
   users,
   onClose,
-  onCreated,
+  onSaved,
 }: {
+  macro?: Macro;
   statuses: TicketStatus[];
   teams: Team[];
   users: UserSummary[];
   onClose: () => void;
-  onCreated: () => void;
+  onSaved: () => void;
 }) {
-  const [name, setName] = useState('');
-  const [enableStatus, setEnableStatus] = useState(false);
-  const [statusId, setStatusId] = useState(statuses[0]?.id ?? '');
-  const [enablePriority, setEnablePriority] = useState(false);
-  const [priority, setPriority] = useState<TicketPriority>('NORMAL');
-  const [enableTeam, setEnableTeam] = useState(false);
-  const [teamId, setTeamId] = useState('');
-  const [enableAssignee, setEnableAssignee] = useState(false);
-  const [assigneeId, setAssigneeId] = useState('');
-  const [enableReply, setEnableReply] = useState(false);
-  const [replyBody, setReplyBody] = useState('');
-  const [replyIsPrivate, setReplyIsPrivate] = useState(false);
+  const a = macro?.actions;
+  const [name, setName] = useState(macro?.name ?? '');
+  const [enableStatus, setEnableStatus] = useState(a?.setStatusId !== undefined);
+  const [statusId, setStatusId] = useState(a?.setStatusId ?? statuses[0]?.id ?? '');
+  const [enablePriority, setEnablePriority] = useState(a?.setPriority !== undefined);
+  const [priority, setPriority] = useState<TicketPriority>(a?.setPriority ?? 'NORMAL');
+  const [enableTeam, setEnableTeam] = useState(a?.setTeamId !== undefined);
+  const [teamId, setTeamId] = useState(a?.setTeamId ?? '');
+  const [enableAssignee, setEnableAssignee] = useState(a?.setAssigneeId !== undefined);
+  const [assigneeId, setAssigneeId] = useState(a?.setAssigneeId ?? '');
+  const [enableReply, setEnableReply] = useState(!!a?.addReply);
+  const [replyBody, setReplyBody] = useState(a?.addReply?.body ?? '');
+  const [replyIsPrivate, setReplyIsPrivate] = useState(a?.addReply?.isPrivateNote ?? false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -134,7 +153,7 @@ function CreateMacroModal({
     setError(null);
     setSubmitting(true);
     try {
-      await apiPost('/macros', {
+      const data = {
         name,
         actions: {
           setStatusId: enableStatus ? statusId : undefined,
@@ -143,11 +162,16 @@ function CreateMacroModal({
           setAssigneeId: enableAssignee ? assigneeId || null : undefined,
           addReply: enableReply ? { body: replyBody, isPrivateNote: replyIsPrivate } : undefined,
         },
-      });
-      onCreated();
+      };
+      if (macro) {
+        await apiPatch(`/macros/${macro.id}`, data);
+      } else {
+        await apiPost('/macros', data);
+      }
+      onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create macro');
+      setError(err instanceof ApiError ? err.message : 'Failed to save macro');
     } finally {
       setSubmitting(false);
     }
@@ -156,7 +180,7 @@ function CreateMacroModal({
   const noActionsSelected = !enableStatus && !enablePriority && !enableTeam && !enableAssignee && !enableReply;
 
   return (
-    <Modal title="New macro" onClose={onClose}>
+    <Modal title={macro ? `Edit "${macro.name}"` : 'New macro'} onClose={onClose}>
       <form onSubmit={onSubmit} className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
         <label className="block text-sm">
           <span className="mb-1 block font-medium text-slate-700">Name</span>

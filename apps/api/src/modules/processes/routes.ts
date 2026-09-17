@@ -9,6 +9,7 @@ import {
   listProcessTemplates,
   startProcessInstance,
   updateProcessStep,
+  updateProcessTemplate,
 } from './service';
 
 const stepTemplateSchema = z.object({
@@ -22,6 +23,12 @@ const createTemplateSchema = z.object({
   description: z.string().max(2000).nullish(),
   kind: z.enum(['GENERAL', 'CHANGE', 'RELEASE']).optional(),
   steps: z.array(stepTemplateSchema).min(1),
+});
+
+const updateTemplateSchema = z.object({
+  name: z.string().min(1).max(150).optional(),
+  description: z.string().max(2000).nullish(),
+  steps: z.array(stepTemplateSchema).min(1).optional(),
 });
 
 const startInstanceSchema = z.object({
@@ -67,6 +74,22 @@ export default async function processRoutes(app: FastifyInstance) {
       try {
         const template = await createProcessTemplate(request.user.tenantId, parsed.data);
         return reply.code(201).send(template);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.patch(
+    '/process-templates/:id',
+    { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = updateTemplateSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const template = await updateProcessTemplate(request.user.tenantId, id, parsed.data);
+        return reply.send(template);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
       }

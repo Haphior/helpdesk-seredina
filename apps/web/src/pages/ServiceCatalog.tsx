@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { CustomFieldDefinition, ServiceCatalogItem } from '../lib/types';
 import { Modal } from '../components/Modal';
 
@@ -8,6 +8,7 @@ export function ServiceCatalog() {
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing] = useState<ServiceCatalogItem | null>(null);
 
   function load() {
     Promise.all([
@@ -71,6 +72,9 @@ export function ServiceCatalog() {
                       {item.customFieldKeys.length} field{item.customFieldKeys.length === 1 ? '' : 's'}
                     </span>
                   )}
+                  <button onClick={() => setEditing(item)} className="text-xs text-slate-400 hover:text-indigo-600">
+                    edit
+                  </button>
                   <button onClick={() => remove(item)} className="text-xs text-slate-400 hover:text-rose-600">
                     delete
                   </button>
@@ -82,25 +86,30 @@ export function ServiceCatalog() {
       )}
 
       {showCreate && (
-        <CreateItemModal customFields={customFields} onClose={() => setShowCreate(false)} onCreated={load} />
+        <ItemModal customFields={customFields} onClose={() => setShowCreate(false)} onSaved={load} />
+      )}
+      {editing && (
+        <ItemModal item={editing} customFields={customFields} onClose={() => setEditing(null)} onSaved={load} />
       )}
     </div>
   );
 }
 
-function CreateItemModal({
+function ItemModal({
+  item,
   customFields,
   onClose,
-  onCreated,
+  onSaved,
 }: {
+  item?: ServiceCatalogItem;
   customFields: CustomFieldDefinition[];
   onClose: () => void;
-  onCreated: () => void;
+  onSaved: () => void;
 }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [icon, setIcon] = useState('');
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [name, setName] = useState(item?.name ?? '');
+  const [description, setDescription] = useState(item?.description ?? '');
+  const [icon, setIcon] = useState(item?.icon ?? '');
+  const [selectedKeys, setSelectedKeys] = useState<string[]>(item?.customFieldKeys ?? []);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -113,23 +122,28 @@ function CreateItemModal({
     setError(null);
     setSubmitting(true);
     try {
-      await apiPost('/service-catalog-items', {
+      const data = {
         name,
         description: description || undefined,
         icon: icon || undefined,
         customFieldKeys: selectedKeys,
-      });
-      onCreated();
+      };
+      if (item) {
+        await apiPatch(`/service-catalog-items/${item.id}`, data);
+      } else {
+        await apiPost('/service-catalog-items', data);
+      }
+      onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create item');
+      setError(err instanceof ApiError ? err.message : 'Failed to save item');
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="New catalog item" onClose={onClose}>
+    <Modal title={item ? `Edit "${item.name}"` : 'New catalog item'} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div className="flex gap-2">
           <label className="block w-16 text-sm">

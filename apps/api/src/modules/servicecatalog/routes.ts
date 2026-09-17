@@ -1,13 +1,27 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { createServiceCatalogItem, createTicketFromCatalogItem, deleteServiceCatalogItem, listServiceCatalogItems } from './service';
+import {
+  createServiceCatalogItem,
+  createTicketFromCatalogItem,
+  deleteServiceCatalogItem,
+  listServiceCatalogItems,
+  updateServiceCatalogItem,
+} from './service';
 
 const createItemSchema = z.object({
   name: z.string().min(1).max(150),
   description: z.string().max(2000).nullish(),
   icon: z.string().max(10).nullish(),
   customFieldKeys: z.array(z.string()).optional(),
+});
+
+const updateItemSchema = z.object({
+  name: z.string().min(1).max(150).optional(),
+  description: z.string().max(2000).nullish(),
+  icon: z.string().max(10).nullish(),
+  customFieldKeys: z.array(z.string()).optional(),
+  sortOrder: z.number().int().min(0).optional(),
 });
 
 const requestSchema = z.object({
@@ -40,6 +54,22 @@ export default async function serviceCatalogRoutes(app: FastifyInstance) {
       try {
         const item = await createServiceCatalogItem(request.user.tenantId, parsed.data);
         return reply.code(201).send(item);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.patch(
+    '/service-catalog-items/:id',
+    { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = updateItemSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const item = await updateServiceCatalogItem(request.user.tenantId, id, parsed.data);
+        return reply.send(item);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
       }

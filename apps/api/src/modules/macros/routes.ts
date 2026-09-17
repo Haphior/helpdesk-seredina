@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { applyMacro, createMacro, deleteMacro, listMacros } from './service';
+import { applyMacro, createMacro, deleteMacro, listMacros, updateMacro } from './service';
 
 const PRIORITY = z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']);
 
@@ -16,6 +16,11 @@ const macroActionsSchema = z.object({
 const createMacroSchema = z.object({
   name: z.string().min(1).max(100),
   actions: macroActionsSchema,
+});
+
+const updateMacroSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  actions: macroActionsSchema.optional(),
 });
 
 export default async function macroRoutes(app: FastifyInstance) {
@@ -41,6 +46,22 @@ export default async function macroRoutes(app: FastifyInstance) {
       try {
         const macro = await createMacro(request.user.tenantId, parsed.data);
         return reply.code(201).send(macro);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.patch(
+    '/macros/:id',
+    { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = updateMacroSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const macro = await updateMacro(request.user.tenantId, id, parsed.data);
+        return reply.send(macro);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
       }

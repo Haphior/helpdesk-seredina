@@ -41,3 +41,38 @@ export async function deleteCustomFieldDefinition(tenantId: string, definitionId
     await tx.customFieldDefinition.delete({ where: { id: definitionId } });
   });
 }
+
+export interface UpdateCustomFieldInput {
+  label?: string;
+  required?: boolean;
+  // SELECT only. Renaming/removing an option a ticket already has stored as its
+  // value is the caller's problem the same way it already is elsewhere (see
+  // customFields' orphaned-value handling on Ticket) -- this never touches
+  // existing ticket data, just the option list new/edited values can pick from.
+  options?: string[];
+  sortOrder?: number;
+}
+
+/**
+ * `key` and `fieldType` are deliberately never editable here -- `key` is how a
+ * ticket's jsonb customFields blob references this definition, and `fieldType`
+ * changing after values exist could leave stored values (e.g. a NUMBER) that no
+ * longer match the field's own type (now BOOLEAN). Both would need a real data
+ * migration, not a form field; delete-and-recreate-with-a-new-key is the
+ * intentional escape hatch for those two.
+ */
+export async function updateCustomFieldDefinition(tenantId: string, id: string, input: UpdateCustomFieldInput) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.customFieldDefinition.findUnique({ where: { id } });
+    if (!existing) throw new Error('custom field not found');
+    return tx.customFieldDefinition.update({
+      where: { id },
+      data: {
+        label: input.label,
+        required: input.required,
+        options: existing.fieldType === 'SELECT' ? input.options : undefined,
+        sortOrder: input.sortOrder,
+      },
+    });
+  });
+}

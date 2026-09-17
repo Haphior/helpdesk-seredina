@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { ProcessTemplate, ProcessTemplateKind, Team } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
@@ -14,6 +14,7 @@ export function ProcessTemplates() {
   const [templates, setTemplates] = useState<ProcessTemplate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing] = useState<ProcessTemplate | null>(null);
 
   function load() {
     apiGet<{ templates: ProcessTemplate[] }>('/process-templates')
@@ -66,9 +67,14 @@ export function ProcessTemplates() {
                   </div>
                   {t.description && <div className="text-[12.5px] text-slate-400">{t.description}</div>}
                 </div>
-                <button onClick={() => remove(t)} className="text-xs text-slate-400 hover:text-rose-600">
-                  delete
-                </button>
+                <div className="flex flex-shrink-0 items-center gap-3">
+                  <button onClick={() => setEditing(t)} className="text-xs text-slate-400 hover:text-indigo-600">
+                    edit
+                  </button>
+                  <button onClick={() => remove(t)} className="text-xs text-slate-400 hover:text-rose-600">
+                    delete
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {t.steps.map((s, i) => (
@@ -87,16 +93,29 @@ export function ProcessTemplates() {
         </div>
       )}
 
-      {showCreate && <CreateTemplateModal onClose={() => setShowCreate(false)} onCreated={load} />}
+      {showCreate && <TemplateModal onClose={() => setShowCreate(false)} onSaved={load} />}
+      {editing && <TemplateModal template={editing} onClose={() => setEditing(null)} onSaved={load} />}
     </div>
   );
 }
 
-function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [kind, setKind] = useState<ProcessTemplateKind>('GENERAL');
-  const [steps, setSteps] = useState<StepDraft[]>([{ label: '', teamId: '', requiresApproval: false }]);
+function TemplateModal({
+  template,
+  onClose,
+  onSaved,
+}: {
+  template?: ProcessTemplate;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(template?.name ?? '');
+  const [description, setDescription] = useState(template?.description ?? '');
+  const [kind, setKind] = useState<ProcessTemplateKind>(template?.kind ?? 'GENERAL');
+  const [steps, setSteps] = useState<StepDraft[]>(
+    template
+      ? template.steps.map((s) => ({ label: s.label, teamId: s.team?.id ?? '', requiresApproval: s.requiresApproval }))
+      : [{ label: '', teamId: '', requiresApproval: false }],
+  );
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -124,25 +143,29 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
     setError(null);
     setSubmitting(true);
     try {
-      await apiPost('/process-templates', {
-        name,
-        description: description || undefined,
-        kind,
-        steps: steps
-          .filter((s) => s.label.trim())
-          .map((s) => ({ label: s.label, teamId: s.teamId || undefined, requiresApproval: s.requiresApproval })),
-      });
-      onCreated();
+      const stepData = steps
+        .filter((s) => s.label.trim())
+        .map((s) => ({ label: s.label, teamId: s.teamId || undefined, requiresApproval: s.requiresApproval }));
+      if (template) {
+        await apiPatch(`/process-templates/${template.id}`, {
+          name,
+          description: description || undefined,
+          steps: stepData,
+        });
+      } else {
+        await apiPost('/process-templates', { name, description: description || undefined, kind, steps: stepData });
+      }
+      onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create template');
+      setError(err instanceof ApiError ? err.message : 'Failed to save template');
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="New process template" onClose={onClose}>
+    <Modal title={template ? `Edit "${template.name}"` : 'New process template'} onClose={onClose}>
       <form onSubmit={onSubmit} className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
         <label className="block text-sm">
           <span className="mb-1 block font-medium text-slate-700">Name</span>
@@ -164,29 +187,36 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
           />
         </label>
 
-        <div className="flex gap-2 rounded-md border border-slate-200 p-2">
-          <label className="flex flex-1 items-start gap-2 text-xs">
-            <input type="radio" className="mt-0.5" checked={kind === 'GENERAL'} onChange={() => setKind('GENERAL')} />
-            <span>
-              <span className="block font-medium text-slate-700">General process</span>
-              <span className="block text-slate-400">Onboarding, a contract chain — any multi-step checklist.</span>
-            </span>
-          </label>
-          <label className="flex flex-1 items-start gap-2 text-xs">
-            <input type="radio" className="mt-0.5" checked={kind === 'CHANGE'} onChange={() => setKind('CHANGE')} />
-            <span>
-              <span className="block font-medium text-slate-700">Change (ITIL)</span>
-              <span className="block text-slate-400">Starting an instance will require a risk level and offer a planned window/rollback plan.</span>
-            </span>
-          </label>
-          <label className="flex flex-1 items-start gap-2 text-xs">
-            <input type="radio" className="mt-0.5" checked={kind === 'RELEASE'} onChange={() => setKind('RELEASE')} />
-            <span>
-              <span className="block font-medium text-slate-700">Release (ITIL)</span>
-              <span className="block text-slate-400">Starting an instance will require a version and can link back to the Change that approved it.</span>
-            </span>
-          </label>
-        </div>
+        {template ? (
+          <p className="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-500">
+            Kind (<span className="font-medium text-slate-700">{kind}</span>) can't change after creation — a template's
+            kind determines which fields starting an instance requires. Create a new template if you need a different one.
+          </p>
+        ) : (
+          <div className="flex gap-2 rounded-md border border-slate-200 p-2">
+            <label className="flex flex-1 items-start gap-2 text-xs">
+              <input type="radio" className="mt-0.5" checked={kind === 'GENERAL'} onChange={() => setKind('GENERAL')} />
+              <span>
+                <span className="block font-medium text-slate-700">General process</span>
+                <span className="block text-slate-400">Onboarding, a contract chain — any multi-step checklist.</span>
+              </span>
+            </label>
+            <label className="flex flex-1 items-start gap-2 text-xs">
+              <input type="radio" className="mt-0.5" checked={kind === 'CHANGE'} onChange={() => setKind('CHANGE')} />
+              <span>
+                <span className="block font-medium text-slate-700">Change (ITIL)</span>
+                <span className="block text-slate-400">Starting an instance will require a risk level and offer a planned window/rollback plan.</span>
+              </span>
+            </label>
+            <label className="flex flex-1 items-start gap-2 text-xs">
+              <input type="radio" className="mt-0.5" checked={kind === 'RELEASE'} onChange={() => setKind('RELEASE')} />
+              <span>
+                <span className="block font-medium text-slate-700">Release (ITIL)</span>
+                <span className="block text-slate-400">Starting an instance will require a version and can link back to the Change that approved it.</span>
+              </span>
+            </label>
+          </div>
+        )}
 
         <div className="border-t border-slate-200 pt-2">
           <span className="mb-2 block text-xs font-medium uppercase text-slate-400">Steps, in order</span>

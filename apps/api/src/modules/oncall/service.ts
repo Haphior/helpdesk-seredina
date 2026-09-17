@@ -19,6 +19,18 @@ export async function createOnCallSchedule(tenantId: string, name: string) {
   });
 }
 
+export async function renameOnCallSchedule(tenantId: string, id: string, name: string) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.onCallSchedule.findUnique({ where: { id } });
+    if (!existing) throw new Error('on-call schedule not found');
+    if (name !== existing.name) {
+      const nameTaken = await tx.onCallSchedule.findUnique({ where: { tenantId_name: { tenantId, name } } });
+      if (nameTaken) throw new Error('an on-call schedule with this name already exists');
+    }
+    return tx.onCallSchedule.update({ where: { id }, data: { name } });
+  });
+}
+
 export async function deleteOnCallSchedule(tenantId: string, id: string) {
   return withTenantTx(prisma, tenantId, async (tx) => {
     const existing = await tx.onCallSchedule.findUnique({ where: { id } });
@@ -97,6 +109,29 @@ export async function createEscalationTier(tenantId: string, input: CreateEscala
         escalateAfterMinutes: input.escalateAfterMinutes,
         sortOrder: count,
       },
+      include: { user: { select: { id: true, name: true } }, onCallSchedule: { select: { id: true, name: true } } },
+    });
+  });
+}
+
+export interface UpdateEscalationTierInput {
+  escalateAfterMinutes?: number;
+  // Reordering only -- see Dashboard.tsx's identical swap-two-rows pattern for
+  // widget prefs. Changing WHO a tier notifies is left to delete+recreate: a
+  // consequential enough change that "start over" is clearer than a partial edit.
+  sortOrder?: number;
+}
+
+export async function updateEscalationTier(tenantId: string, id: string, input: UpdateEscalationTierInput) {
+  if (input.escalateAfterMinutes !== undefined && input.escalateAfterMinutes <= 0) {
+    throw new Error('escalateAfterMinutes must be a positive number of minutes');
+  }
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.escalationTier.findUnique({ where: { id } });
+    if (!existing) throw new Error('escalation tier not found');
+    return tx.escalationTier.update({
+      where: { id },
+      data: { escalateAfterMinutes: input.escalateAfterMinutes, sortOrder: input.sortOrder },
       include: { user: { select: { id: true, name: true } }, onCallSchedule: { select: { id: true, name: true } } },
     });
   });

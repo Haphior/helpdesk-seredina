@@ -57,6 +57,63 @@ export async function createProcessTemplate(tenantId: string, input: CreateProce
   });
 }
 
+export interface UpdateProcessTemplateInput {
+  name?: string;
+  description?: string | null;
+  steps?: StepTemplateInput[];
+}
+
+/**
+ * `kind` is deliberately never editable -- switching an existing GENERAL
+ * template to CHANGE/RELEASE after the fact would retroactively demand
+ * fields (riskLevel, a version) that already-started instances never had a
+ * chance to supply. A new template is the correct way to change kind.
+ *
+ * Steps, when provided, fully replace the existing set (delete + recreate)
+ * rather than diffing -- safe because ProcessStepInstance copies its label/
+ * sortOrder/requiresApproval at instance-creation time and holds no FK back
+ * to ProcessStepTemplate (see schema.prisma's comment on ProcessStepInstance),
+ * so an already-running process instance is completely unaffected by editing
+ * the template it was started from.
+ */
+export async function updateProcessTemplate(tenantId: string, id: string, input: UpdateProcessTemplateInput) {
+  if (input.steps && input.steps.length === 0) {
+    throw new Error('a process template needs at least one step');
+  }
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.processTemplate.findUnique({ where: { id } });
+    if (!existing) throw new Error('process template not found');
+    if (input.name && input.name !== existing.name) {
+      const nameTaken = await tx.processTemplate.findUnique({ where: { tenantId_name: { tenantId, name: input.name } } });
+      if (nameTaken) throw new Error('a process template with this name already exists');
+    }
+
+    if (input.steps) {
+      await tx.processStepTemplate.deleteMany({ where: { processTemplateId: id } });
+    }
+
+    return tx.processTemplate.update({
+      where: { id },
+      data: {
+        name: input.name,
+        description: input.description,
+        steps: input.steps
+          ? {
+              create: input.steps.map((s, i) => ({
+                tenantId,
+                label: s.label,
+                teamId: s.teamId ?? null,
+                requiresApproval: s.requiresApproval ?? false,
+                sortOrder: i,
+              })),
+            }
+          : undefined,
+      },
+      include: { steps: { orderBy: { sortOrder: 'asc' }, include: { team: true } } },
+    });
+  });
+}
+
 export async function deleteProcessTemplate(tenantId: string, id: string) {
   return withTenantTx(prisma, tenantId, async (tx) => {
     const existing = await tx.processTemplate.findUnique({ where: { id } });

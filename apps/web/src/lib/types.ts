@@ -242,7 +242,12 @@ export interface Macro {
   createdAt: string;
 }
 
-export type WebhookEvent = 'ticket.created' | 'ticket.updated' | 'message.created';
+export type WebhookEvent =
+  | 'ticket.created'
+  | 'ticket.updated'
+  | 'message.created'
+  | 'sla.first_response_breached'
+  | 'sla.resolution_breached';
 
 export interface Webhook {
   id: string;

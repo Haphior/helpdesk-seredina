@@ -58,3 +58,45 @@ export async function deleteWebhook(tenantId: string, id: string) {
     await tx.webhook.delete({ where: { id } });
   });
 }
+
+export interface UpdateWebhookInput {
+  url?: string;
+  events?: WebhookEvent[];
+  isActive?: boolean;
+}
+
+/**
+ * Never touches secretEncrypted -- rotating the signing secret is its own
+ * explicit action (rotateWebhookSecret below), not a side effect of editing
+ * the URL or event list. A plain "edit" changing the secret out from under an
+ * operator who didn't ask for that would silently break their delivery
+ * verification.
+ */
+export async function updateWebhook(tenantId: string, id: string, input: UpdateWebhookInput) {
+  if (input.url && !input.url.startsWith('https://')) {
+    throw new Error('webhook URL must use https://');
+  }
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.webhook.findUnique({ where: { id } });
+    if (!existing) throw new Error('webhook not found');
+    return tx.webhook.update({
+      where: { id },
+      data: { url: input.url, events: input.events, isActive: input.isActive },
+      select: SAFE_SELECT,
+    });
+  });
+}
+
+/** Shown once, exactly like createWebhook's -- the old secret stops verifying deliveries immediately. */
+export async function rotateWebhookSecret(tenantId: string, id: string) {
+  const secret = randomBytes(32).toString('hex');
+  const secretEncrypted = encryptSecret(secret, ENCRYPTION_KEY!);
+
+  const webhook = await withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.webhook.findUnique({ where: { id } });
+    if (!existing) throw new Error('webhook not found');
+    return tx.webhook.update({ where: { id }, data: { secretEncrypted }, select: SAFE_SELECT });
+  });
+
+  return { ...webhook, secret };
+}

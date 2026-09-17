@@ -1,7 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { createCustomFieldDefinition, deleteCustomFieldDefinition, listCustomFieldDefinitions } from './service';
+import {
+  createCustomFieldDefinition,
+  deleteCustomFieldDefinition,
+  listCustomFieldDefinitions,
+  updateCustomFieldDefinition,
+} from './service';
 
 const createCustomFieldSchema = z.object({
   key: z
@@ -13,6 +18,13 @@ const createCustomFieldSchema = z.object({
   fieldType: z.enum(['TEXT', 'NUMBER', 'BOOLEAN', 'DATE', 'SELECT']),
   options: z.array(z.string().min(1)).optional(),
   required: z.boolean().optional(),
+});
+
+const updateCustomFieldSchema = z.object({
+  label: z.string().min(1).max(100).optional(),
+  required: z.boolean().optional(),
+  options: z.array(z.string().min(1)).optional(),
+  sortOrder: z.number().int().min(0).optional(),
 });
 
 export default async function customFieldRoutes(app: FastifyInstance) {
@@ -42,6 +54,22 @@ export default async function customFieldRoutes(app: FastifyInstance) {
         return reply.code(201).send(field);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.patch(
+    '/custom-fields/:id',
+    { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = updateCustomFieldSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const field = await updateCustomFieldDefinition(request.user.tenantId, id, parsed.data);
+        return reply.send(field);
+      } catch (err) {
+        return reply.code(404).send({ error: (err as Error).message });
       }
     },
   );

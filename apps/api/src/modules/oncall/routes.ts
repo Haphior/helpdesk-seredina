@@ -11,6 +11,8 @@ import {
   deleteShift,
   listEscalationTiers,
   listOnCallSchedules,
+  renameOnCallSchedule,
+  updateEscalationTier,
 } from './service';
 
 const createScheduleSchema = z.object({ name: z.string().min(1).max(150) });
@@ -19,6 +21,10 @@ const createTierSchema = z.object({
   userId: z.string().uuid().nullish(),
   onCallScheduleId: z.string().uuid().nullish(),
   escalateAfterMinutes: z.number().int().positive(),
+});
+const updateTierSchema = z.object({
+  escalateAfterMinutes: z.number().int().positive().optional(),
+  sortOrder: z.number().int().min(0).optional(),
 });
 
 // All configuration (schedules/shifts/tiers) is tickets:manage_all, the same
@@ -43,6 +49,22 @@ export default async function onCallRoutes(app: FastifyInstance) {
       try {
         const schedule = await createOnCallSchedule(request.user.tenantId, parsed.data.name);
         return reply.code(201).send(schedule);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.patch(
+    '/on-call-schedules/:id',
+    { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = createScheduleSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const schedule = await renameOnCallSchedule(request.user.tenantId, id, parsed.data.name);
+        return reply.send(schedule);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
       }
@@ -111,6 +133,22 @@ export default async function onCallRoutes(app: FastifyInstance) {
       try {
         const tier = await createEscalationTier(request.user.tenantId, parsed.data);
         return reply.code(201).send(tier);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.patch(
+    '/escalation-tiers/:id',
+    { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = updateTierSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const tier = await updateEscalationTier(request.user.tenantId, id, parsed.data);
+        return reply.send(tier);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
       }
