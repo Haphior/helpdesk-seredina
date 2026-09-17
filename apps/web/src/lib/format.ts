@@ -1,5 +1,5 @@
 import type { BadgeTone } from '../components/Badge';
-import type { ChangeRiskLevel, Ticket, TicketPriority, TicketStatusCategory } from './types';
+import type { ChangeRiskLevel, ProblemStatus, Ticket, TicketPriority, TicketStatusCategory } from './types';
 
 export const STATUS_CATEGORY_TONE: Record<TicketStatusCategory, BadgeTone> = {
   OPEN: 'sky',
@@ -19,6 +19,13 @@ export const RISK_TONE: Record<ChangeRiskLevel, BadgeTone> = {
   LOW: 'slate',
   MEDIUM: 'orange',
   HIGH: 'rose',
+};
+
+export const PROBLEM_STATUS_TONE: Record<ProblemStatus, BadgeTone> = {
+  UNDER_INVESTIGATION: 'amber',
+  KNOWN_ERROR: 'orange',
+  RESOLVED: 'emerald',
+  CLOSED: 'slate',
 };
 
 export function formatDateTime(iso: string): string {

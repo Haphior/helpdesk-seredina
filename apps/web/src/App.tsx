@@ -20,6 +20,8 @@ import { Webhooks } from './pages/Webhooks';
 import { Macros } from './pages/Macros';
 import { SlaPolicies } from './pages/SlaPolicies';
 import { BusinessHoursPage } from './pages/BusinessHoursPage';
+import { Problems } from './pages/Problems';
+import { ProblemDetail } from './pages/ProblemDetail';
 
 export function App() {
   return (
@@ -43,6 +45,8 @@ export function App() {
             <Route path="/processes" element={<Processes />} />
             <Route path="/processes/:id" element={<ProcessDetail />} />
             <Route path="/process-templates" element={<ProcessTemplates />} />
+            <Route path="/problems" element={<Problems />} />
+            <Route path="/problems/:id" element={<ProblemDetail />} />
             <Route path="/webhooks" element={<Webhooks />} />
             <Route path="/macros" element={<Macros />} />
             <Route path="/sla-policies" element={<SlaPolicies />} />

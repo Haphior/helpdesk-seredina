@@ -77,6 +77,7 @@ export interface Ticket {
   firstResponseDueAt: string | null;
   firstRespondedAt: string | null;
   resolutionDueAt: string | null;
+  problemId: string | null;
 }
 
 export interface SlaPolicy {
@@ -180,6 +181,7 @@ export interface DiscoveryJob {
 export interface TicketDetail extends Ticket {
   messages: Message[];
   assets: { assetId: string; asset: AssetSummary }[];
+  problem?: { id: string; number: number; title: string } | null;
 }
 
 export interface ApiKeySummary {
@@ -309,4 +311,29 @@ export interface SlaComplianceReport {
 export interface AgentWorkloadReport {
   agents: { userId: string; name: string; count: number }[];
   unassigned: number;
+}
+
+export type ProblemStatus = 'UNDER_INVESTIGATION' | 'KNOWN_ERROR' | 'RESOLVED' | 'CLOSED';
+
+export interface ProblemTicketSummary {
+  id: string;
+  number: number;
+  subject: string;
+  statusId: string;
+}
+
+export interface Problem {
+  id: string;
+  number: number;
+  title: string;
+  description: string | null;
+  status: ProblemStatus;
+  rootCause: string | null;
+  workaround: string | null;
+  changeInstanceId: string | null;
+  changeInstance?: { id: string; subject: string } | null;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+  tickets: ProblemTicketSummary[];
 }

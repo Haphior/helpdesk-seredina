@@ -21,6 +21,7 @@ import macroRoutes from './modules/macros/routes';
 import slaRoutes from './modules/sla/routes';
 import reportingRoutes from './modules/reporting/routes';
 import dashboardRoutes from './modules/dashboard/routes';
+import problemRoutes from './modules/problems/routes';
 
 initErrorTracking();
 
@@ -65,6 +66,7 @@ export function buildApp() {
   app.register(slaRoutes);
   app.register(reportingRoutes);
   app.register(dashboardRoutes);
+  app.register(problemRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

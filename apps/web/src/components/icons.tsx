@@ -230,3 +230,13 @@ export function ChevronUpIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function WarningIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M10 3.5 2.5 16.5h15Z" />
+      <path d="M10 8v4" />
+      <path d="M10 14.5v.1" />
+    </Icon>
+  );
+}

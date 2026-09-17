@@ -213,6 +213,7 @@ export async function getTicket(tenantId: string, ticketId: string) {
         team: true,
         messages: { orderBy: { createdAt: 'asc' }, include: { authorUser: { select: { id: true, name: true } } } },
         assets: { include: { asset: { select: { id: true, name: true, ipAddress: true, assetType: true } } } },
+        problem: { select: { id: true, number: true, title: true } },
       },
     });
     if (!ticket) throw new Error('ticket not found');
@@ -279,6 +280,9 @@ export interface UpdateTicketInput {
   // Merged into the existing jsonb, never replaced -- a PATCH that only sets one
   // custom field shouldn't silently blank out every other one already stored.
   customFields?: Record<string, unknown>;
+  // Links this ticket to the Problem it's a symptom of -- see
+  // docs/adr/0015-problem-management.md. null disconnects.
+  problemId?: string | null;
 }
 
 export async function updateTicket(tenantId: string, ticketId: string, input: UpdateTicketInput) {
@@ -292,6 +296,7 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
       priority: input.priority,
       assignee: input.assigneeId === undefined ? undefined : input.assigneeId ? { connect: { id: input.assigneeId } } : { disconnect: true },
       team: input.teamId === undefined ? undefined : input.teamId ? { connect: { id: input.teamId } } : { disconnect: true },
+      problem: input.problemId === undefined ? undefined : input.problemId ? { connect: { id: input.problemId } } : { disconnect: true },
       customFields: input.customFields
         ? ({ ...((ticket.customFields as Record<string, unknown> | null) ?? {}), ...input.customFields } as Prisma.InputJsonValue)
         : undefined,

@@ -17,6 +17,7 @@ import {
   SlidersIcon,
   TicketIcon,
   UsersIcon,
+  WarningIcon,
   WebhookIcon,
 } from './icons';
 import { Logo } from './Logo';
@@ -32,6 +33,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { to: '/tickets', label: 'Tickets', icon: TicketIcon },
   { to: '/processes', label: 'Processes', icon: ChecklistIcon, permission: 'tickets:write' as const },
+  { to: '/problems', label: 'Problems', icon: WarningIcon, permission: 'tickets:write' as const },
   { to: '/assets', label: 'Assets', icon: AssetsIcon },
   { to: '/equipment-catalog', label: 'Equipment Catalog', icon: LayersIcon, permission: 'assets:manage' as const },
   { to: '/api-keys', label: 'API Keys', icon: KeyIcon },

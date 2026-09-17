@@ -5,6 +5,7 @@ import type {
   AssetSummary,
   CustomFieldDefinition,
   Macro,
+  Problem,
   Team,
   TicketDetail as TicketDetailType,
   TicketPriority,
@@ -25,6 +26,7 @@ export function TicketDetail() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [allAssets, setAllAssets] = useState<AssetSummary[]>([]);
+  const [problems, setProblems] = useState<Problem[]>([]);
   const [assetToLink, setAssetToLink] = useState('');
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
   const [macros, setMacros] = useState<Macro[]>([]);
@@ -44,7 +46,7 @@ export function TicketDetail() {
     if (!id) return;
     setError(null);
     try {
-      const [t, s, tm, u, a, cf, mc] = await Promise.all([
+      const [t, s, tm, u, a, cf, mc, pr] = await Promise.all([
         apiGet<TicketDetailType>(`/tickets/${id}`),
         apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses'),
         apiGet<{ teams: Team[] }>('/teams'),
@@ -52,6 +54,7 @@ export function TicketDetail() {
         apiGet<{ assets: AssetSummary[] }>('/assets'),
         apiGet<{ customFields: CustomFieldDefinition[] }>('/custom-fields'),
         apiGet<{ macros: Macro[] }>('/macros'),
+        apiGet<{ problems: Problem[] }>('/problems'),
       ]);
       setTicket(t);
       setStatuses(s.statuses);
@@ -60,6 +63,7 @@ export function TicketDetail() {
       setAllAssets(a.assets);
       setCustomFieldDefs(cf.customFields);
       setMacros(mc.macros);
+      setProblems(pr.problems);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load ticket');
     }
@@ -356,7 +360,27 @@ export function TicketDetail() {
               ))}
             </PropertySelect>
           </PropertyRow>
+
+          <PropertyRow label="Problem">
+            <PropertySelect value={ticket.problemId ?? ''} onChange={(v) => patch({ problemId: v || null })}>
+              <option value="">Unlinked</option>
+              {problems.map((p) => (
+                <option key={p.id} value={p.id}>
+                  #{p.number} {p.title}
+                </option>
+              ))}
+            </PropertySelect>
+          </PropertyRow>
         </div>
+
+        {ticket.problem && (
+          <Link
+            to={`/problems/${ticket.problem.id}`}
+            className="mt-2 block text-[12.5px] font-medium text-indigo-700 hover:underline"
+          >
+            View Problem #{ticket.problem.number} →
+          </Link>
+        )}
 
         {(ticket.firstResponseDueAt || ticket.resolutionDueAt) && (
           <>

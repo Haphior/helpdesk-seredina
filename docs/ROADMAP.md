@@ -754,14 +754,32 @@ badge and Release Management panel — including a working link to the linked
 Change's detail page — render correctly on both the list and detail pages,
 and confirmed the Change instance's own Change Enablement panel still renders
 unmodified alongside it. Zero console errors.
-- **Problem Management (ITIL).** Distinguishing a root cause ("Problem") from
-  the individual incidents it's causing — Jira Service Management treats this
-  as a first-class, separate concept from ticket/incident. Not yet designed in
-  as much detail as the item above: likely a lightweight `Problem` record that
-  several `Ticket`s can link to (many incidents, one root cause), surfaced as
-  "N linked incidents" on the problem and "linked to Problem #X" on each
-  ticket. Sequenced after Change Enablement above since a real problem
-  management workflow usually *produces* a change request as its fix.
+**Problem Management ✅ (this pass)** — distinguishing a root cause
+("Problem") from the individual incidents it's causing, the way Jira Service
+Management and ITIL 4 both treat it: a first-class, separate concept from
+ticket/incident. Built as its own small `Problem` model — deliberately
+**not** another `ProcessTemplateKind` like Change/Release Management, since a
+Problem isn't a checklist, it's a root cause with a workaround and a set of
+linked tickets. A one-way `Ticket.problemId` links many tickets to one
+Problem, reusing the existing ticket `PATCH` endpoint rather than adding a
+new one; `Problem.number` is sequential per tenant, generated the same way
+`Ticket.number` already is; an optional `changeInstanceId` links to the
+Change that shipped the fix, same reasoning Release Management already
+established. See `docs/adr/0015-problem-management.md`.
+
+Verified: 5 new integration tests against real Postgres (sequential
+numbering starting `UNDER_INVESTIGATION`; linking/unlinking tickets via the
+existing ticket-update path actually connects/disconnects; `resolvedAt` sets
+on the first `RESOLVED`/`CLOSED` transition and clears on reopening; an
+optional Change link persists and a nonexistent one is rejected; the list
+orders newest-first), full suite 52/52 green, both `apps/api`/`apps/web`
+typecheck clean. Browser-verified end to end: created two real tickets via
+the API-key path, created a Problem, linked both tickets from the Problem
+page, filled in root cause/workaround (auto-saved on blur, survives reload),
+moved status to `KNOWN_ERROR`, unlinked one ticket and confirmed it dropped
+off the list, and confirmed the other ticket's own detail page shows a
+working "Problem" dropdown plus a back-link into the Problem page. Zero
+console errors.
 - **Service Configuration Management (ITIL).** Sharper and more specific than
   the general "CMDB relationship depth" concern already flagged in Phase 1/2
   — this is the ITIL practice of mapping which technical assets actually

@@ -27,6 +27,7 @@ model Tenant {
   name             String
   mode             String   @default("cloud") // 'self_hosted' | 'cloud'
   lastTicketNumber Int      @default(0) @map("last_ticket_number")
+  lastProblemNumber Int     @default(0) @map("last_problem_number")
   createdAt        DateTime @default(now()) @map("created_at")
 
   users           User[]
@@ -54,6 +55,7 @@ model Tenant {
   slaPolicies           SlaPolicy[]
   businessHours         BusinessHours?
   dashboardWidgets      DashboardWidget[]
+  problems              Problem[]
 
   @@map("tenants")
 }
@@ -230,6 +232,12 @@ model Ticket {
   // CustomFieldDefinition row (the definition was since deleted) is simply never
   // rendered -- the value is orphaned but harmless, not cleaned up automatically.
   customFields Json? @map("custom_fields")
+
+  // The root cause this ticket is a symptom of, if one's been identified -- see
+  // Problem below and docs/adr/0015-problem-management.md. Nullable + SetNull:
+  // a Problem being deleted must never take its linked tickets down with it.
+  problemId String?  @map("problem_id") @db.Uuid
+  problem   Problem? @relation(fields: [problemId], references: [id], onDelete: SetNull)
 
   messages     Message[]
   assets       TicketAsset[]
@@ -603,7 +611,10 @@ model ProcessInstance {
   changeInstance   ProcessInstance?  @relation("ReleaseChangeLink", fields: [changeInstanceId], references: [id], onDelete: SetNull)
   releases         ProcessInstance[] @relation("ReleaseChangeLink")
 
-  steps ProcessStepInstance[]
+  steps    ProcessStepInstance[]
+  // Reverse side of Problem.changeInstanceId below -- the fix a Problem's root
+  // cause produced, if any.
+  problems Problem[]
 
   @@map("process_instances")
 }
@@ -736,4 +747,51 @@ model DashboardWidget {
 
   @@unique([userId, widgetType])
   @@map("dashboard_widgets")
+}
+
+// ITIL's own lifecycle for a Problem record: raised while the root cause is
+// still unknown, KNOWN_ERROR once it's identified (a workaround may exist even
+// before a permanent fix ships), RESOLVED once the fix has landed, CLOSED once
+// confirmed stable. Distinct from ProcessInstanceStatus/TicketStatusCategory --
+// a Problem's own domain, not reused from either.
+enum ProblemStatus {
+  UNDER_INVESTIGATION
+  KNOWN_ERROR
+  RESOLVED
+  CLOSED
+}
+
+// A Problem is a root cause, not a checklist -- unlike Change/Release
+// Management (docs/adr/0013, 0014), it does NOT extend the ProcessInstance
+// engine; it's its own small model, exactly as flagged as the plan in
+// docs/adr/0014-release-management.md's Consequences section. One Problem can
+// explain many Tickets (see Ticket.problemId above); the reverse -- a Ticket
+// linked to more than one Problem -- isn't modeled, matching ITIL's own
+// "one incident, one root cause" framing. See
+// docs/adr/0015-problem-management.md.
+model Problem {
+  id          String        @id @default(uuid()) @db.Uuid
+  tenantId    String        @map("tenant_id") @db.Uuid
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number      Int
+  title       String
+  description String?
+  status      ProblemStatus @default(UNDER_INVESTIGATION)
+  rootCause   String?       @map("root_cause")
+  workaround  String?
+  // Optional link to the Change that shipped the permanent fix -- "a real
+  // problem management workflow usually produces a change request as its
+  // fix" (docs/ROADMAP.md). SetNull, not Cascade, for the same reason as
+  // every other optional FK here: the Change being deleted later must never
+  // take the Problem record down with it.
+  changeInstanceId String?          @map("change_instance_id") @db.Uuid
+  changeInstance   ProcessInstance? @relation(fields: [changeInstanceId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  resolvedAt  DateTime?     @map("resolved_at")
+
+  tickets Ticket[]
+
+  @@unique([tenantId, number])
+  @@map("problems")
 }

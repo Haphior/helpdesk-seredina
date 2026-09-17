@@ -49,6 +49,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   SlaPolicy: 'tenantId',
   BusinessHours: 'tenantId',
   DashboardWidget: 'tenantId',
+  Problem: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);
