@@ -24,6 +24,9 @@ import { Problems } from './pages/Problems';
 import { ProblemDetail } from './pages/ProblemDetail';
 import { ServiceCatalog } from './pages/ServiceCatalog';
 import { Services } from './pages/Services';
+import { KnowledgeBase } from './pages/KnowledgeBase';
+import { PublicKb } from './pages/PublicKb';
+import { PublicKbArticlePage } from './pages/PublicKbArticle';
 
 export function App() {
   return (
@@ -31,6 +34,8 @@ export function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/kb/:tenantSlug" element={<PublicKb />} />
+        <Route path="/kb/:tenantSlug/:slug" element={<PublicKbArticlePage />} />
 
         <Route element={<RequireAuth />}>
           <Route element={<Layout />}>
@@ -51,6 +56,7 @@ export function App() {
             <Route path="/problems/:id" element={<ProblemDetail />} />
             <Route path="/service-catalog" element={<ServiceCatalog />} />
             <Route path="/services" element={<Services />} />
+            <Route path="/knowledge-base" element={<KnowledgeBase />} />
             <Route path="/webhooks" element={<Webhooks />} />
             <Route path="/macros" element={<Macros />} />
             <Route path="/sla-policies" element={<SlaPolicies />} />

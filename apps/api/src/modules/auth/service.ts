@@ -136,12 +136,12 @@ export async function getMe(tenantId: string, userId: string) {
         email: true,
         name: true,
         role: { select: { key: true } },
-        tenant: { select: { name: true } },
+        tenant: { select: { name: true, slug: true } },
       },
     });
     if (!user) throw new Error('user not found');
     const { tenant, ...rest } = user;
-    return { ...rest, tenantName: tenant.name };
+    return { ...rest, tenantName: tenant.name, tenantSlug: tenant.slug };
   });
 }
 

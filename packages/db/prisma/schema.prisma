@@ -59,6 +59,7 @@ model Tenant {
   serviceCatalogItems   ServiceCatalogItem[]
   services              Service[]
   serviceAssets         ServiceAsset[]
+  kbArticles            KbArticle[]
 
   @@map("tenants")
 }
@@ -119,6 +120,7 @@ model User {
   authoredMessages     Message[]             @relation("MessageAuthorUser")
   processStepAssignments ProcessStepInstance[]
   dashboardWidgets     DashboardWidget[]
+  kbArticles           KbArticle[]
 
   @@unique([tenantId, email])
   @@map("users")
@@ -533,6 +535,36 @@ model ServiceAsset {
 
   @@id([serviceId, assetId])
   @@map("service_assets")
+}
+
+// Plain, human-browsable CRUD -- deliberately NOT waiting for Phase 3's pgvector
+// RAG plan. "A knowledge base that only an AI can query isn't a knowledge base a
+// support team can maintain or trust" (docs/ROADMAP.md) -- embeddings/
+// search_knowledge_base land later as a layer ON TOP of these same rows, not the
+// reason they exist. See docs/adr/0018-knowledge-base.md. `body` is plain text
+// (whitespace-pre-wrap on render), matching Message.body's existing convention --
+// no markdown parser anywhere in this codebase yet.
+model KbArticle {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title        String
+  // Derived from title at creation time (see slugify() in the service layer),
+  // not user-editable -- the one stable, URL-safe identifier the public
+  // self-service portal links to; the title itself can change freely afterward.
+  slug         String
+  body         String
+  // Drafts are never returned by the public/self-service routes -- only
+  // published articles are internet-facing. Unpublished is the default so a
+  // half-written article never leaks before someone means it to.
+  published    Boolean  @default(false)
+  authorUserId String?  @map("author_user_id") @db.Uuid
+  author       User?    @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, slug])
+  @@map("kb_articles")
 }
 
 enum DiscoveryJobStatus {

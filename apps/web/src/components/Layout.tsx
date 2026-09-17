@@ -6,6 +6,7 @@ import { Avatar } from './Avatar';
 import {
   AssetsIcon,
   BoltIcon,
+  BookIcon,
   CalendarIcon,
   CatalogIcon,
   ChecklistIcon,
@@ -36,6 +37,7 @@ const navItems = [
   { to: '/tickets', label: 'Tickets', icon: TicketIcon },
   { to: '/processes', label: 'Processes', icon: ChecklistIcon, permission: 'tickets:write' as const },
   { to: '/problems', label: 'Problems', icon: WarningIcon, permission: 'tickets:write' as const },
+  { to: '/knowledge-base', label: 'Knowledge Base', icon: BookIcon, permission: 'tickets:read' as const },
   { to: '/assets', label: 'Assets', icon: AssetsIcon },
   { to: '/equipment-catalog', label: 'Equipment Catalog', icon: LayersIcon, permission: 'assets:manage' as const },
   { to: '/services', label: 'Services', icon: ServiceMapIcon, permission: 'assets:manage' as const },

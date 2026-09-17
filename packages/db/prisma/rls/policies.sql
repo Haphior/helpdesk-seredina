@@ -30,7 +30,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   manufacturers, asset_models, process_templates, process_step_templates,
   process_instances, process_step_instances, webhooks, macros,
   sla_policies, business_hours, dashboard_widgets, problems, service_catalog_items,
-  services, service_assets
+  services, service_assets, kb_articles
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -59,7 +59,7 @@ BEGIN
     'process_templates', 'process_step_templates', 'process_instances',
     'process_step_instances', 'webhooks', 'macros',
     'sla_policies', 'business_hours', 'dashboard_widgets', 'problems', 'service_catalog_items',
-    'services', 'service_assets'
+    'services', 'service_assets', 'kb_articles'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);

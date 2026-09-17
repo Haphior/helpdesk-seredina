@@ -262,3 +262,12 @@ export function ServiceMapIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function BookIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M3.5 4.2c1.8-.9 4-.9 5.8 0v11.6c-1.8-.9-4-.9-5.8 0Z" />
+      <path d="M16.5 4.2c-1.8-.9-4-.9-5.8 0v11.6c1.8-.9 4-.9 5.8 0Z" />
+    </Icon>
+  );
+}

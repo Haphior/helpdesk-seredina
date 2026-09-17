@@ -53,6 +53,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   ServiceCatalogItem: 'tenantId',
   Service: 'tenantId',
   ServiceAsset: 'tenantId',
+  KbArticle: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

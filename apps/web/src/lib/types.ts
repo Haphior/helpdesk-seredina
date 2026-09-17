@@ -356,3 +356,29 @@ export interface Service {
   createdAt: string;
   assets: { asset: AssetSummary }[];
 }
+
+export interface KbArticle {
+  id: string;
+  title: string;
+  slug: string;
+  body: string;
+  published: boolean;
+  author: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicKbArticleSummary {
+  id: string;
+  title: string;
+  slug: string;
+  updatedAt: string;
+}
+
+export interface PublicKbArticle {
+  id: string;
+  title: string;
+  slug: string;
+  body: string;
+  updatedAt: string;
+}

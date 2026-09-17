@@ -24,6 +24,7 @@ import dashboardRoutes from './modules/dashboard/routes';
 import problemRoutes from './modules/problems/routes';
 import serviceCatalogRoutes from './modules/servicecatalog/routes';
 import serviceRoutes from './modules/services/routes';
+import kbRoutes from './modules/kb/routes';
 
 initErrorTracking();
 
@@ -71,6 +72,7 @@ export function buildApp() {
   app.register(problemRoutes);
   app.register(serviceCatalogRoutes);
   app.register(serviceRoutes);
+  app.register(kbRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

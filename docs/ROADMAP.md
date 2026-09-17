@@ -822,16 +822,34 @@ works and a second delete is rejected), full suite 65/65 green, both
 two assets, created a service and linked both, created a ticket via the
 API-key path, linked the affected asset from the ticket's own panel, and
 confirmed "Affects: Email" renders correctly. Zero console errors.
-- **Self-service portal + a browsable knowledge base.** A real gap, not a
-  duplicate of Phase 3's RAG plan below: this needs `KbArticle` as a plain,
-  human-browsable CRUD resource (a contact can read and search it directly)
-  *before* anything AI-related touches it. Phase 3's `pgvector` embeddings and
-  `search_knowledge_base` tool should be an enhancement layered onto these same
-  articles, not the reason they exist — a knowledge base that only an AI can
-  query isn't a knowledge base a support team can maintain or trust. Worth
-  pulling the plain-CRUD half of this forward into Phase 2 rather than waiting
-  for Phase 3, given how consistently "the KB is incomplete/impossible to
-  search live" showed up as a real agent pain point in the research pass.
+**Self-service portal + a browsable knowledge base ✅ (this pass)** — a real
+gap, not a duplicate of Phase 3's RAG plan below: `KbArticle` as a plain,
+human-browsable CRUD resource (a contact can read and search it directly)
+*before* anything AI-related touches it. Phase 3's `pgvector` embeddings and
+`search_knowledge_base` tool land later as an enhancement layered onto these
+same rows, not the reason they exist. `slug` is derived from `title` once at
+creation and never changes, even if the title is edited later (a stable,
+bookmarkable public URL); `published` defaults to `false`, and both public
+service functions filter on it themselves rather than trusting every future
+caller to. The public portal (`/kb/:tenantSlug`, no login) resolves its
+tenant via `resolveTenantIdBySlug()` — the exact mechanism login/register
+already use, since a Contact has no Seredina account to authenticate with in
+the first place. See `docs/adr/0018-knowledge-base.md`.
+
+Verified: 8 new integration tests against real Postgres (default-unpublished
+with a derived slug; duplicate titles get a deduped `-2` slug; editing the
+title never changes the slug; search matches title or body
+case-insensitively; the public functions never return a draft, by list or by
+direct slug lookup; publishing toggles public visibility without touching
+the slug; tenant-slug resolution works and returns null for a nonexistent
+one; delete works and a second delete is rejected), full suite 73/73 green,
+both `apps/api`/`apps/web` typecheck clean. Browser-verified end to end:
+created a draft and a published article from the admin page, confirmed
+search finds an article by body text, then — in a separate, unauthenticated
+browser context — visited the public portal, confirmed the draft never
+appears there, read the published article, and confirmed both public routes
+404 cleanly for a draft slug and for a nonexistent tenant slug. Zero console
+errors.
 
 **Differentiators (added 2026-09-16, at the user's explicit request for
 "what would set this apart, not just close the gap") — deliberately NOT
