@@ -20,12 +20,19 @@ const stepTemplateSchema = z.object({
 const createTemplateSchema = z.object({
   name: z.string().min(1).max(150),
   description: z.string().max(2000).nullish(),
+  kind: z.enum(['GENERAL', 'CHANGE']).optional(),
   steps: z.array(stepTemplateSchema).min(1),
 });
 
 const startInstanceSchema = z.object({
   templateId: z.string().uuid(),
   subject: z.string().min(1).max(200),
+  // Only meaningful (and required, checked in the service layer) when
+  // templateId points at a CHANGE-kind template.
+  riskLevel: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
+  plannedStart: z.coerce.date().nullish(),
+  plannedEnd: z.coerce.date().nullish(),
+  rollbackPlan: z.string().max(4000).nullish(),
 });
 
 const STEP_STATUS = z.enum(['PENDING', 'DONE', 'APPROVED', 'REJECTED', 'SKIPPED']);
@@ -108,7 +115,19 @@ export default async function processRoutes(app: FastifyInstance) {
       const parsed = startInstanceSchema.safeParse(request.body);
       if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
       try {
-        const instance = await startProcessInstance(request.user.tenantId, parsed.data.templateId, parsed.data.subject);
+        const instance = await startProcessInstance(
+          request.user.tenantId,
+          parsed.data.templateId,
+          parsed.data.subject,
+          parsed.data.riskLevel
+            ? {
+                riskLevel: parsed.data.riskLevel,
+                plannedStart: parsed.data.plannedStart,
+                plannedEnd: parsed.data.plannedEnd,
+                rollbackPlan: parsed.data.rollbackPlan,
+              }
+            : undefined,
+        );
         return reply.code(201).send(instance);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });

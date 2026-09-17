@@ -495,13 +495,24 @@ model DiscoveryJob {
 // single conversation (employee onboarding, a commercial document approval chain).
 // Deliberately NOT the same model as Macro (a one-shot bundle of actions applied
 // instantly to a single ticket) -- see docs/adr/0008-it-processes.md.
+//
+// `kind` distinguishes Change Enablement (ITIL) templates from a general
+// process, added rather than a separate Change model -- see
+// docs/adr/0013-change-enablement.md for why a Change is "this same engine,
+// plus a risk assessment," not a new subsystem.
+enum ProcessTemplateKind {
+  GENERAL
+  CHANGE
+}
+
 model ProcessTemplate {
-  id          String   @id @default(uuid()) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id          String              @id @default(uuid()) @db.Uuid
+  tenantId    String              @map("tenant_id") @db.Uuid
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name        String
   description String?
-  createdAt   DateTime @default(now()) @map("created_at")
+  kind        ProcessTemplateKind @default(GENERAL)
+  createdAt   DateTime            @default(now()) @map("created_at")
 
   steps     ProcessStepTemplate[]
   instances ProcessInstance[]
@@ -531,6 +542,12 @@ enum ProcessInstanceStatus {
   CANCELLED
 }
 
+enum ChangeRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 // Spawned from a ProcessTemplate -- its steps are copied into ProcessStepInstance
 // rows at creation time (label included), so editing the template later never
 // rewrites an already-running instance's history.
@@ -551,6 +568,16 @@ model ProcessInstance {
   status            ProcessInstanceStatus @default(IN_PROGRESS)
   createdAt         DateTime              @default(now()) @map("created_at")
   completedAt       DateTime?             @map("completed_at")
+
+  // Change Enablement fields -- only ever set when spawned from a
+  // ProcessTemplate.kind = CHANGE (enforced at the service layer, not the DB:
+  // null for every ordinary process instance). riskLevel is required when
+  // starting a Change; plannedStart/plannedEnd/rollbackPlan stay optional --
+  // useful, not enforced, for a first pass.
+  riskLevel    ChangeRiskLevel? @map("risk_level")
+  plannedStart DateTime?        @map("planned_start")
+  plannedEnd   DateTime?        @map("planned_end")
+  rollbackPlan String?          @map("rollback_plan")
 
   steps ProcessStepInstance[]
 

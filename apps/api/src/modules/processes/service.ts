@@ -1,4 +1,4 @@
-import { prisma, withTenantTx, type ProcessStepStatus } from '@seredina/db';
+import { prisma, withTenantTx, type ChangeRiskLevel, type ProcessStepStatus, type ProcessTemplateKind } from '@seredina/db';
 
 export interface StepTemplateInput {
   label: string;
@@ -9,6 +9,7 @@ export interface StepTemplateInput {
 export interface CreateProcessTemplateInput {
   name: string;
   description?: string | null;
+  kind?: ProcessTemplateKind;
   steps: StepTemplateInput[];
 }
 
@@ -32,6 +33,7 @@ export async function createProcessTemplate(tenantId: string, input: CreateProce
         tenantId,
         name: input.name,
         description: input.description ?? null,
+        kind: input.kind ?? 'GENERAL',
         steps: {
           create: input.steps.map((s, i) => ({
             tenantId,
@@ -83,13 +85,30 @@ export async function getProcessInstance(tenantId: string, id: string) {
   });
 }
 
-export async function startProcessInstance(tenantId: string, templateId: string, subject: string) {
+export interface StartChangeFields {
+  riskLevel: ChangeRiskLevel;
+  plannedStart?: Date | null;
+  plannedEnd?: Date | null;
+  rollbackPlan?: string | null;
+}
+
+/**
+ * `change` is required when `template.kind === 'CHANGE'` -- a Change without
+ * a risk assessment isn't following the practice, so this is enforced here
+ * rather than left as an optional field nobody fills in. Ignored (never
+ * stored) for a GENERAL template, since these columns are null for every
+ * ordinary process instance by design -- see docs/adr/0013-change-enablement.md.
+ */
+export async function startProcessInstance(tenantId: string, templateId: string, subject: string, change?: StartChangeFields) {
   return withTenantTx(prisma, tenantId, async (tx) => {
     const template = await tx.processTemplate.findUnique({
       where: { id: templateId },
       include: { steps: { orderBy: { sortOrder: 'asc' } } },
     });
     if (!template) throw new Error('process template not found');
+    if (template.kind === 'CHANGE' && !change?.riskLevel) {
+      throw new Error('starting a change requires a risk level');
+    }
 
     return tx.processInstance.create({
       data: {
@@ -97,6 +116,14 @@ export async function startProcessInstance(tenantId: string, templateId: string,
         processTemplateId: template.id,
         templateName: template.name,
         subject,
+        ...(template.kind === 'CHANGE'
+          ? {
+              riskLevel: change!.riskLevel,
+              plannedStart: change?.plannedStart ?? null,
+              plannedEnd: change?.plannedEnd ?? null,
+              rollbackPlan: change?.rollbackPlan ?? null,
+            }
+          : {}),
         steps: {
           create: template.steps.map((s) => ({
             tenantId,

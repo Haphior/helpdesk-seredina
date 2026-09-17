@@ -96,4 +96,55 @@ describe.skipIf(!hasDb)('IT processes', () => {
     fetched = await getProcessInstance(tenantId, instance.id);
     expect(fetched.status).toBe('IN_PROGRESS');
   });
+
+  describe('Change Enablement', () => {
+    it('a GENERAL template (the default kind) never requires a risk level', async () => {
+      const template = await createProcessTemplate(tenantId, { name: 'Plain Process', steps: [{ label: 'Step 1' }] });
+      expect(template.kind).toBe('GENERAL');
+      const instance = await startProcessInstance(tenantId, template.id, 'no risk needed');
+      expect(instance.riskLevel).toBeNull();
+    });
+
+    it('starting a CHANGE-kind template without a risk level is rejected', async () => {
+      const template = await createProcessTemplate(tenantId, {
+        name: 'Firewall Rule Change',
+        kind: 'CHANGE',
+        steps: [{ label: 'CAB approval', requiresApproval: true }, { label: 'Apply change' }],
+      });
+      await expect(startProcessInstance(tenantId, template.id, 'Open port 8443')).rejects.toThrow(
+        'starting a change requires a risk level',
+      );
+    });
+
+    it('a CHANGE instance stores its risk level and optional planned window/rollback plan', async () => {
+      const template = await createProcessTemplate(tenantId, {
+        name: 'Database Migration',
+        kind: 'CHANGE',
+        steps: [{ label: 'CAB approval', requiresApproval: true }, { label: 'Run migration' }],
+      });
+      const plannedStart = new Date('2026-02-01T02:00:00Z');
+      const plannedEnd = new Date('2026-02-01T04:00:00Z');
+      const instance = await startProcessInstance(tenantId, template.id, 'Migrate to Postgres 17', {
+        riskLevel: 'HIGH',
+        plannedStart,
+        plannedEnd,
+        rollbackPlan: 'Restore from the pre-migration snapshot.',
+      });
+      expect(instance.riskLevel).toBe('HIGH');
+      expect(instance.plannedStart).toEqual(plannedStart);
+      expect(instance.plannedEnd).toEqual(plannedEnd);
+      expect(instance.rollbackPlan).toBe('Restore from the pre-migration snapshot.');
+      // The approval-gated step already built for general processes works
+      // unmodified for a Change's CAB sign-off -- no new mechanism needed.
+      expect(instance.steps[0].requiresApproval).toBe(true);
+    });
+
+    it('a risk level provided against a GENERAL template is silently ignored, not stored', async () => {
+      const template = await createProcessTemplate(tenantId, { name: 'Another Plain Process', steps: [{ label: 'Step 1' }] });
+      const instance = await startProcessInstance(tenantId, template.id, 'has a risk level but should not keep it', {
+        riskLevel: 'HIGH',
+      });
+      expect(instance.riskLevel).toBeNull();
+    });
+  });
 });

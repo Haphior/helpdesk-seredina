@@ -5,7 +5,7 @@ import type { ProcessInstance, ProcessStepStatus, UserSummary } from '../lib/typ
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { BackArrowIcon, LockIcon } from '../components/icons';
-import { formatDateTime } from '../lib/format';
+import { formatDateTime, RISK_TONE } from '../lib/format';
 
 const INSTANCE_STATUS_TONE = { IN_PROGRESS: 'sky', COMPLETED: 'emerald', CANCELLED: 'slate' } as const;
 const STEP_STATUS_TONE = { PENDING: 'slate', DONE: 'emerald', APPROVED: 'emerald', REJECTED: 'rose', SKIPPED: 'slate' } as const;
@@ -60,9 +60,37 @@ export function ProcessDetail() {
           <Badge tone={INSTANCE_STATUS_TONE[instance.status]} dot>
             {instance.status.replace('_', ' ')}
           </Badge>
+          {instance.riskLevel && (
+            <Badge tone={RISK_TONE[instance.riskLevel]} dot>
+              {instance.riskLevel} risk
+            </Badge>
+          )}
           <span className="text-[13px] text-slate-400">from {instance.templateName}</span>
         </div>
       </div>
+
+      {instance.riskLevel && (
+        <div className="mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4">
+          <div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-orange-800">Change Enablement</div>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-slate-700">
+            {instance.plannedStart && (
+              <span>
+                <span className="text-slate-500">Planned start:</span> {formatDateTime(instance.plannedStart)}
+              </span>
+            )}
+            {instance.plannedEnd && (
+              <span>
+                <span className="text-slate-500">Planned end:</span> {formatDateTime(instance.plannedEnd)}
+              </span>
+            )}
+          </div>
+          {instance.rollbackPlan && (
+            <div className="mt-2 text-[13px] text-slate-700">
+              <span className="text-slate-500">Rollback plan:</span> {instance.rollbackPlan}
+            </div>
+          )}
+        </div>
+      )}
 
       {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
 

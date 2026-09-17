@@ -244,10 +244,14 @@ export interface ProcessStepTemplate {
   team: Team | null;
 }
 
+export type ProcessTemplateKind = 'GENERAL' | 'CHANGE';
+export type ChangeRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
 export interface ProcessTemplate {
   id: string;
   name: string;
   description: string | null;
+  kind: ProcessTemplateKind;
   steps: ProcessStepTemplate[];
 }
 
@@ -273,6 +277,10 @@ export interface ProcessInstance {
   createdAt: string;
   completedAt: string | null;
   steps: ProcessStepInstance[];
+  riskLevel: ChangeRiskLevel | null;
+  plannedStart: string | null;
+  plannedEnd: string | null;
+  rollbackPlan: string | null;
 }
 
 export type WidgetType = 'ticket_volume' | 'priority_breakdown' | 'sla_compliance' | 'agent_workload' | 'recent_activity';

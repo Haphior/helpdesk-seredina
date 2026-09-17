@@ -705,19 +705,31 @@ shipped, not by external priority:**
   (name, description, icon, which `CustomFieldDefinition`s it shows) creates a
   `Ticket` pre-filled from the chosen item, the same creation path every other
   channel already uses.
-- **Change Enablement (ITIL 4's official name for this practice — "Change
-  Management" in the original note here was ITIL v3 terminology, corrected
-  after checking against the actual ITIL 4 practice list).** Deliberately
-  scoped as an extension of the existing IT Processes engine
-  (`ProcessTemplate`/`ProcessInstance`, Phase 2 ✅), not a new subsystem: a
-  `ProcessTemplate.kind = 'CHANGE'` (or a small dedicated fields addition —
-  risk level, planned window, rollback plan) reuses every mechanism already
-  proven there, including the approval-gated step type that already makes a
-  CAB-style sign-off enforceable. Building a whole separate Change model when
-  the process engine already does "multi-step, approval-gated, outlives-a-
-  single-ticket" would be two systems pretending to be one — the same
-  reasoning `docs/adr/0003-alert-ingestion.md` used to keep alerts on `Ticket`
-  instead of a new `Incident` model.
+
+**Change Enablement ✅ (this pass)** — ITIL 4's official name for this practice
+("Change Management" in the original note here was ITIL v3 terminology,
+corrected after checking against the actual ITIL 4 practice list). Built as a
+`ProcessTemplateKind` (`GENERAL` | `CHANGE`) on the existing `ProcessTemplate`,
+plus four nullable fields on `ProcessInstance` (`riskLevel`, `plannedStart`,
+`plannedEnd`, `rollbackPlan`) — not a new subsystem. Every mechanism already
+proven by IT Processes (Phase 2 ✅) carries over unmodified, including the
+approval-gated step type, which is all a CAB-style sign-off needs. `riskLevel`
+is required when starting a `CHANGE` instance (a Change with no risk
+assessment isn't following the practice); the planned window and rollback plan
+stay optional, a deliberate first-pass scope cut. See
+`docs/adr/0013-change-enablement.md`.
+
+Verified: 4 new integration tests against real Postgres (a `GENERAL` template
+never requires a risk level; starting a `CHANGE` instance without one is
+rejected; risk level/planned window/rollback plan all persist correctly for a
+real Change instance while its approval-gated step works completely
+unmodified; a risk level sent against a `GENERAL` template is confirmed not
+stored), full suite 43/43 green, both `apps/api`/`apps/web` typecheck clean.
+Browser-verified end to end: created a Change template with a CAB-approval
+step, started a HIGH-risk instance with a rollback plan, confirmed the risk
+badge and Change Enablement panel render correctly on both the list and
+detail pages, and confirmed the CAB step still only offers
+APPROVED/REJECTED/SKIPPED, never a plain DONE — zero console errors.
 - **Release Management (ITIL).** ITIL 4 treats this as its own practice,
   distinct from Change Enablement: a Change is the *decision and approval* to
   make a change; a Release is *actually making it available to users*. Same

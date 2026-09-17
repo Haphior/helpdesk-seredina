@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
-import type { ProcessTemplate, Team } from '../lib/types';
+import type { ProcessTemplate, ProcessTemplateKind, Team } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
 
@@ -59,7 +59,10 @@ export function ProcessTemplates() {
             <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-2 flex items-center justify-between">
                 <div>
-                  <div className="text-[14.5px] font-semibold text-slate-800">{t.name}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[14.5px] font-semibold text-slate-800">{t.name}</span>
+                    {t.kind === 'CHANGE' && <Badge tone="orange">Change</Badge>}
+                  </div>
                   {t.description && <div className="text-[12.5px] text-slate-400">{t.description}</div>}
                 </div>
                 <button onClick={() => remove(t)} className="text-xs text-slate-400 hover:text-rose-600">
@@ -91,6 +94,7 @@ export function ProcessTemplates() {
 function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [kind, setKind] = useState<ProcessTemplateKind>('GENERAL');
   const [steps, setSteps] = useState<StepDraft[]>([{ label: '', teamId: '', requiresApproval: false }]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +126,7 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
       await apiPost('/process-templates', {
         name,
         description: description || undefined,
+        kind,
         steps: steps
           .filter((s) => s.label.trim())
           .map((s) => ({ label: s.label, teamId: s.teamId || undefined, requiresApproval: s.requiresApproval })),
@@ -157,6 +162,23 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
             className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
           />
         </label>
+
+        <div className="flex gap-2 rounded-md border border-slate-200 p-2">
+          <label className="flex flex-1 items-start gap-2 text-xs">
+            <input type="radio" className="mt-0.5" checked={kind === 'GENERAL'} onChange={() => setKind('GENERAL')} />
+            <span>
+              <span className="block font-medium text-slate-700">General process</span>
+              <span className="block text-slate-400">Onboarding, a contract chain — any multi-step checklist.</span>
+            </span>
+          </label>
+          <label className="flex flex-1 items-start gap-2 text-xs">
+            <input type="radio" className="mt-0.5" checked={kind === 'CHANGE'} onChange={() => setKind('CHANGE')} />
+            <span>
+              <span className="block font-medium text-slate-700">Change (ITIL)</span>
+              <span className="block text-slate-400">Starting an instance will require a risk level and offer a planned window/rollback plan.</span>
+            </span>
+          </label>
+        </div>
 
         <div className="border-t border-slate-200 pt-2">
           <span className="mb-2 block text-xs font-medium uppercase text-slate-400">Steps, in order</span>

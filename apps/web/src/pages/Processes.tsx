@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { apiGet, apiPost, ApiError } from '../lib/api';
-import type { ProcessInstance, ProcessTemplate } from '../lib/types';
+import type { ChangeRiskLevel, ProcessInstance, ProcessTemplate } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
+import { RISK_TONE } from '../lib/format';
 
 const STATUS_TONE = { IN_PROGRESS: 'sky', COMPLETED: 'emerald', CANCELLED: 'slate' } as const;
 
@@ -54,7 +55,14 @@ export function Processes() {
                 className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50"
               >
                 <div className="min-w-0">
-                  <div className="text-[14px] font-semibold text-slate-800">{inst.subject}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[14px] font-semibold text-slate-800">{inst.subject}</span>
+                    {inst.riskLevel && (
+                      <Badge tone={RISK_TONE[inst.riskLevel]} dot>
+                        {inst.riskLevel} risk
+                      </Badge>
+                    )}
+                  </div>
                   <div className="text-[12.5px] text-slate-400">{inst.templateName}</div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -78,6 +86,10 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
   const [templates, setTemplates] = useState<ProcessTemplate[]>([]);
   const [templateId, setTemplateId] = useState('');
   const [subject, setSubject] = useState('');
+  const [riskLevel, setRiskLevel] = useState<ChangeRiskLevel>('MEDIUM');
+  const [plannedStart, setPlannedStart] = useState('');
+  const [plannedEnd, setPlannedEnd] = useState('');
+  const [rollbackPlan, setRollbackPlan] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -90,12 +102,26 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
       .catch(() => {});
   }, []);
 
+  const selectedTemplate = templates.find((t) => t.id === templateId);
+  const isChange = selectedTemplate?.kind === 'CHANGE';
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await apiPost('/process-instances', { templateId, subject });
+      await apiPost('/process-instances', {
+        templateId,
+        subject,
+        ...(isChange
+          ? {
+              riskLevel,
+              plannedStart: plannedStart || undefined,
+              plannedEnd: plannedEnd || undefined,
+              rollbackPlan: rollbackPlan || undefined,
+            }
+          : {}),
+      });
       onStarted();
       onClose();
     } catch (err) {
@@ -121,6 +147,7 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
+                  {t.kind === 'CHANGE' ? ' (Change)' : ''}
                 </option>
               ))}
             </select>
@@ -136,6 +163,54 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
             />
           </label>
+
+          {isChange && (
+            <div className="space-y-2.5 rounded-md border border-orange-200 bg-orange-50 p-2.5">
+              <p className="text-xs font-semibold text-orange-800">Change Enablement — a risk assessment is required.</p>
+              <label className="block text-xs">
+                <span className="mb-1 block font-medium text-slate-700">Risk level</span>
+                <select
+                  value={riskLevel}
+                  onChange={(e) => setRiskLevel(e.target.value as ChangeRiskLevel)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                </select>
+              </label>
+              <div className="flex gap-2">
+                <label className="block flex-1 text-xs">
+                  <span className="mb-1 block font-medium text-slate-700">Planned start (optional)</span>
+                  <input
+                    type="datetime-local"
+                    value={plannedStart}
+                    onChange={(e) => setPlannedStart(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                  />
+                </label>
+                <label className="block flex-1 text-xs">
+                  <span className="mb-1 block font-medium text-slate-700">Planned end (optional)</span>
+                  <input
+                    type="datetime-local"
+                    value={plannedEnd}
+                    onChange={(e) => setPlannedEnd(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                  />
+                </label>
+              </div>
+              <label className="block text-xs">
+                <span className="mb-1 block font-medium text-slate-700">Rollback plan (optional)</span>
+                <textarea
+                  value={rollbackPlan}
+                  onChange={(e) => setRollbackPlan(e.target.value)}
+                  rows={2}
+                  placeholder="How do we undo this if it goes wrong?"
+                  className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                />
+              </label>
+            </div>
+          )}
 
           {error && <p className="text-sm text-rose-600">{error}</p>}
 
