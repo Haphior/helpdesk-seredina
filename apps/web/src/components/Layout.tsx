@@ -21,6 +21,7 @@ import {
   MailIcon,
   SlidersIcon,
   ServiceMapIcon,
+  SparkleIcon,
   TicketIcon,
   UsersIcon,
   WarningIcon,
@@ -69,6 +70,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Comp
       { to: '/sla-policies', label: 'SLA Policies', icon: ClockIcon, permission: 'tickets:manage_all' },
       { to: '/on-call', label: 'On-Call & Escalation', icon: BellIcon, permission: 'tickets:manage_all' },
       { to: '/business-hours', label: 'Business Hours', icon: CalendarIcon, permission: 'tickets:manage_all' },
+      { to: '/ai-usage', label: 'AI Usage', icon: SparkleIcon, permission: 'tickets:manage_all' },
     ],
   },
   {

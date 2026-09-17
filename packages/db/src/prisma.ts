@@ -61,6 +61,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   SavedView: 'tenantId',
   Notification: 'tenantId',
   NotificationPreference: 'tenantId',
+  AiUsageLog: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

@@ -34,6 +34,7 @@ export class AnthropicAdapter implements LlmProviderAdapter {
       text: textBlock?.type === 'text' ? textBlock.text : '',
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
+      model: this.model,
     };
   }
 }

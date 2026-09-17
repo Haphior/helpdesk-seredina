@@ -67,6 +67,7 @@ model Tenant {
   savedViews            SavedView[]
   notifications         Notification[]
   notificationPreferences NotificationPreference[]
+  aiUsageLogs           AiUsageLog[]
 
   @@map("tenants")
 }
@@ -270,6 +271,7 @@ model Ticket {
   processSteps    ProcessStepInstance[]
   escalationRuns  EscalationRun[]
   notifications   Notification[]
+  aiUsageLogs     AiUsageLog[]
 
   @@unique([tenantId, number])
   @@index([tenantId, channel, externalId])
@@ -1064,4 +1066,28 @@ model NotificationPreference {
 
   @@unique([userId, eventType])
   @@map("notification_preferences")
+}
+
+// One row per completed LLM call -- written by the AI copilot's own service
+// functions (modules/ai/service.ts) right after adapter.complete() returns,
+// never estimated after the fact. `action` is a plain string (like
+// DashboardWidget.widgetType), not a DB enum -- Phase 3's autonomous mode
+// adds new actions to this same table, not a new one.
+// estimatedCostUsd is nullable: an unrecognized model (see
+// packages/ai-adapters/src/pricing.ts) logs real token counts with a null
+// cost rather than a guessed number. See docs/adr/0023-ai-cost-transparency.md.
+model AiUsageLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ticketId         String?  @map("ticket_id") @db.Uuid
+  ticket           Ticket?  @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  action           String
+  model            String
+  inputTokens      Int      @map("input_tokens")
+  outputTokens     Int      @map("output_tokens")
+  estimatedCostUsd Decimal? @map("estimated_cost_usd") @db.Decimal(10, 6)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("ai_usage_logs")
 }

@@ -939,17 +939,35 @@ piece already being built for another reason:**
   anonymous visitor is allowed to see (ticket subjects/descriptions almost
   certainly not — a service name and a status color, probably yes) — a
   privacy/scoping design question, not a technical one.
-- **AI cost transparency, per ticket and per tenant.** Because the
-  `LlmProviderAdapter` is already a bring-your-own-key design (Phase 1 ✅,
-  deepened in Phase 3), Seredina is structurally able to show a tenant exactly
-  what each AI action cost in real dollars — something no per-seat SaaS
-  competitor bundling AI into its price can offer, because the incentive runs
-  the other way for them. Doesn't need to wait for Phase 3's full
-  `AiAgentRun`/`AutonomyPolicy` audit engine: a lightweight `AiUsageLog`
-  (tenantId, ticketId, action, input/output token counts, estimated cost)
-  written by the copilot calls that already exist today (Phase 1's summarize/
-  suggest-reply) is enough to start, with Phase 3's fuller audit trail
-  extending the same table rather than replacing it.
+**AI cost transparency, per ticket and per tenant ✅ (this pass)** — because
+the `LlmProviderAdapter` is already bring-your-own-key, Seredina can show a
+tenant exactly what each AI action cost in real dollars, something no
+per-seat SaaS competitor bundling AI into its price can offer. A lightweight
+`AiUsageLog` (action, model, input/output token counts, estimated cost —
+`action` a plain string, extensible without a migration, matching
+`DashboardWidget.widgetType`'s posture) is written by `suggestReply`/
+`summarizeTicket` right after each real call, with Phase 3's fuller audit
+trail extending this same table rather than replacing it. Pricing lives in
+code (`packages/ai-adapters/src/pricing.ts`), not a DB table — a model's
+price is a fact about the code that calls it, not tenant data — and an
+unrecognized model logs real token counts with a null cost rather than a
+guessed number. Per-ticket usage is `tickets:read`; the tenant-wide summary
+(its own new "AI Usage" page, in the Configuration group) is
+`tickets:manage_all`. See `docs/adr/0023-ai-cost-transparency.md`.
+
+Verified: 4 new integration tests against real Postgres (real token counts
+logged with a null cost for an unpriced test model; summarize and
+suggest-reply log under distinct actions; the tenant summary aggregates
+correctly by action across tickets and never substitutes a guessed cost;
+a ticket with no AI activity reports a clean zero), full suite 108/108
+green, both `apps/api`/`apps/web` typecheck clean, `packages/ai-adapters`'
+own suite still green after adding `model` to `CompleteResult`.
+Browser-verified: the AI Usage page's zero state and a ticket's absent cost
+pill both render correctly. The live Anthropic network call itself was
+deliberately not re-exercised in this pass (this session works with the
+user's own credit-limited key) — the logging path is fully covered by the
+integration tests via `TestProviderAdapter`, which runs the identical code
+a real call would. Zero console errors.
 - **Full data portability — a one-click export in an open format.** Tickets,
   messages, KB articles, assets, and every configuration table (custom
   fields, macros, SLA policies, ...) as a downloadable JSON/CSV bundle. The

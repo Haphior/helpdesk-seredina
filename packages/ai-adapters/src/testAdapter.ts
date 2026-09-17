@@ -18,7 +18,7 @@ export class TestProviderAdapter implements LlmProviderAdapter {
   async complete(input: CompleteInput): Promise<CompleteResult> {
     this.calls.push(input);
     const text = this.queue.shift() ?? '[test response]';
-    return { text, inputTokens: text.length, outputTokens: text.length };
+    return { text, inputTokens: text.length, outputTokens: text.length, model: 'test-model' };
   }
 
   getCalls(): CompleteInput[] {

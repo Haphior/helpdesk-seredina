@@ -13,6 +13,10 @@ export interface CompleteResult {
   text: string;
   inputTokens: number;
   outputTokens: number;
+  // Which model actually served this call -- the adapter is the source of
+  // truth (it may differ from a hardcoded default via ANTHROPIC_MODEL), so
+  // callers that log cost/usage (see pricing.ts) never have to re-derive it.
+  model: string;
 }
 
 /**

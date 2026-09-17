@@ -451,3 +451,28 @@ export interface NotificationPreference {
   inApp: boolean;
   email: boolean;
 }
+
+export interface AiUsageLog {
+  id: string;
+  action: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  // A Decimal column serializes as a numeric string over JSON, or null for
+  // an unrecognized model -- see packages/ai-adapters/src/pricing.ts.
+  estimatedCostUsd: string | null;
+  createdAt: string;
+}
+
+export interface TicketAiUsage {
+  logs: AiUsageLog[];
+  totalCalls: number;
+  totalCostUsd: number;
+}
+
+export interface AiUsageSummary {
+  totalCalls: number;
+  totalCostUsd: number;
+  byAction: { action: string; calls: number; costUsd: number }[];
+  recent: (AiUsageLog & { ticket: { id: string; number: number; subject: string } | null })[];
+}

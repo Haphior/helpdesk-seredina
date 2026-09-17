@@ -8,6 +8,7 @@ import type {
   Problem,
   Team,
   Ticket,
+  TicketAiUsage,
   TicketDetail as TicketDetailType,
   TicketPriority,
   TicketStatus,
@@ -45,6 +46,16 @@ export function TicketDetail() {
   const [summarizing, setSummarizing] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiUsage, setAiUsage] = useState<TicketAiUsage | null>(null);
+
+  function loadAiUsage() {
+    if (!id) return;
+    apiGet<TicketAiUsage>(`/tickets/${id}/ai-usage`)
+      .then(setAiUsage)
+      .catch(() => {});
+  }
+
+  useEffect(loadAiUsage, [id]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -163,6 +174,7 @@ export function TicketDetail() {
     try {
       const res = await apiPost<{ summary: string }>(`/tickets/${id}/ai/summarize`);
       setSummary(res.summary);
+      loadAiUsage();
     } catch (err) {
       setAiError(err instanceof ApiError ? err.message : 'Failed to summarize');
     } finally {
@@ -177,6 +189,7 @@ export function TicketDetail() {
     try {
       const res = await apiPost<{ suggestion: string }>(`/tickets/${id}/ai/suggest-reply`);
       setReply(res.suggestion);
+      loadAiUsage();
     } catch (err) {
       setAiError(err instanceof ApiError ? err.message : 'Failed to suggest a reply');
     } finally {
@@ -278,6 +291,14 @@ export function TicketDetail() {
                 <SparkleIcon width={12} height={12} />
                 {summarizing ? 'Summarizing…' : 'Summarize'}
               </button>
+              {aiUsage && aiUsage.totalCalls > 0 && (
+                <span
+                  title={`${aiUsage.totalCalls} AI call${aiUsage.totalCalls === 1 ? '' : 's'} on this ticket`}
+                  className="text-[11px] text-slate-400"
+                >
+                  AI cost: ${aiUsage.totalCostUsd.toFixed(4)}
+                </span>
+              )}
             </div>
           </div>
         </div>
