@@ -73,18 +73,18 @@ describe.skipIf(!hasDb)('Saved views', () => {
 
     const [view] = await listSavedViews(tenantId, userAId); // "My open tickets" from the first test, filters: { statusCategory: 'OPEN' }
     const filters = view.filters as { statusCategory?: 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED' };
-    const result = await listTickets(tenantId, filters);
+    const { tickets: result } = await listTickets(tenantId, filters);
     expect(result.every((t) => t.status.category === 'OPEN')).toBe(true);
     expect(result.map((t) => t.id)).toContain(ticketOpen.id);
 
     const assignedToA = await createSavedView(tenantId, userAId, { name: 'Assigned to me', filters: { assigneeId: userAId } });
     const assignedFilters = assignedToA.filters as { assigneeId?: string };
-    const assignedResult = await listTickets(tenantId, assignedFilters);
+    const { tickets: assignedResult } = await listTickets(tenantId, assignedFilters);
     expect(assignedResult.map((t) => t.id)).toEqual([ticketAssigned.id]);
 
     const unassigned = await createSavedView(tenantId, userAId, { name: 'Unassigned', filters: { assigneeId: 'unassigned' } });
     const unassignedFilters = unassigned.filters as { assigneeId?: string };
-    const unassignedResult = await listTickets(tenantId, unassignedFilters);
+    const { tickets: unassignedResult } = await listTickets(tenantId, unassignedFilters);
     expect(unassignedResult.map((t) => t.id)).not.toContain(ticketAssigned.id);
     expect(unassignedResult.map((t) => t.id)).toContain(ticketOpen.id);
   });

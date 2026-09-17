@@ -1,19 +1,41 @@
-import { prisma, withTenantTx, type ProblemStatus } from '@seredina/db';
+import { prisma, withTenantTx, type Prisma, type ProblemStatus } from '@seredina/db';
 
 const TICKET_SUMMARY_SELECT = { id: true, number: true, subject: true, statusId: true } as const;
+const OWNER_SELECT = { id: true, name: true } as const;
 
-export async function listProblems(tenantId: string) {
-  return withTenantTx(prisma, tenantId, (tx) =>
-    tx.problem.findMany({
-      include: { tickets: { select: TICKET_SUMMARY_SELECT } },
-      orderBy: { number: 'desc' },
-    }),
-  );
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
+export interface ListProblemsFilter {
+  status?: ProblemStatus;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listProblems(tenantId: string, filter: ListProblemsFilter = {}) {
+  const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
+  const offset = filter.offset ?? 0;
+  const where: Prisma.ProblemWhereInput = { status: filter.status };
+
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const [problems, total] = await Promise.all([
+      tx.problem.findMany({
+        where,
+        include: { tickets: { select: TICKET_SUMMARY_SELECT }, owner: { select: OWNER_SELECT } },
+        orderBy: { number: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      tx.problem.count({ where }),
+    ]);
+    return { problems, total };
+  });
 }
 
 export interface CreateProblemInput {
   title: string;
   description?: string | null;
+  ownerId?: string | null;
 }
 
 export async function createProblem(tenantId: string, input: CreateProblemInput) {
@@ -28,8 +50,9 @@ export async function createProblem(tenantId: string, input: CreateProblemInput)
         number: tenant.lastProblemNumber,
         title: input.title,
         description: input.description ?? null,
+        ownerId: input.ownerId ?? null,
       },
-      include: { tickets: { select: TICKET_SUMMARY_SELECT } },
+      include: { tickets: { select: TICKET_SUMMARY_SELECT }, owner: { select: OWNER_SELECT } },
     });
   });
 }
@@ -41,6 +64,7 @@ export async function getProblem(tenantId: string, id: string) {
       include: {
         tickets: { select: TICKET_SUMMARY_SELECT },
         changeInstance: { select: { id: true, subject: true } },
+        owner: { select: OWNER_SELECT },
       },
     });
     if (!problem) throw new Error('problem not found');
@@ -55,6 +79,7 @@ export interface UpdateProblemInput {
   rootCause?: string | null;
   workaround?: string | null;
   changeInstanceId?: string | null;
+  ownerId?: string | null;
 }
 
 const RESOLVED_STATUSES: ProblemStatus[] = ['RESOLVED', 'CLOSED'];
@@ -90,9 +115,14 @@ export async function updateProblem(tenantId: string, id: string, input: UpdateP
         rootCause: input.rootCause,
         workaround: input.workaround,
         changeInstanceId: input.changeInstanceId === undefined ? undefined : input.changeInstanceId,
+        ownerId: input.ownerId === undefined ? undefined : input.ownerId,
         resolvedAt,
       },
-      include: { tickets: { select: TICKET_SUMMARY_SELECT }, changeInstance: { select: { id: true, subject: true } } },
+      include: {
+        tickets: { select: TICKET_SUMMARY_SELECT },
+        changeInstance: { select: { id: true, subject: true } },
+        owner: { select: OWNER_SELECT },
+      },
     });
   });
 }

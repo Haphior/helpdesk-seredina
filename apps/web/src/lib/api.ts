@@ -16,10 +16,38 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+// zod's .flatten() shape, returned as `{ error: ... }` by every route that does
+// `reply.code(400).send({ error: parsed.error.flatten() })`. Recognized here so a
+// validation failure reads as "title: String must contain at least 1 character(s)"
+// instead of the raw JSON blob a user has no way to parse themselves.
+interface ZodFlattenedError {
+  formErrors?: string[];
+  fieldErrors?: Record<string, string[] | undefined>;
+}
+
+function isZodFlattenedError(value: unknown): value is ZodFlattenedError {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    ('formErrors' in value || 'fieldErrors' in value) &&
+    !('message' in value) // a plain Error-shaped object should never be mistaken for this
+  );
+}
+
+function humanizeZodError(error: ZodFlattenedError): string {
+  const parts: string[] = [];
+  for (const [field, messages] of Object.entries(error.fieldErrors ?? {})) {
+    if (messages?.length) parts.push(`${field}: ${messages.join(', ')}`);
+  }
+  if (error.formErrors?.length) parts.push(...error.formErrors);
+  return parts.length > 0 ? parts.join('; ') : 'Invalid request';
+}
+
 function extractErrorMessage(body: unknown, status: number): string {
   if (body && typeof body === 'object' && 'error' in body) {
     const error = (body as { error: unknown }).error;
     if (typeof error === 'string') return error;
+    if (isZodFlattenedError(error)) return humanizeZodError(error);
     if (error && typeof error === 'object') return JSON.stringify(error);
   }
   return `Request failed (${status})`;
@@ -52,6 +80,21 @@ export const apiPatch = <T,>(path: string, data: unknown) =>
 export const apiPut = <T,>(path: string, data: unknown) =>
   apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(data) });
 export const apiDelete = <T,>(path: string) => apiFetch<T>(path, { method: 'DELETE' });
+
+// FormData, not JSON -- letting the browser set its own multipart Content-Type
+// (with the boundary) rather than apiFetch's default 'application/json' is why
+// this doesn't just go through apiFetch directly.
+export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const res = await fetch(`${API_URL}${path}`, { method: 'POST', body: form, headers });
+  const isJson = res.headers.get('content-type')?.includes('application/json');
+  const body = isJson ? await res.json() : undefined;
+  if (!res.ok) throw new ApiError(res.status, extractErrorMessage(body, res.status));
+  return body as T;
+}
 
 // A plain <a href> can't carry the Authorization header, so a file download needs
 // its own fetch: read the raw response as a Blob, then trigger a save via a

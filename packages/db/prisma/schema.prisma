@@ -68,6 +68,7 @@ model Tenant {
   notifications         Notification[]
   notificationPreferences NotificationPreference[]
   aiUsageLogs           AiUsageLog[]
+  attachments           Attachment[]
 
   @@map("tenants")
 }
@@ -135,6 +136,7 @@ model User {
   savedViews           SavedView[]
   notifications        Notification[]
   notificationPreferences NotificationPreference[]
+  ownedProblems        Problem[]             @relation("ProblemOwner")
 
   @@unique([tenantId, email])
   @@map("users")
@@ -222,7 +224,7 @@ model Ticket {
   assignee   User?          @relation("TicketAssignee", fields: [assigneeId], references: [id])
   contactId  String         @map("contact_id") @db.Uuid
   contact    Contact        @relation(fields: [contactId], references: [id])
-  channel    String         @default("api") // 'api' | 'alert' | 'email' | 'widget' | 'catalog' (api/alert/catalog ship so far)
+  channel    String         @default("api") // 'api' | 'alert' | 'email' | 'widget' | 'catalog' | 'agent' (widget not shipped yet)
   // Set only for channel='alert' -- the monitoring/security tool's own id for this
   // problem (e.g. a Zabbix event id, a Wazuh alert id), used to fold a re-fired
   // alert into the same ticket instead of spawning a duplicate. Not unique-
@@ -355,8 +357,32 @@ model Message {
   externalId    String?           @map("external_id")
   createdAt     DateTime          @default(now()) @map("created_at")
 
+  attachments Attachment[]
+
   @@index([tenantId, externalId])
   @@map("messages")
+}
+
+// v1 file attachments -- manual uploads on a reply/note only (see
+// docs/adr/0026-work-section-improvements.md for why inbound-email attachments
+// are explicitly deferred). Bytes stored directly in Postgres, not an
+// object-storage bucket: no MinIO/S3 exists in this stack yet (self-hosted
+// Docker Compose has none), and a hard per-file size cap enforced at the
+// service layer (modules/attachments/service.ts) keeps row/table bloat bounded
+// until real volume justifies standing up object storage instead.
+model Attachment {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messageId String   @map("message_id") @db.Uuid
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  filename  String
+  mimeType  String   @map("mime_type")
+  sizeBytes Int      @map("size_bytes")
+  data      Bytes
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("attachments")
 }
 
 // Authenticates the API channel (POST /v1/tickets) -- see
@@ -904,6 +930,11 @@ model Problem {
   // take the Problem record down with it.
   changeInstanceId String?          @map("change_instance_id") @db.Uuid
   changeInstance   ProcessInstance? @relation(fields: [changeInstanceId], references: [id], onDelete: SetNull)
+  // The person driving the RCA -- optional (a Problem can sit unowned, same as
+  // Ticket.assigneeId), SetNull so a deactivated/deleted user never takes the
+  // Problem record down with it.
+  ownerId     String?       @map("owner_id") @db.Uuid
+  owner       User?         @relation("ProblemOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
   resolvedAt  DateTime?     @map("resolved_at")

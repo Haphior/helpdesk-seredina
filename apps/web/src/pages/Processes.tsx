@@ -1,12 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { apiGet, apiPost, ApiError } from '../lib/api';
-import type { ChangeRiskLevel, ProcessInstance, ProcessTemplate } from '../lib/types';
+import type { ChangeRiskLevel, ProcessInstance, ProcessInstanceStatus, ProcessTemplate } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
 import { RISK_TONE } from '../lib/format';
 
 const STATUS_TONE = { IN_PROGRESS: 'sky', COMPLETED: 'emerald', CANCELLED: 'slate' } as const;
+
+const TABS: { key: ProcessInstanceStatus | 'ALL'; label: string }[] = [
+  { key: 'ALL', label: 'All' },
+  { key: 'IN_PROGRESS', label: 'In progress' },
+  { key: 'COMPLETED', label: 'Completed' },
+  { key: 'CANCELLED', label: 'Cancelled' },
+];
+
+const PAGE_SIZE = 50;
 
 function progress(instance: ProcessInstance) {
   const done = instance.steps.filter((s) => s.status !== 'PENDING').length;
@@ -14,17 +23,32 @@ function progress(instance: ProcessInstance) {
 }
 
 export function Processes() {
+  const [tab, setTab] = useState<ProcessInstanceStatus | 'ALL'>('ALL');
   const [instances, setInstances] = useState<ProcessInstance[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showStart, setShowStart] = useState(false);
 
-  function load() {
-    apiGet<{ instances: ProcessInstance[] }>('/process-instances')
-      .then((res) => setInstances(res.instances))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load processes'));
+  function load(offset = 0) {
+    if (offset > 0) setLoadingMore(true);
+    const params = new URLSearchParams();
+    if (tab !== 'ALL') params.set('status', tab);
+    params.set('limit', String(PAGE_SIZE));
+    params.set('offset', String(offset));
+    apiGet<{ instances: ProcessInstance[]; total: number }>(`/process-instances?${params.toString()}`)
+      .then((res) => {
+        setInstances((prev) => (offset > 0 && prev ? [...prev, ...res.instances] : res.instances));
+        setTotal(res.total);
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load processes'))
+      .finally(() => setLoadingMore(false));
   }
 
-  useEffect(load, []);
+  useEffect(() => {
+    load(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   return (
     <div className="px-8 py-7">
@@ -37,13 +61,27 @@ export function Processes() {
           Start process
         </button>
       </div>
-      <p className="mb-5 text-[13.5px] text-slate-500">
+      <p className="mb-4 text-[13.5px] text-slate-500">
         Onboarding, contract approvals — anything that's a checklist over days, not a single ticket conversation.
       </p>
 
+      <div className="mb-5 flex gap-1 rounded-[9px] bg-slate-100 p-[3px]">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`rounded-[7px] px-3.5 py-1.5 text-[13px] font-medium ${
+              tab === t.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
       {instances === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {instances?.length === 0 && <p className="text-sm text-slate-500">No processes started yet.</p>}
+      {instances?.length === 0 && <p className="text-sm text-slate-500">No processes here.</p>}
 
       {instances && instances.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -78,7 +116,19 @@ export function Processes() {
         </div>
       )}
 
-      {showStart && <StartProcessModal onClose={() => setShowStart(false)} onStarted={load} />}
+      {instances && instances.length < total && (
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={() => load(instances.length)}
+            disabled={loadingMore}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+          >
+            {loadingMore ? 'Loading…' : `Load more (${total - instances.length} remaining)`}
+          </button>
+        </div>
+      )}
+
+      {showStart && <StartProcessModal onClose={() => setShowStart(false)} onStarted={() => load(0)} />}
     </div>
   );
 }

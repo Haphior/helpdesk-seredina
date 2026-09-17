@@ -1,7 +1,9 @@
 import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
+import { MAX_ATTACHMENT_SIZE_BYTES } from './modules/attachments/service';
 import { attachErrorTracking, initErrorTracking } from './lib/errorTracking';
 import jwtPlugin from './plugins/jwt';
 import apiKeyAuthPlugin from './plugins/apiKeyAuth';
@@ -29,6 +31,7 @@ import onCallRoutes from './modules/oncall/routes';
 import savedViewRoutes from './modules/savedviews/routes';
 import notificationRoutes from './modules/notifications/routes';
 import exportRoutes from './modules/export/routes';
+import attachmentRoutes from './modules/attachments/routes';
 
 initErrorTracking();
 
@@ -57,6 +60,9 @@ export function buildApp() {
   // without this, the web app's export download can read the response body but
   // not the filename the server set, and silently falls back to a generic name.
   app.register(cors, { origin: corsOrigin ? corsOrigin.split(',') : true, exposedHeaders: ['Content-Disposition'] });
+  // files: 1 -- the web app sends one upload request per file (see
+  // TicketDetail.tsx's sendReply), never a multi-file field in one request.
+  app.register(multipart, { limits: { fileSize: MAX_ATTACHMENT_SIZE_BYTES, files: 1 } });
 
   app.register(jwtPlugin);
   app.register(apiKeyAuthPlugin);
@@ -84,6 +90,7 @@ export function buildApp() {
   app.register(savedViewRoutes);
   app.register(notificationRoutes);
   app.register(exportRoutes);
+  app.register(attachmentRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

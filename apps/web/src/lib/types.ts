@@ -44,6 +44,14 @@ export interface Role {
   name: string;
 }
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
 export interface Message {
   id: string;
   ticketId: string;
@@ -52,6 +60,7 @@ export interface Message {
   body: string;
   isPrivateNote: boolean;
   createdAt: string;
+  attachments: Attachment[];
 }
 
 export interface Ticket {
@@ -337,6 +346,8 @@ export interface Problem {
   workaround: string | null;
   changeInstanceId: string | null;
   changeInstance?: { id: string; subject: string } | null;
+  ownerId: string | null;
+  owner: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;

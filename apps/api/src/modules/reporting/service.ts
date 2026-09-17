@@ -45,11 +45,21 @@ export async function getPriorityBreakdown(tenantId: string) {
  * (resolutionDueAt set -- opt-in, see docs/adr/0011-sla-engine.md) and are
  * actually resolved; a still-open ticket with a due date isn't done yet, so
  * it's neither -- it'll show up in the priority/workload widgets instead.
+ *
+ * Bounded to a rolling window (default 90 days, by resolvedAt), matching
+ * every other widget in this file -- unlike those, this one used to query
+ * ALL resolved tickets ever with no date bound at all, which meant a tenant
+ * with years of history was scanning and returning its entire resolved-ticket
+ * archive on every single dashboard load. "SLA compliance" already implicitly
+ * means "recently," not "since the beginning of time."
  */
-export async function getSlaCompliance(tenantId: string) {
+export async function getSlaCompliance(tenantId: string, days = 90) {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
   const tickets = await withTenantTx(prisma, tenantId, (tx) =>
     tx.ticket.findMany({
-      where: { resolutionDueAt: { not: null }, resolvedAt: { not: null } },
+      where: { resolutionDueAt: { not: null }, resolvedAt: { not: null, gte: since } },
       select: { resolvedAt: true, resolutionDueAt: true },
     }),
   );

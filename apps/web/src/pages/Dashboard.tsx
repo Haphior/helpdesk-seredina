@@ -231,14 +231,14 @@ function PriorityBreakdownWidget({ counts }: { counts: Record<string, number> })
 
 function SlaComplianceWidget({ report }: { report: SlaComplianceReport }) {
   if (report.total === 0) {
-    return <p className="text-xs text-slate-400">No resolved tickets with an SLA target yet.</p>;
+    return <p className="text-xs text-slate-400">No resolved tickets with an SLA target in the last 90 days.</p>;
   }
   const pct = report.percentMet ?? 0;
   return (
     <div>
       <div className="mb-2 flex items-baseline gap-2">
         <span className="text-3xl font-bold text-slate-900">{pct}%</span>
-        <span className="text-xs text-slate-400">met on time ({report.total} resolved)</span>
+        <span className="text-xs text-slate-400">met on time ({report.total} resolved, last 90 days)</span>
       </div>
       <div className="flex h-2 overflow-hidden rounded-full bg-slate-100">
         <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />

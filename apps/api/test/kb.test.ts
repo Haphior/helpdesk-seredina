@@ -50,8 +50,8 @@ describe.skipIf(!hasDb)('Knowledge Base', () => {
     await createKbArticle(tenantId, { title: 'Wildly Unrelated Title', body: 'Mentions Kubernetes somewhere in here.' });
     const byTitle = await listKbArticles(tenantId, 'unrelated');
     const byBody = await listKbArticles(tenantId, 'KUBERNETES');
-    expect(byTitle.map((a) => a.title)).toContain('Wildly Unrelated Title');
-    expect(byBody.map((a) => a.title)).toContain('Wildly Unrelated Title');
+    expect(byTitle.articles.map((a) => a.title)).toContain('Wildly Unrelated Title');
+    expect(byBody.articles.map((a) => a.title)).toContain('Wildly Unrelated Title');
   });
 
   it('the public routes never return an unpublished draft, by list or by slug', async () => {

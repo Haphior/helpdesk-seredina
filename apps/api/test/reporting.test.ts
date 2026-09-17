@@ -96,9 +96,18 @@ describe.skipIf(!hasDb)('reporting', () => {
   });
 
   it('getSlaCompliance splits resolved tickets into met vs breached by comparing resolvedAt to resolutionDueAt', async () => {
-    const due = new Date('2026-01-10T12:00:00Z');
-    await makeTicket({ resolutionDueAt: due, resolvedAt: new Date('2026-01-10T10:00:00Z') }); // before due -> met
-    await makeTicket({ resolutionDueAt: due, resolvedAt: new Date('2026-01-10T14:00:00Z') }); // after due -> breached
+    // Relative to "now", not a hardcoded past date -- getSlaCompliance bounds
+    // its query to a rolling window (default last 90 days), so a fixture
+    // resolved further back than that would silently fall outside it.
+    const due = new Date();
+    due.setHours(due.getHours() + 12);
+    const beforeDue = new Date(due);
+    beforeDue.setHours(beforeDue.getHours() - 2);
+    const afterDue = new Date(due);
+    afterDue.setHours(afterDue.getHours() + 2);
+
+    await makeTicket({ resolutionDueAt: due, resolvedAt: beforeDue }); // before due -> met
+    await makeTicket({ resolutionDueAt: due, resolvedAt: afterDue }); // after due -> breached
     await makeTicket({ resolutionDueAt: due, resolvedAt: null }); // still open, not resolved -- excluded
     await makeTicket({ resolutionDueAt: null, resolvedAt: new Date() }); // no SLA target at all -- excluded
 

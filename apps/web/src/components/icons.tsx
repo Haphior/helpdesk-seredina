@@ -290,3 +290,11 @@ export function DownloadIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function PaperclipIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M14.5 8.2 8.8 13.9a3 3 0 0 1-4.24-4.24l6.36-6.36a2 2 0 0 1 2.83 2.83L7.4 12.5a1 1 0 0 1-1.41-1.41l5.3-5.3" />
+    </Icon>
+  );
+}

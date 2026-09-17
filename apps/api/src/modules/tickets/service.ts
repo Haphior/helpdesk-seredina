@@ -204,20 +204,48 @@ export interface ListTicketsFilter {
   // own id in at save time already means the same thing.
   assigneeId?: string;
   priority?: TicketPriority;
+  // Case-insensitive match against subject or the contact's name/email --
+  // deliberately not a full-text index: this is a helpdesk console search box,
+  // not a search product, and `contains` is plenty at realistic tenant volumes.
+  q?: string;
+  limit?: number;
+  offset?: number;
 }
 
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
 export async function listTickets(tenantId: string, filter: ListTicketsFilter = {}) {
-  return withTenantTx(prisma, tenantId, async (tx) =>
-    tx.ticket.findMany({
-      where: {
-        status: filter.statusCategory ? { category: filter.statusCategory } : undefined,
-        assigneeId: filter.assigneeId ? (filter.assigneeId === 'unassigned' ? null : filter.assigneeId) : undefined,
-        priority: filter.priority,
-      },
-      include: { status: true, contact: true, assignee: { select: { id: true, name: true } }, team: true },
-      orderBy: { createdAt: 'desc' },
-    }),
-  );
+  const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
+  const offset = filter.offset ?? 0;
+
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const where: Prisma.TicketWhereInput = {
+      status: filter.statusCategory ? { category: filter.statusCategory } : undefined,
+      assigneeId: filter.assigneeId ? (filter.assigneeId === 'unassigned' ? null : filter.assigneeId) : undefined,
+      priority: filter.priority,
+      OR: filter.q
+        ? [
+            { subject: { contains: filter.q, mode: 'insensitive' } },
+            { contact: { name: { contains: filter.q, mode: 'insensitive' } } },
+            { contact: { email: { contains: filter.q, mode: 'insensitive' } } },
+          ]
+        : undefined,
+    };
+
+    const [tickets, total] = await Promise.all([
+      tx.ticket.findMany({
+        where,
+        include: { status: true, contact: true, assignee: { select: { id: true, name: true } }, team: true },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      tx.ticket.count({ where }),
+    ]);
+
+    return { tickets, total };
+  });
 }
 
 export async function getTicket(tenantId: string, ticketId: string) {
@@ -229,7 +257,16 @@ export async function getTicket(tenantId: string, ticketId: string) {
         contact: true,
         assignee: { select: { id: true, name: true } },
         team: true,
-        messages: { orderBy: { createdAt: 'asc' }, include: { authorUser: { select: { id: true, name: true } } } },
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            authorUser: { select: { id: true, name: true } },
+            // Metadata only, never `data` -- the file bytes have no business
+            // riding along on every ticket load; GET /attachments/:id fetches
+            // the actual blob only when someone clicks to download it.
+            attachments: { select: { id: true, filename: true, mimeType: true, sizeBytes: true, createdAt: true } },
+          },
+        },
         assets: {
           include: {
             asset: {

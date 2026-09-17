@@ -24,16 +24,20 @@ const updateArticleSchema = z.object({
   published: z.boolean().optional(),
 });
 
-const searchQuerySchema = z.object({ q: z.string().max(200).optional() });
+const searchQuerySchema = z.object({
+  q: z.string().max(200).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
 
 export default async function kbRoutes(app: FastifyInstance) {
   // Internal browsing -- tickets:read, same tier as custom field definitions:
   // any agent can read (and, below, write) the knowledge base; nothing here is
   // configuration-only the way custom field DEFINITIONS or process templates are.
   app.get('/kb-articles', { preHandler: [app.authenticate, requirePermission('tickets:read')] }, async (request, reply) => {
-    const { q } = searchQuerySchema.parse(request.query);
-    const articles = await listKbArticles(request.user.tenantId, q);
-    return reply.send({ articles });
+    const { q, limit, offset } = searchQuerySchema.parse(request.query);
+    const { articles, total } = await listKbArticles(request.user.tenantId, q, limit, offset);
+    return reply.send({ articles, total });
   });
 
   app.get(

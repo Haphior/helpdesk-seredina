@@ -21,7 +21,8 @@ export default async function reportingRoutes(app: FastifyInstance) {
   });
 
   app.get('/reporting/sla-compliance', { preHandler: [app.authenticate, requirePermission('tickets:read')] }, async (request, reply) => {
-    return reply.send(await getSlaCompliance(request.user.tenantId));
+    const days = Number((request.query as { days?: string }).days ?? 90);
+    return reply.send(await getSlaCompliance(request.user.tenantId, days));
   });
 
   app.get('/reporting/agent-workload', { preHandler: [app.authenticate, requirePermission('tickets:read')] }, async (request, reply) => {

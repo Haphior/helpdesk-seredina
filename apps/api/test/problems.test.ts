@@ -98,7 +98,7 @@ describe.skipIf(!hasDb)('Problem Management', () => {
   });
 
   it('lists problems newest-number-first', async () => {
-    const { problems } = { problems: await listProblems(tenantId) };
+    const { problems } = await listProblems(tenantId);
     const numbers = problems.map((p) => p.number);
     expect(numbers).toEqual([...numbers].sort((a, b) => b - a));
   });

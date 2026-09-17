@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
+import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, downloadFile, ApiError } from '../lib/api';
 import type {
   AssetSummary,
   CustomFieldDefinition,
@@ -17,7 +17,7 @@ import type {
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
-import { BackArrowIcon, BoltIcon, ChevronDownIcon, ClockIcon, EyeIcon, LockIcon, SparkleIcon } from '../components/icons';
+import { BackArrowIcon, BoltIcon, ChevronDownIcon, ClockIcon, EyeIcon, LockIcon, PaperclipIcon, SparkleIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime, isFirstResponseOverdue, isResolutionOverdue } from '../lib/format';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
@@ -41,6 +41,7 @@ export function TicketDetail() {
   const [reply, setReply] = useState('');
   const [isPrivateNote, setIsPrivateNote] = useState(false);
   const [sending, setSending] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const [summary, setSummary] = useState<string | null>(null);
   const [summarizing, setSummarizing] = useState(false);
@@ -57,12 +58,24 @@ export function TicketDetail() {
 
   useEffect(loadAiUsage, [id]);
 
-  const load = useCallback(async () => {
+  // Just the ticket itself -- called after every mutation (status/priority/
+  // assignee change, macro run, asset link, a new message...). Reference data
+  // below (statuses/teams/users/assets/custom fields/macros/problems) never
+  // changes as a *result* of editing a ticket, so re-fetching all seven of
+  // those on every single patch was pure waste; this is the fix.
+  const loadTicket = useCallback(async () => {
     if (!id) return;
     setError(null);
     try {
-      const [t, s, tm, u, a, cf, mc, pr] = await Promise.all([
-        apiGet<TicketDetailType>(`/tickets/${id}`),
+      setTicket(await apiGet<TicketDetailType>(`/tickets/${id}`));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load ticket');
+    }
+  }, [id]);
+
+  const loadReferenceData = useCallback(async () => {
+    try {
+      const [s, tm, u, a, cf, mc, pr] = await Promise.all([
         apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses'),
         apiGet<{ teams: Team[] }>('/teams'),
         apiGet<{ users: UserSummary[] }>('/users'),
@@ -71,7 +84,6 @@ export function TicketDetail() {
         apiGet<{ macros: Macro[] }>('/macros'),
         apiGet<{ problems: Problem[] }>('/problems'),
       ]);
-      setTicket(t);
       setStatuses(s.statuses);
       setTeams(tm.teams);
       setUsers(u.users);
@@ -82,11 +94,12 @@ export function TicketDetail() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load ticket');
     }
-  }, [id]);
+  }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadTicket();
+    loadReferenceData();
+  }, [loadTicket, loadReferenceData]);
 
   // Collision detection: "who else has this ticket open right now" -- a short-poll
   // heartbeat, not a WebSocket (see docs/adr/0019-collision-merge-bulk-actions.md).
@@ -116,7 +129,7 @@ export function TicketDetail() {
     if (!id) return;
     try {
       await apiPatch(`/tickets/${id}`, data);
-      await load();
+      await loadTicket();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Update failed');
     }
@@ -127,7 +140,7 @@ export function TicketDetail() {
     try {
       await apiPost(`/tickets/${id}/assets`, { assetId: assetToLink });
       setAssetToLink('');
-      await load();
+      await loadTicket();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to link asset');
     }
@@ -137,7 +150,7 @@ export function TicketDetail() {
     if (!id) return;
     try {
       await apiDelete(`/tickets/${id}/assets/${assetId}`);
-      await load();
+      await loadTicket();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to unlink asset');
     }
@@ -147,7 +160,7 @@ export function TicketDetail() {
     if (!id) return;
     try {
       await apiPost(`/tickets/${id}/escalation/acknowledge`);
-      await load();
+      await loadTicket();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to acknowledge');
     }
@@ -157,14 +170,35 @@ export function TicketDetail() {
     if (!id || !reply.trim()) return;
     setSending(true);
     try {
-      await apiPost(`/tickets/${id}/messages`, { body: reply, isPrivateNote });
+      const message = await apiPost<{ id: string }>(`/tickets/${id}/messages`, { body: reply, isPrivateNote });
+      for (const file of pendingFiles) {
+        const form = new FormData();
+        form.append('file', file);
+        await apiUpload(`/messages/${message.id}/attachments`, form);
+      }
       setReply('');
-      await load();
+      setPendingFiles([]);
+      await loadTicket();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to send message');
     } finally {
       setSending(false);
     }
+  }
+
+  function addPendingFiles(files: FileList | null) {
+    if (!files) return;
+    setPendingFiles((prev) => [...prev, ...Array.from(files)]);
+  }
+
+  function removePendingFile(index: number) {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   async function handleSummarize() {
@@ -203,7 +237,7 @@ export function TicketDetail() {
     setError(null);
     try {
       await apiPost(`/tickets/${id}/apply-macro`, { macroId });
-      await load();
+      await loadTicket();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to apply macro');
     } finally {
@@ -397,6 +431,21 @@ export function TicketDetail() {
                 <p className={`whitespace-pre-wrap text-[13.5px] leading-relaxed ${message.isPrivateNote ? 'text-amber-900' : 'text-slate-700'}`}>
                   {message.body}
                 </p>
+                {message.attachments.length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {message.attachments.map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => downloadFile(`/attachments/${a.id}`)}
+                        className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[12px] font-medium text-slate-600 hover:bg-slate-100"
+                      >
+                        <PaperclipIcon width={11} height={11} className="text-slate-400" />
+                        {a.filename}
+                        <span className="text-slate-400">{formatFileSize(a.sizeBytes)}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -410,6 +459,22 @@ export function TicketDetail() {
             rows={3}
             className="w-full resize-none rounded-lg border-0 px-2.5 py-2 text-[13.5px] focus:outline-none"
           />
+          {pendingFiles.length > 0 && (
+            <div className="mb-1.5 flex flex-wrap gap-1.5 px-1.5">
+              {pendingFiles.map((f, i) => (
+                <span
+                  key={i}
+                  className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[12px] font-medium text-slate-600"
+                >
+                  <PaperclipIcon width={11} height={11} className="text-slate-400" />
+                  {f.name}
+                  <button onClick={() => removePendingFile(i)} className="text-slate-400 hover:text-rose-600">
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between px-1.5">
             <div className="flex items-center gap-2">
               <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[12.5px] font-medium text-slate-500">
@@ -421,6 +486,11 @@ export function TicketDetail() {
                 />
                 <LockIcon width={12} height={12} />
                 Internal note
+              </label>
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[12.5px] font-medium text-slate-500 hover:bg-slate-50">
+                <PaperclipIcon width={12} height={12} />
+                Attach
+                <input type="file" multiple onChange={(e) => addPendingFiles(e.target.files)} className="hidden" />
               </label>
               <button
                 onClick={handleSuggestReply}
@@ -618,7 +688,7 @@ export function TicketDetail() {
       </aside>
 
       {showMerge && ticket && (
-        <MergeModal currentTicket={ticket} onClose={() => setShowMerge(false)} onMerged={load} />
+        <MergeModal currentTicket={ticket} onClose={() => setShowMerge(false)} onMerged={loadTicket} />
       )}
     </div>
   );

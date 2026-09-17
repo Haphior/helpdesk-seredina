@@ -93,8 +93,16 @@ export default async function processRoutes(app: FastifyInstance) {
     '/process-instances',
     { preHandler: [app.authenticate, requirePermission('tickets:write')] },
     async (request, reply) => {
-      const instances = await listProcessInstances(request.user.tenantId);
-      return reply.send({ instances });
+      const query = z
+        .object({
+          status: z.enum(['IN_PROGRESS', 'COMPLETED', 'CANCELLED']).optional(),
+          limit: z.coerce.number().int().min(1).max(200).optional(),
+          offset: z.coerce.number().int().min(0).optional(),
+        })
+        .safeParse(request.query);
+      if (!query.success) return reply.code(400).send({ error: query.error.flatten() });
+      const { instances, total } = await listProcessInstances(request.user.tenantId, query.data);
+      return reply.send({ instances, total });
     },
   );
 

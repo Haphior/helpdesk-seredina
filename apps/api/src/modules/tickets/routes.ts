@@ -92,13 +92,30 @@ export default async function ticketRoutes(app: FastifyInstance) {
         statusCategory: STATUS_CATEGORY.optional(),
         assigneeId: z.union([z.string().uuid(), z.literal('unassigned')]).optional(),
         priority: PRIORITY.optional(),
+        q: z.string().max(200).optional(),
+        limit: z.coerce.number().int().min(1).max(200).optional(),
+        offset: z.coerce.number().int().min(0).optional(),
       })
       .safeParse(request.query);
     if (!query.success) {
       return reply.code(400).send({ error: query.error.flatten() });
     }
-    const tickets = await listTickets(request.user.tenantId, query.data);
-    return reply.send({ tickets });
+    const { tickets, total } = await listTickets(request.user.tenantId, query.data);
+    return reply.send({ tickets, total });
+  });
+
+  // An agent logging a ticket by hand -- a walk-in, a phone call -- rather than
+  // through the Service Catalog. Same underlying createTicketFromApi() every
+  // other channel already goes through (see docs/adr/0016-service-catalog.md
+  // for the precedent of reusing it under a different channel value), just
+  // authenticated as a logged-in agent (tickets:write) instead of an ApiKey.
+  app.post('/tickets', { preHandler: [app.authenticate, requirePermission('tickets:write')] }, async (request, reply) => {
+    const parsed = createFromApiSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.flatten() });
+    }
+    const ticket = await createTicketFromApi(request.user.tenantId, { ...parsed.data, channel: 'agent' });
+    return reply.code(201).send(ticket);
   });
 
   app.get(

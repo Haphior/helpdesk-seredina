@@ -8,6 +8,7 @@ const PROBLEM_STATUS = z.enum(['UNDER_INVESTIGATION', 'KNOWN_ERROR', 'RESOLVED',
 const createProblemSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(4000).nullish(),
+  ownerId: z.string().uuid().nullish(),
 });
 
 const updateProblemSchema = z.object({
@@ -17,14 +18,23 @@ const updateProblemSchema = z.object({
   rootCause: z.string().max(4000).nullish(),
   workaround: z.string().max(4000).nullish(),
   changeInstanceId: z.string().uuid().nullish(),
+  ownerId: z.string().uuid().nullish(),
+});
+
+const listProblemsQuerySchema = z.object({
+  status: PROBLEM_STATUS.optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 // Same tier as process instances -- day-to-day investigative work, not
 // configuration, so tickets:write rather than tickets:manage_all.
 export default async function problemRoutes(app: FastifyInstance) {
   app.get('/problems', { preHandler: [app.authenticate, requirePermission('tickets:write')] }, async (request, reply) => {
-    const problems = await listProblems(request.user.tenantId);
-    return reply.send({ problems });
+    const query = listProblemsQuerySchema.safeParse(request.query);
+    if (!query.success) return reply.code(400).send({ error: query.error.flatten() });
+    const { problems, total } = await listProblems(request.user.tenantId, query.data);
+    return reply.send({ problems, total });
   });
 
   app.post('/problems', { preHandler: [app.authenticate, requirePermission('tickets:write')] }, async (request, reply) => {

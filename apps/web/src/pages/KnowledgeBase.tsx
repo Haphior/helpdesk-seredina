@@ -10,19 +10,32 @@ interface Me {
   tenantSlug: string;
 }
 
+const PAGE_SIZE = 50;
+
 export function KnowledgeBase() {
   const { hasPermission } = useAuth();
   const canWrite = hasPermission('tickets:write');
   const [articles, setArticles] = useState<KbArticle[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<KbArticle | 'new' | null>(null);
 
-  function load(query = q) {
-    apiGet<{ articles: KbArticle[] }>(`/kb-articles${query ? `?q=${encodeURIComponent(query)}` : ''}`)
-      .then((res) => setArticles(res.articles))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load the knowledge base'));
+  function load(query = q, offset = 0) {
+    if (offset > 0) setLoadingMore(true);
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    params.set('limit', String(PAGE_SIZE));
+    params.set('offset', String(offset));
+    apiGet<{ articles: KbArticle[]; total: number }>(`/kb-articles?${params.toString()}`)
+      .then((res) => {
+        setArticles((prev) => (offset > 0 && prev ? [...prev, ...res.articles] : res.articles));
+        setTotal(res.total);
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load the knowledge base'))
+      .finally(() => setLoadingMore(false));
   }
 
   useEffect(() => {
@@ -101,6 +114,18 @@ export function KnowledgeBase() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {articles && articles.length < total && (
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={() => load(q, articles.length)}
+            disabled={loadingMore}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+          >
+            {loadingMore ? 'Loading…' : `Load more (${total - articles.length} remaining)`}
+          </button>
         </div>
       )}
 

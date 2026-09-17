@@ -32,13 +32,19 @@ const CHANNEL_TONE: Record<string, 'rose' | 'slate'> = { alert: 'rose', email: '
 
 const ROW_COLUMNS = '24px 56px 1fr 108px 120px 130px 110px 100px';
 
+const PAGE_SIZE = 50;
+
 export function TicketsQueue() {
   const { hasPermission, payload } = useAuth();
   const canBulkEdit = hasPermission('tickets:write');
   const [tab, setTab] = useState<TicketStatusCategory | 'ALL'>('ALL');
   const [assigneeFilter, setAssigneeFilter] = useState(''); // '' | 'unassigned' | a user id
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
+  const [q, setQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRequest, setShowRequest] = useState(false);
   const [showSaveView, setShowSaveView] = useState(false);
@@ -48,16 +54,30 @@ export function TicketsQueue() {
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [applyingBulk, setApplyingBulk] = useState(false);
 
-  function load() {
+  // Debounced so every keystroke doesn't fire a request -- 300ms is the usual
+  // sweet spot between "feels instant" and "not a request per letter."
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q), 300);
+    return () => clearTimeout(timer);
+  }, [q]);
+
+  function load(offset = 0) {
     setError(null);
+    if (offset > 0) setLoadingMore(true);
     const params = new URLSearchParams();
     if (tab !== 'ALL') params.set('statusCategory', tab);
     if (assigneeFilter) params.set('assigneeId', assigneeFilter);
     if (priorityFilter) params.set('priority', priorityFilter);
-    const query = params.toString();
-    apiGet<{ tickets: Ticket[] }>(`/tickets${query ? `?${query}` : ''}`)
-      .then((res) => setTickets(res.tickets))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load tickets'));
+    if (debouncedQ) params.set('q', debouncedQ);
+    params.set('limit', String(PAGE_SIZE));
+    params.set('offset', String(offset));
+    apiGet<{ tickets: Ticket[]; total: number }>(`/tickets?${params.toString()}`)
+      .then((res) => {
+        setTickets((prev) => (offset > 0 && prev ? [...prev, ...res.tickets] : res.tickets));
+        setTotal(res.total);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load tickets'))
+      .finally(() => setLoadingMore(false));
   }
 
   function loadSavedViews() {
@@ -67,10 +87,10 @@ export function TicketsQueue() {
   }
 
   useEffect(() => {
-    load();
+    load(0);
     setSelected(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, assigneeFilter, priorityFilter]);
+  }, [tab, assigneeFilter, priorityFilter, debouncedQ]);
 
   useEffect(() => {
     apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses').then((res) => setStatuses(res.statuses)).catch(() => {});
@@ -131,7 +151,11 @@ export function TicketsQueue() {
         <div className="flex items-baseline justify-between gap-2.5">
           <div className="flex items-baseline gap-2.5">
             <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Tickets</h1>
-            {tickets && <span className="text-[13px] text-slate-400">{tickets.length} in this view</span>}
+            {tickets && (
+              <span className="text-[13px] text-slate-400">
+                {tickets.length} of {total}
+              </span>
+            )}
           </div>
           {hasPermission('tickets:write') && (
             <button
@@ -160,7 +184,12 @@ export function TicketsQueue() {
 
           <div className="flex w-[280px] items-center gap-2 rounded-[9px] border border-slate-200 bg-white px-3 py-2">
             <SearchIcon width={15} height={15} className="text-slate-400" />
-            <span className="text-[13px] text-slate-400">Search tickets…</span>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search tickets…"
+              className="w-full bg-transparent text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none"
+            />
           </div>
         </div>
 
@@ -358,9 +387,21 @@ export function TicketsQueue() {
             </div>
           </div>
         )}
+
+        {tickets && tickets.length < total && (
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => load(tickets.length)}
+              disabled={loadingMore}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+            >
+              {loadingMore ? 'Loading…' : `Load more (${total - tickets.length} remaining)`}
+            </button>
+          </div>
+        )}
       </div>
 
-      {showRequest && <RequestFromCatalogModal onClose={() => setShowRequest(false)} />}
+      {showRequest && <NewTicketModal onClose={() => setShowRequest(false)} />}
       {showSaveView && (
         <SaveViewModal
           filters={{
@@ -437,11 +478,175 @@ function SaveViewModal({
   );
 }
 
-function RequestFromCatalogModal({ onClose }: { onClose: () => void }) {
+function NewTicketModal({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
-  const [items, setItems] = useState<ServiceCatalogItem[]>([]);
+  const [items, setItems] = useState<ServiceCatalogItem[] | null>(null);
+  const [mode, setMode] = useState<'blank' | 'catalog'>('blank');
+
+  useEffect(() => {
+    apiGet<{ items: ServiceCatalogItem[] }>('/service-catalog-items').then((res) => {
+      setItems(res.items);
+      if (res.items.length > 0) setMode('catalog');
+    });
+  }, []);
+
+  return (
+    <Modal title="New ticket" onClose={onClose}>
+      {items === null ? (
+        <p className="text-sm text-slate-500">Loading…</p>
+      ) : (
+        <>
+          {items.length > 0 && (
+            <div className="mb-3 flex gap-1 rounded-[9px] bg-slate-100 p-[3px]">
+              <button
+                type="button"
+                onClick={() => setMode('blank')}
+                className={`flex-1 rounded-[7px] px-3 py-1.5 text-[13px] font-medium ${
+                  mode === 'blank' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Blank ticket
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('catalog')}
+                className={`flex-1 rounded-[7px] px-3 py-1.5 text-[13px] font-medium ${
+                  mode === 'catalog' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                From catalog
+              </button>
+            </div>
+          )}
+          {mode === 'blank' ? (
+            <BlankTicketForm onClose={onClose} onCreated={(id) => navigate(`/tickets/${id}`)} />
+          ) : (
+            <CatalogRequestForm items={items} onClose={onClose} onCreated={(id) => navigate(`/tickets/${id}`)} />
+          )}
+        </>
+      )}
+    </Modal>
+  );
+}
+
+// A ticket logged by hand -- a walk-in, a phone call -- when there's no
+// Service Catalog item that fits. POST /tickets, agent-authenticated (see
+// docs/adr/0026-work-section-improvements.md): before this, an agent with
+// zero catalog items configured had no way to create a ticket at all from
+// the console.
+function BlankTicketForm({ onClose, onCreated }: { onClose: () => void; onCreated: (ticketId: string) => void }) {
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [priority, setPriority] = useState<TicketPriority>('NORMAL');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const ticket = await apiPost<{ id: string }>('/tickets', { subject, body, contactName, contactEmail, priority });
+      onClose();
+      onCreated(ticket.id);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create ticket');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium text-slate-700">Subject</span>
+        <input
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          required
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        />
+      </label>
+
+      <div className="flex gap-2">
+        <label className="block flex-1 text-sm">
+          <span className="mb-1 block font-medium text-slate-700">Requester name</span>
+          <input
+            value={contactName}
+            onChange={(e) => setContactName(e.target.value)}
+            required
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          />
+        </label>
+        <label className="block flex-1 text-sm">
+          <span className="mb-1 block font-medium text-slate-700">Requester email</span>
+          <input
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            required
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          />
+        </label>
+      </div>
+
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium text-slate-700">Description</span>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={3}
+          required
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        />
+      </label>
+
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium text-slate-700">Priority</span>
+        <select
+          value={priority}
+          onChange={(e) => setPriority(e.target.value as TicketPriority)}
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        >
+          {PRIORITIES.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {error && <p className="text-sm text-rose-600">{error}</p>}
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {submitting ? 'Creating…' : 'Create ticket'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function CatalogRequestForm({
+  items,
+  onClose,
+  onCreated,
+}: {
+  items: ServiceCatalogItem[];
+  onClose: () => void;
+  onCreated: (ticketId: string) => void;
+}) {
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
-  const [itemId, setItemId] = useState('');
+  const [itemId, setItemId] = useState(items[0]?.id ?? '');
   const [contactEmail, setContactEmail] = useState('');
   const [contactName, setContactName] = useState('');
   const [subject, setSubject] = useState('');
@@ -450,14 +655,7 @@ function RequestFromCatalogModal({ onClose }: { onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      apiGet<{ items: ServiceCatalogItem[] }>('/service-catalog-items'),
-      apiGet<{ customFields: CustomFieldDefinition[] }>('/custom-fields'),
-    ]).then(([i, cf]) => {
-      setItems(i.items);
-      setItemId(i.items[0]?.id ?? '');
-      setCustomFields(cf.customFields);
-    });
+    apiGet<{ customFields: CustomFieldDefinition[] }>('/custom-fields').then((res) => setCustomFields(res.customFields));
   }, []);
 
   const item = items.find((i) => i.id === itemId);
@@ -475,7 +673,7 @@ function RequestFromCatalogModal({ onClose }: { onClose: () => void }) {
         customFields: itemFields.length > 0 ? fieldValues : undefined,
       });
       onClose();
-      navigate(`/tickets/${ticket.id}`);
+      onCreated(ticket.id);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to create ticket');
     } finally {
@@ -484,15 +682,9 @@ function RequestFromCatalogModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal title="New ticket" onClose={onClose}>
-      {items.length === 0 ? (
-        <p className="text-sm text-slate-500">
-          No service catalog items yet — an admin can add some on the Service Catalog page.
-        </p>
-      ) : (
-        <form onSubmit={onSubmit} className="space-y-3">
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Request</span>
+    <form onSubmit={onSubmit} className="space-y-3">
+      <label className="block text-sm">
+        <span className="mb-1 block font-medium text-slate-700">Request</span>
             <select
               value={itemId}
               onChange={(e) => {
@@ -593,8 +785,6 @@ function RequestFromCatalogModal({ onClose }: { onClose: () => void }) {
               {submitting ? 'Creating…' : 'Create ticket'}
             </button>
           </div>
-        </form>
-      )}
-    </Modal>
+    </form>
   );
 }

@@ -32,14 +32,27 @@ function searchFilter(q?: string): Prisma.KbArticleWhereInput | undefined {
   };
 }
 
-export async function listKbArticles(tenantId: string, q?: string) {
-  return withTenantTx(prisma, tenantId, (tx) =>
-    tx.kbArticle.findMany({
-      where: searchFilter(q),
-      include: { author: { select: { id: true, name: true } } },
-      orderBy: { updatedAt: 'desc' },
-    }),
-  );
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
+export async function listKbArticles(tenantId: string, q?: string, limit?: number, offset?: number) {
+  const take = Math.min(limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
+  const skip = offset ?? 0;
+  const where = searchFilter(q);
+
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const [articles, total] = await Promise.all([
+      tx.kbArticle.findMany({
+        where,
+        include: { author: { select: { id: true, name: true } } },
+        orderBy: { updatedAt: 'desc' },
+        take,
+        skip,
+      }),
+      tx.kbArticle.count({ where }),
+    ]);
+    return { articles, total };
+  });
 }
 
 export async function getKbArticle(tenantId: string, id: string) {

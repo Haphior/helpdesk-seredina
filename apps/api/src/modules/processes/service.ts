@@ -1,4 +1,12 @@
-import { prisma, withTenantTx, type ChangeRiskLevel, type ProcessStepStatus, type ProcessTemplateKind } from '@seredina/db';
+import {
+  prisma,
+  withTenantTx,
+  type ChangeRiskLevel,
+  type Prisma,
+  type ProcessInstanceStatus,
+  type ProcessStepStatus,
+  type ProcessTemplateKind,
+} from '@seredina/db';
 
 export interface StepTemplateInput {
   label: string;
@@ -60,13 +68,33 @@ export async function deleteProcessTemplate(tenantId: string, id: string) {
   });
 }
 
-export async function listProcessInstances(tenantId: string) {
-  return withTenantTx(prisma, tenantId, (tx) =>
-    tx.processInstance.findMany({
-      include: { steps: { orderBy: { sortOrder: 'asc' } } },
-      orderBy: { createdAt: 'desc' },
-    }),
-  );
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
+export interface ListProcessInstancesFilter {
+  status?: ProcessInstanceStatus;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listProcessInstances(tenantId: string, filter: ListProcessInstancesFilter = {}) {
+  const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
+  const offset = filter.offset ?? 0;
+  const where: Prisma.ProcessInstanceWhereInput = { status: filter.status };
+
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const [instances, total] = await Promise.all([
+      tx.processInstance.findMany({
+        where,
+        include: { steps: { orderBy: { sortOrder: 'asc' } } },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      tx.processInstance.count({ where }),
+    ]);
+    return { instances, total };
+  });
 }
 
 export async function getProcessInstance(tenantId: string, id: string) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiGet, apiPatch, ApiError } from '../lib/api';
-import type { Problem, ProblemStatus, ProcessInstance, Ticket } from '../lib/types';
+import type { Problem, ProblemStatus, ProcessInstance, Ticket, UserSummary } from '../lib/types';
 import { Badge } from '../components/Badge';
 import { BackArrowIcon } from '../components/icons';
 import { formatDateTime, PROBLEM_STATUS_TONE } from '../lib/format';
@@ -13,6 +13,7 @@ export function ProblemDetail() {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [changeInstances, setChangeInstances] = useState<ProcessInstance[]>([]);
   const [unlinkedTickets, setUnlinkedTickets] = useState<Ticket[]>([]);
+  const [users, setUsers] = useState<UserSummary[]>([]);
   const [ticketToLink, setTicketToLink] = useState('');
   const [rootCause, setRootCause] = useState('');
   const [workaround, setWorkaround] = useState('');
@@ -22,16 +23,18 @@ export function ProblemDetail() {
     if (!id) return;
     setError(null);
     try {
-      const [p, instances, tickets] = await Promise.all([
+      const [p, instances, tickets, u] = await Promise.all([
         apiGet<Problem>(`/problems/${id}`),
         apiGet<{ instances: ProcessInstance[] }>('/process-instances'),
         apiGet<{ tickets: Ticket[] }>('/tickets'),
+        apiGet<{ users: UserSummary[] }>('/users'),
       ]);
       setProblem(p);
       setRootCause(p.rootCause ?? '');
       setWorkaround(p.workaround ?? '');
       setChangeInstances(instances.instances.filter((i) => i.riskLevel));
       setUnlinkedTickets(tickets.tickets.filter((t) => !t.problemId));
+      setUsers(u.users);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to load problem');
     }
@@ -184,6 +187,22 @@ export function ProblemDetail() {
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s.replace('_', ' ')}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block text-xs">
+            <span className="mb-1 block font-semibold uppercase tracking-wide text-slate-400">Owner</span>
+            <select
+              value={problem.ownerId ?? ''}
+              onChange={(e) => patch({ ownerId: e.target.value || null })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1 text-[13px]"
+            >
+              <option value="">Unowned</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
                 </option>
               ))}
             </select>
