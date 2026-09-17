@@ -240,3 +240,14 @@ export function WarningIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function CatalogIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="3" width="5.5" height="5.5" rx="1.2" />
+      <rect x="11.5" y="3" width="5.5" height="5.5" rx="1.2" />
+      <rect x="3" y="11.5" width="5.5" height="5.5" rx="1.2" />
+      <rect x="11.5" y="11.5" width="5.5" height="5.5" rx="1.2" />
+    </Icon>
+  );
+}

@@ -25,6 +25,11 @@ export interface CreateTicketFromApiInput {
   contactEmail: string;
   contactName: string;
   priority?: TicketPriority;
+  // Defaults to 'api' -- the Service Catalog (docs/adr/0016-service-catalog.md)
+  // reuses this same function with channel: 'catalog' rather than duplicating
+  // ticket-creation logic for a second internal channel.
+  channel?: string;
+  customFields?: Record<string, unknown>;
 }
 
 /** The API channel: POST /v1/tickets, authenticated by ApiKey -- see plugins/apiKeyAuth.ts. */
@@ -56,7 +61,8 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
         priority,
         statusId: openStatus.id,
         contactId: contact.id,
-        channel: 'api',
+        channel: input.channel ?? 'api',
+        customFields: input.customFields as Prisma.InputJsonValue | undefined,
         createdAt,
         firstResponseDueAt: dueAts.firstResponseDueAt,
         resolutionDueAt: dueAts.resolutionDueAt,

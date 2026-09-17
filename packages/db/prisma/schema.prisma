@@ -56,6 +56,7 @@ model Tenant {
   businessHours         BusinessHours?
   dashboardWidgets      DashboardWidget[]
   problems              Problem[]
+  serviceCatalogItems   ServiceCatalogItem[]
 
   @@map("tenants")
 }
@@ -203,7 +204,7 @@ model Ticket {
   assignee   User?          @relation("TicketAssignee", fields: [assigneeId], references: [id])
   contactId  String         @map("contact_id") @db.Uuid
   contact    Contact        @relation(fields: [contactId], references: [id])
-  channel    String         @default("api") // 'api' | 'alert' | 'email' | 'widget' (only api/alert ship so far)
+  channel    String         @default("api") // 'api' | 'alert' | 'email' | 'widget' | 'catalog' (api/alert/catalog ship so far)
   // Set only for channel='alert' -- the monitoring/security tool's own id for this
   // problem (e.g. a Zabbix event id, a Wazuh alert id), used to fold a re-fired
   // alert into the same ticket instead of spawning a duplicate. Not unique-
@@ -274,6 +275,28 @@ model CustomFieldDefinition {
 
   @@unique([tenantId, key])
   @@map("custom_field_definitions")
+}
+
+// A tenant-defined "requestable thing" ("new laptop," "VPN access," "onboard a
+// contractor") that creates a Ticket pre-filled from the chosen item, via the
+// exact same creation path every other channel (api/alert/email) already uses
+// -- see docs/adr/0016-service-catalog.md. customFieldKeys references
+// CustomFieldDefinition.key (not id) by design, the same "orphaned key is
+// harmless" posture Ticket.customFields already takes: a key whose definition
+// was since deleted is just never rendered, not a dangling FK to clean up.
+model ServiceCatalogItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  icon            String?
+  customFieldKeys String[] @default([]) @map("custom_field_keys")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, name])
+  @@map("service_catalog_items")
 }
 
 enum MessageAuthorType {

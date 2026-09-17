@@ -337,3 +337,13 @@ export interface Problem {
   resolvedAt: string | null;
   tickets: ProblemTicketSummary[];
 }
+
+export interface ServiceCatalogItem {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  customFieldKeys: string[];
+  sortOrder: number;
+  createdAt: string;
+}

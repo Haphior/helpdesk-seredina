@@ -50,6 +50,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   BusinessHours: 'tenantId',
   DashboardWidget: 'tenantId',
   Problem: 'tenantId',
+  ServiceCatalogItem: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

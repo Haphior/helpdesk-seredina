@@ -22,6 +22,7 @@ import { SlaPolicies } from './pages/SlaPolicies';
 import { BusinessHoursPage } from './pages/BusinessHoursPage';
 import { Problems } from './pages/Problems';
 import { ProblemDetail } from './pages/ProblemDetail';
+import { ServiceCatalog } from './pages/ServiceCatalog';
 
 export function App() {
   return (
@@ -47,6 +48,7 @@ export function App() {
             <Route path="/process-templates" element={<ProcessTemplates />} />
             <Route path="/problems" element={<Problems />} />
             <Route path="/problems/:id" element={<ProblemDetail />} />
+            <Route path="/service-catalog" element={<ServiceCatalog />} />
             <Route path="/webhooks" element={<Webhooks />} />
             <Route path="/macros" element={<Macros />} />
             <Route path="/sla-policies" element={<SlaPolicies />} />

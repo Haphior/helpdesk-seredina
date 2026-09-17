@@ -696,15 +696,34 @@ shipped, not by external priority:**
   the on-call person hasn't acknowledged in N minutes, escalate to the next
   tier") that consumes the same breach-check delayed-job mechanism already
   built rather than a second scheduler.
-- **Service Catalog.** A tenant-defined list of *requestable things*
-  ("new laptop," "VPN access," "onboard a contractor"), each pointing at its
-  own form — the missing piece `docs/adr/0006-custom-fields.md` already
-  flagged as a known v1 limitation ("no drag-and-drop `TicketForm` layout
-  customization... a separate, larger GLPI-parity item"). This is that item,
-  now named concretely instead of deferred vaguely: `ServiceCatalogItem`
-  (name, description, icon, which `CustomFieldDefinition`s it shows) creates a
-  `Ticket` pre-filled from the chosen item, the same creation path every other
-  channel already uses.
+**Service Catalog ✅ (this pass)** — a tenant-defined list of *requestable
+things* ("new laptop," "VPN access," "onboard a contractor"), each pointing
+at its own form. The missing piece `docs/adr/0006-custom-fields.md` already
+flagged as a known v1 limitation ("no drag-and-drop `TicketForm` layout
+customization... a separate, larger GLPI-parity item") — deliberately kept
+thin rather than building that full form builder: `ServiceCatalogItem` is
+just `name`, `description`, `icon`, and which `CustomFieldDefinition`s (by
+key) it asks for. Requesting an item calls the exact same
+`createTicketFromApi` every other channel already uses (now accepting an
+optional `channel`/`customFields`), creating a `Ticket` on a new `catalog`
+channel value, pre-filled with the requester's answers. This also became the
+first agent-facing manual ticket-creation path — the Tickets queue's new
+"New ticket" button opens the catalog request flow directly, since a
+standalone blank-ticket form was out of scope for this item. See
+`docs/adr/0016-service-catalog.md`.
+
+Verified: 6 new integration tests against real Postgres (duplicate names
+rejected; `sortOrder` increments correctly; requesting an item creates a
+`catalog`-channel ticket with the requester upserted as its contact and the
+given custom fields stored; an explicit subject overrides the item's name
+while a blank one falls back to it; requesting a nonexistent item is
+rejected; delete works and a second delete is rejected), full suite 58/58
+green, both `apps/api`/`apps/web` typecheck clean. Browser-verified end to
+end: created a custom field, created a catalog item with an icon and that
+field attached, requested it from the Tickets page's new "New ticket"
+button, and confirmed the resulting ticket's subject, channel badge, message
+body, contact, and custom field value all render correctly on its detail
+page. Zero console errors.
 
 **Change Enablement ✅ (this pass)** — ITIL 4's official name for this practice
 ("Change Management" in the original note here was ITIL v3 terminology,
