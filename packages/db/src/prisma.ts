@@ -51,6 +51,8 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   DashboardWidget: 'tenantId',
   Problem: 'tenantId',
   ServiceCatalogItem: 'tenantId',
+  Service: 'tenantId',
+  ServiceAsset: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

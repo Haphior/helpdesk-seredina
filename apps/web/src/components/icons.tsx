@@ -251,3 +251,14 @@ export function CatalogIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function ServiceMapIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="10" cy="3.8" r="2" />
+      <circle cx="4.5" cy="15" r="2" />
+      <circle cx="15.5" cy="15" r="2" />
+      <path d="M10 5.8v3M8.6 9.8 5.6 13.4M11.4 9.8l3 3.6" />
+    </Icon>
+  );
+}

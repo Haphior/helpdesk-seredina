@@ -163,6 +163,7 @@ export interface AssetSummary {
   name: string;
   ipAddress: string | null;
   assetType: AssetType;
+  services?: { id: string; name: string }[];
 }
 
 export type DiscoveryJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
@@ -346,4 +347,12 @@ export interface ServiceCatalogItem {
   customFieldKeys: string[];
   sortOrder: number;
   createdAt: string;
+}
+
+export interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  assets: { asset: AssetSummary }[];
 }

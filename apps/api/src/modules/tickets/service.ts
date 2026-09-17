@@ -218,12 +218,34 @@ export async function getTicket(tenantId: string, ticketId: string) {
         assignee: { select: { id: true, name: true } },
         team: true,
         messages: { orderBy: { createdAt: 'asc' }, include: { authorUser: { select: { id: true, name: true } } } },
-        assets: { include: { asset: { select: { id: true, name: true, ipAddress: true, assetType: true } } } },
+        assets: {
+          include: {
+            asset: {
+              select: {
+                id: true,
+                name: true,
+                ipAddress: true,
+                assetType: true,
+                services: { include: { service: { select: { id: true, name: true } } } },
+              },
+            },
+          },
+        },
         problem: { select: { id: true, number: true, title: true } },
       },
     });
     if (!ticket) throw new Error('ticket not found');
-    return ticket;
+
+    // Flatten the ServiceAsset join rows into a plain services[] per asset --
+    // "this affects: Payroll" (docs/adr/0017-service-configuration-management.md)
+    // shouldn't require the frontend to know a join table exists.
+    return {
+      ...ticket,
+      assets: ticket.assets.map((ta) => ({
+        ...ta,
+        asset: { ...ta.asset, services: ta.asset.services.map((sa) => sa.service) },
+      })),
+    };
   });
 }
 

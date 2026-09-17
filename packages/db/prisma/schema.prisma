@@ -57,6 +57,8 @@ model Tenant {
   dashboardWidgets      DashboardWidget[]
   problems              Problem[]
   serviceCatalogItems   ServiceCatalogItem[]
+  services              Service[]
+  serviceAssets         ServiceAsset[]
 
   @@map("tenants")
 }
@@ -435,7 +437,8 @@ model Asset {
   modelId      String?     @map("model_id") @db.Uuid
   catalogModel AssetModel? @relation(fields: [modelId], references: [id])
 
-  tickets TicketAsset[]
+  tickets  TicketAsset[]
+  services ServiceAsset[]
 
   // Re-scanning the same range upserts by (tenantId, ipAddress) rather than
   // duplicating -- imperfect under DHCP churn, a known v1 limitation (see ADR), not
@@ -495,6 +498,41 @@ model TicketAsset {
 
   @@id([ticketId, assetId])
   @@map("ticket_assets")
+}
+
+// The ITIL "Service Configuration Management" practice: mapping which
+// technical Assets actually underpin which business-facing Service ("Email,"
+// "Payroll") -- sharper than the general asset-to-asset/asset-to-contact CMDB
+// links Asset Management already has. See docs/adr/0017-service-configuration-management.md.
+model Service {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  assets ServiceAsset[]
+
+  @@unique([tenantId, name])
+  @@map("services")
+}
+
+// Many-to-many: one Service can depend on several Assets (e.g. "Email" needs
+// both the mail server and the DNS box), and one Asset can underpin several
+// Services (a shared database server). Explicit join table with its own
+// denormalized tenant_id, same shape as TicketAsset above, for the same RLS
+// reason noted at the top of this file.
+model ServiceAsset {
+  tenantId  String  @map("tenant_id") @db.Uuid
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceId String  @map("service_id") @db.Uuid
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  assetId   String  @map("asset_id") @db.Uuid
+  asset     Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, assetId])
+  @@map("service_assets")
 }
 
 enum DiscoveryJobStatus {

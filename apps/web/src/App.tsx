@@ -23,6 +23,7 @@ import { BusinessHoursPage } from './pages/BusinessHoursPage';
 import { Problems } from './pages/Problems';
 import { ProblemDetail } from './pages/ProblemDetail';
 import { ServiceCatalog } from './pages/ServiceCatalog';
+import { Services } from './pages/Services';
 
 export function App() {
   return (
@@ -49,6 +50,7 @@ export function App() {
             <Route path="/problems" element={<Problems />} />
             <Route path="/problems/:id" element={<ProblemDetail />} />
             <Route path="/service-catalog" element={<ServiceCatalog />} />
+            <Route path="/services" element={<Services />} />
             <Route path="/webhooks" element={<Webhooks />} />
             <Route path="/macros" element={<Macros />} />
             <Route path="/sla-policies" element={<SlaPolicies />} />

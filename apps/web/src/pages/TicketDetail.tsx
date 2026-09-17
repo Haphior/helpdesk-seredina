@@ -447,14 +447,21 @@ export function TicketDetail() {
         <FieldGroup label="Linked assets">
           {ticket.assets.length === 0 && <p className="mb-2 text-[13px] text-slate-400">None linked.</p>}
           {ticket.assets.map(({ asset }) => (
-            <div key={asset.id} className="mb-1 flex items-center justify-between rounded-lg bg-slate-50 px-2.5 py-1.5">
-              <span className="truncate text-[13px] text-slate-700">
-                {asset.name}
-                {asset.ipAddress && <span className="text-slate-400"> · {asset.ipAddress}</span>}
-              </span>
-              <button onClick={() => unlinkAsset(asset.id)} className="flex-shrink-0 text-xs text-slate-400 hover:text-rose-600">
-                remove
-              </button>
+            <div key={asset.id} className="mb-1 rounded-lg bg-slate-50 px-2.5 py-1.5">
+              <div className="flex items-center justify-between">
+                <span className="truncate text-[13px] text-slate-700">
+                  {asset.name}
+                  {asset.ipAddress && <span className="text-slate-400"> · {asset.ipAddress}</span>}
+                </span>
+                <button onClick={() => unlinkAsset(asset.id)} className="flex-shrink-0 text-xs text-slate-400 hover:text-rose-600">
+                  remove
+                </button>
+              </div>
+              {asset.services && asset.services.length > 0 && (
+                <div className="mt-0.5 text-[11.5px] text-orange-600">
+                  Affects: {asset.services.map((s) => s.name).join(', ')}
+                </div>
+              )}
             </div>
           ))}
           <div className="mt-2 flex gap-1.5">

@@ -799,15 +799,29 @@ moved status to `KNOWN_ERROR`, unlinked one ticket and confirmed it dropped
 off the list, and confirmed the other ticket's own detail page shows a
 working "Problem" dropdown plus a back-link into the Problem page. Zero
 console errors.
-- **Service Configuration Management (ITIL).** Sharper and more specific than
-  the general "CMDB relationship depth" concern already flagged in Phase 1/2
-  — this is the ITIL practice of mapping which technical assets actually
-  underpin which *business service*, not just asset-to-asset or asset-to-
-  contact links. Concretely: a `Service` record (the business-facing thing,
-  e.g. "Email," "Payroll") that `Asset`s link to as dependencies, so an
-  incident on an asset can show "this affects: Payroll" instead of just
-  showing the asset itself. Depends on Asset Management (Phase 1/2 ✅) as its
-  foundation; nothing here yet beyond that foundation.
+**Service Configuration Management ✅ (this pass)** — sharper and more
+specific than the general "CMDB relationship depth" concern already flagged
+in Phase 1/2: the ITIL practice of mapping which technical assets actually
+underpin which *business service*, not just asset-to-asset or asset-to-
+contact links. A `Service` record (`name`, `description` — deliberately no
+status field; "current status" is the already-planned public-status-page
+differentiator's job, derived from open alert tickets rather than
+manually maintained) links to `Asset`s via a many-to-many `ServiceAsset` join
+table, mirroring `TicketAsset`'s exact shape. A ticket's existing "linked
+assets" panel now also shows which Services each linked asset underpins —
+"Affects: Payroll" — entirely from data `getTicket` already fetched, no new
+ticket-level field. See `docs/adr/0017-service-configuration-management.md`.
+
+Verified: 7 new integration tests against real Postgres (duplicate service
+names rejected; linking two assets to a service lists both; one asset can
+underpin more than one service at once; unlinking removes the join row
+without deleting either side; linking a nonexistent asset or service is
+rejected; a ticket linked to an asset shows the services it affects; delete
+works and a second delete is rejected), full suite 65/65 green, both
+`apps/api`/`apps/web` typecheck clean. Browser-verified end to end: added
+two assets, created a service and linked both, created a ticket via the
+API-key path, linked the affected asset from the ticket's own panel, and
+confirmed "Affects: Email" renders correctly. Zero console errors.
 - **Self-service portal + a browsable knowledge base.** A real gap, not a
   duplicate of Phase 3's RAG plan below: this needs `KbArticle` as a plain,
   human-browsable CRUD resource (a contact can read and search it directly)
