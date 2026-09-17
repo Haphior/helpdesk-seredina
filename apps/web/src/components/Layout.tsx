@@ -15,6 +15,7 @@ import {
   ChecklistIcon,
   ClockIcon,
   DashboardIcon,
+  DownloadIcon,
   KeyIcon,
   LayersIcon,
   LogoutIcon,
@@ -71,6 +72,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Comp
       { to: '/on-call', label: 'On-Call & Escalation', icon: BellIcon, permission: 'tickets:manage_all' },
       { to: '/business-hours', label: 'Business Hours', icon: CalendarIcon, permission: 'tickets:manage_all' },
       { to: '/ai-usage', label: 'AI Usage', icon: SparkleIcon, permission: 'tickets:manage_all' },
+      { to: '/data-export', label: 'Data Export', icon: DownloadIcon, permission: 'tickets:manage_all' },
     ],
   },
   {

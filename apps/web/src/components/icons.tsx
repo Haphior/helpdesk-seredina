@@ -281,3 +281,12 @@ export function BellIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function DownloadIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M10 3v9.5M6.5 9 10 12.5 13.5 9" />
+      <path d="M3.5 15h13" />
+    </Icon>
+  );
+}

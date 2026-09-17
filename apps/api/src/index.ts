@@ -28,6 +28,7 @@ import kbRoutes from './modules/kb/routes';
 import onCallRoutes from './modules/oncall/routes';
 import savedViewRoutes from './modules/savedviews/routes';
 import notificationRoutes from './modules/notifications/routes';
+import exportRoutes from './modules/export/routes';
 
 initErrorTracking();
 
@@ -52,7 +53,10 @@ export function buildApp() {
   if (!corsOrigin && process.env.NODE_ENV === 'production') {
     throw new Error('CORS_ORIGIN must be set when NODE_ENV=production');
   }
-  app.register(cors, { origin: corsOrigin ? corsOrigin.split(',') : true });
+  // Content-Disposition isn't on the cross-origin default-exposed header list --
+  // without this, the web app's export download can read the response body but
+  // not the filename the server set, and silently falls back to a generic name.
+  app.register(cors, { origin: corsOrigin ? corsOrigin.split(',') : true, exposedHeaders: ['Content-Disposition'] });
 
   app.register(jwtPlugin);
   app.register(apiKeyAuthPlugin);
@@ -79,6 +83,7 @@ export function buildApp() {
   app.register(onCallRoutes);
   app.register(savedViewRoutes);
   app.register(notificationRoutes);
+  app.register(exportRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

@@ -52,3 +52,32 @@ export const apiPatch = <T,>(path: string, data: unknown) =>
 export const apiPut = <T,>(path: string, data: unknown) =>
   apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(data) });
 export const apiDelete = <T,>(path: string) => apiFetch<T>(path, { method: 'DELETE' });
+
+// A plain <a href> can't carry the Authorization header, so a file download needs
+// its own fetch: read the raw response as a Blob, then trigger a save via a
+// throwaway object-URL anchor. Used by the data-export page.
+export async function downloadFile(path: string): Promise<void> {
+  const token = getToken();
+  const headers = new Headers();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const res = await fetch(`${API_URL}${path}`, { headers });
+  if (!res.ok) {
+    const body = res.headers.get('content-type')?.includes('application/json') ? await res.json() : undefined;
+    throw new ApiError(res.status, extractErrorMessage(body, res.status));
+  }
+
+  const disposition = res.headers.get('content-disposition') ?? '';
+  const filenameMatch = disposition.match(/filename="([^"]+)"/);
+  const filename = filenameMatch ? filenameMatch[1] : 'export.json';
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}

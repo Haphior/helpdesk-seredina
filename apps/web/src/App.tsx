@@ -28,6 +28,7 @@ import { KnowledgeBase } from './pages/KnowledgeBase';
 import { OnCall } from './pages/OnCall';
 import { NotificationSettings } from './pages/NotificationSettings';
 import { AiUsage } from './pages/AiUsage';
+import { DataExport } from './pages/DataExport';
 import { PublicKb } from './pages/PublicKb';
 import { PublicKbArticlePage } from './pages/PublicKbArticle';
 
@@ -63,6 +64,7 @@ export function App() {
             <Route path="/on-call" element={<OnCall />} />
             <Route path="/notification-settings" element={<NotificationSettings />} />
             <Route path="/ai-usage" element={<AiUsage />} />
+            <Route path="/data-export" element={<DataExport />} />
             <Route path="/webhooks" element={<Webhooks />} />
             <Route path="/macros" element={<Macros />} />
             <Route path="/sla-policies" element={<SlaPolicies />} />

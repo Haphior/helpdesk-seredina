@@ -968,17 +968,37 @@ deliberately not re-exercised in this pass (this session works with the
 user's own credit-limited key) — the logging path is fully covered by the
 integration tests via `TestProviderAdapter`, which runs the identical code
 a real call would. Zero console errors.
-- **Full data portability — a one-click export in an open format.** Tickets,
-  messages, KB articles, assets, and every configuration table (custom
-  fields, macros, SLA policies, ...) as a downloadable JSON/CSV bundle. The
-  honest opposite of how Jira and ServiceDesk Plus treat migrating *away*
-  from them — deliberately painful, by design, for a vendor whose business
-  model depends on lock-in. Seredina's doesn't: AGPL-3.0 and a self-hosted
-  path already say "you own this" implicitly; this makes it a real, provable
-  feature instead of a licensing technicality nobody notices. Low technical
-  risk — every table involved is already tenant-scoped and RLS-gated, so the
-  export query shape is the same `withTenantTx` pattern used everywhere else,
-  just serialized to a file instead of a response body.
+**Full data portability — a one-click export in an open format ✅ (this
+pass)** — a single `GET /export` returning every tenant-scoped table (all
+~35 of them, minus `Notification`/`DiscoveryJob` — transient state, not
+data worth migrating) as one JSON file. The honest opposite of how Jira
+and ServiceDesk Plus treat migrating *away* from them — deliberately
+painful, by design, for a vendor whose business model depends on lock-in.
+Seredina's doesn't: AGPL-3.0 and a self-hosted path already say "you own
+this" implicitly; this makes it a real, provable feature instead of a
+licensing technicality nobody notices. Secrets (password hashes, API key
+hashes, email-channel/webhook encrypted credentials) are redacted via an
+explicit `select` allowlist on the four models that hold them, not a
+denylist — a future field added to any of those models can't silently leak
+into an export by default. Every query runs inside one `withTenantTx` via
+`Promise.all`, the same low-risk pattern every other multi-table read in
+this codebase already uses. See `docs/adr/0024-data-export.md`.
+
+Verified: 4 new integration tests against real Postgres (real data across
+multiple tables; every secret field genuinely absent from the exported
+rows, checked both structurally and by string search for the plaintext
+test passwords; `notifications`/`discoveryJobs` absent from the export
+entirely; cross-tenant isolation holds both directions), full suite
+112/112 green, both `apps/api`/`apps/web` typecheck clean.
+Browser-verified end to end via Playwright: registered a fresh tenant,
+clicked "Download export" on the new Data Export page, captured the real
+browser download event, and parsed the saved file — tenant record present,
+no `passwordHash`, no `notifications` key. This pass caught a genuine bug:
+`Content-Disposition` isn't on the cross-origin default-exposed header
+list, so the download silently fell back to a generic filename until
+`exposedHeaders: ['Content-Disposition']` was added to the API's CORS
+config — re-verified clean afterward with the correct
+`seredina-export-<slug>-<date>.json` name landing. Zero console errors.
 
 **Onboarding & installation experience (added 2026-09-16, at the user's
 request) — a cross-cutting concern, not tied to one phase, since both a
