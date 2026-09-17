@@ -64,6 +64,7 @@ model Tenant {
   onCallShifts          OnCallShift[]
   escalationTiers       EscalationTier[]
   escalationRuns        EscalationRun[]
+  savedViews            SavedView[]
 
   @@map("tenants")
 }
@@ -128,6 +129,7 @@ model User {
   onCallShifts         OnCallShift[]
   escalationTiers      EscalationTier[]
   acknowledgedEscalations EscalationRun[]
+  savedViews           SavedView[]
 
   @@unique([tenantId, email])
   @@map("users")
@@ -990,4 +992,24 @@ model EscalationRun {
   createdAt            DateTime            @default(now()) @map("created_at")
 
   @@map("escalation_runs")
+}
+
+// "A filter is just serialized query params under a name" (docs/ROADMAP.md).
+// Per-agent, not tenant-wide -- like DashboardWidget above, only ever read
+// back by the user who created it, never shared. `filters` is a validated
+// (at the service layer, zod) subset of ListTicketsFilter -- jsonb rather
+// than a column per filter dimension, same posture as Ticket.customFields.
+model SavedView {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  filters   Json
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, name])
+  @@map("saved_views")
 }

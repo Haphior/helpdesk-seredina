@@ -87,7 +87,13 @@ export default async function ticketRoutes(app: FastifyInstance) {
   );
 
   app.get('/tickets', { preHandler: [app.authenticate, requirePermission('tickets:read')] }, async (request, reply) => {
-    const query = z.object({ statusCategory: STATUS_CATEGORY.optional() }).safeParse(request.query);
+    const query = z
+      .object({
+        statusCategory: STATUS_CATEGORY.optional(),
+        assigneeId: z.union([z.string().uuid(), z.literal('unassigned')]).optional(),
+        priority: PRIORITY.optional(),
+      })
+      .safeParse(request.query);
     if (!query.success) {
       return reply.code(400).send({ error: query.error.flatten() });
     }

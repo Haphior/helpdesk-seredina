@@ -197,12 +197,22 @@ export async function listTicketStatuses(tenantId: string) {
 
 export interface ListTicketsFilter {
   statusCategory?: TicketStatusCategory;
+  // A real user id, or the literal 'unassigned' meaning assigneeId IS NULL --
+  // see docs/adr/0021-saved-views.md for why there's no 'me' sentinel: a saved
+  // view is only ever read back by the user who created it, so baking their
+  // own id in at save time already means the same thing.
+  assigneeId?: string;
+  priority?: TicketPriority;
 }
 
 export async function listTickets(tenantId: string, filter: ListTicketsFilter = {}) {
   return withTenantTx(prisma, tenantId, async (tx) =>
     tx.ticket.findMany({
-      where: filter.statusCategory ? { status: { category: filter.statusCategory } } : undefined,
+      where: {
+        status: filter.statusCategory ? { category: filter.statusCategory } : undefined,
+        assigneeId: filter.assigneeId ? (filter.assigneeId === 'unassigned' ? null : filter.assigneeId) : undefined,
+        priority: filter.priority,
+      },
       include: { status: true, contact: true, assignee: { select: { id: true, name: true } }, team: true },
       orderBy: { createdAt: 'desc' },
     }),

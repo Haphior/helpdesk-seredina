@@ -659,12 +659,26 @@ itself. Naming what's still missing to make that a *complete* story:
   built-in default when a tenant hasn't customized one). Reuses the same
   `Tenant.branding` blob above for a logo in the template, rather than a
   second place to configure it.
-- **Saved views / filters per agent.** "My open tickets," "Unassigned +
-  urgent" as named, reusable filters an agent saves once instead of
-  rebuilding every session — small, but it's the kind of daily-friction item
-  that showed up repeatedly in the "what do helpdesk agents actually need"
-  research pass, and it's cheap: a filter is just serialized query params
-  under a name.
+**Saved views / filters per agent ✅ (this pass)** — "My open tickets,"
+"Unassigned + urgent" as named, reusable filters an agent saves once
+instead of rebuilding every session. `ListTicketsFilter` gained
+`assigneeId` (a real user id, or the sentinel `'unassigned'`) and
+`priority` alongside the existing `statusCategory`; `SavedView.filters` is
+a validated jsonb blob, per-agent (`userId`, mirroring `DashboardWidget`'s
+exact shape) rather than tenant-wide — two agents both naming a view "My
+open tickets" is the expected case, not a collision. No `'me'` sentinel
+needed: a saved view is only ever read back by its creator, so baking their
+own user id in at save time already means the same thing. See
+`docs/adr/0021-saved-views.md`.
+
+Verified: 5 new integration tests against real Postgres (per-user scoping
+and uniqueness; deleting another user's view rejected as not-found, not
+forbidden; a view's stored filters actually narrow `listTickets` when
+applied, including the `'unassigned'` sentinel), full suite 96/96 green,
+both `apps/api`/`apps/web` typecheck clean. Browser-verified end to end:
+filtered the queue to URGENT priority, saved it as a named view, cleared
+filters, re-applied the view via its chip, and deleted the chip — all
+correctly narrowing/restoring the ticket list. Zero console errors.
 - **Notification preferences per agent.** Email vs. in-app, immediate vs.
   digest — currently there's no per-agent choice at all in how they're told
   about ticket activity.

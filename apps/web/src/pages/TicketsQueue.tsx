@@ -1,13 +1,24 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
-import type { CustomFieldDefinition, ServiceCatalogItem, Ticket, TicketStatus, TicketStatusCategory, UserSummary } from '../lib/types';
+import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
+import type {
+  CustomFieldDefinition,
+  SavedView,
+  ServiceCatalogItem,
+  Ticket,
+  TicketPriority,
+  TicketStatus,
+  TicketStatusCategory,
+  UserSummary,
+} from '../lib/types';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { ClockIcon, SearchIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime, isTicketOverdue } from '../lib/format';
+
+const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 
 const TABS: { key: TicketStatusCategory | 'ALL'; label: string }[] = [
   { key: 'ALL', label: 'All' },
@@ -22,37 +33,68 @@ const CHANNEL_TONE: Record<string, 'rose' | 'slate'> = { alert: 'rose', email: '
 const ROW_COLUMNS = '24px 56px 1fr 108px 120px 130px 110px 100px';
 
 export function TicketsQueue() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, payload } = useAuth();
   const canBulkEdit = hasPermission('tickets:write');
   const [tab, setTab] = useState<TicketStatusCategory | 'ALL'>('ALL');
+  const [assigneeFilter, setAssigneeFilter] = useState(''); // '' | 'unassigned' | a user id
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showRequest, setShowRequest] = useState(false);
+  const [showSaveView, setShowSaveView] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statuses, setStatuses] = useState<TicketStatus[]>([]);
   const [users, setUsers] = useState<UserSummary[]>([]);
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [applyingBulk, setApplyingBulk] = useState(false);
 
   function load() {
     setError(null);
-    const query = tab === 'ALL' ? '' : `?statusCategory=${tab}`;
-    apiGet<{ tickets: Ticket[] }>(`/tickets${query}`)
+    const params = new URLSearchParams();
+    if (tab !== 'ALL') params.set('statusCategory', tab);
+    if (assigneeFilter) params.set('assigneeId', assigneeFilter);
+    if (priorityFilter) params.set('priority', priorityFilter);
+    const query = params.toString();
+    apiGet<{ tickets: Ticket[] }>(`/tickets${query ? `?${query}` : ''}`)
       .then((res) => setTickets(res.tickets))
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load tickets'));
+  }
+
+  function loadSavedViews() {
+    apiGet<{ views: SavedView[] }>('/saved-views')
+      .then((res) => setSavedViews(res.views))
+      .catch(() => {});
   }
 
   useEffect(() => {
     load();
     setSelected(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [tab, assigneeFilter, priorityFilter]);
 
   useEffect(() => {
-    if (!canBulkEdit) return;
     apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses').then((res) => setStatuses(res.statuses)).catch(() => {});
     apiGet<{ users: UserSummary[] }>('/users').then((res) => setUsers(res.users)).catch(() => {});
+    loadSavedViews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function applySavedView(view: SavedView) {
+    setTab(view.filters.statusCategory ?? 'ALL');
+    setAssigneeFilter(view.filters.assigneeId ?? '');
+    setPriorityFilter(view.filters.priority ?? '');
+  }
+
+  async function removeSavedView(id: string) {
+    try {
+      await apiDelete(`/saved-views/${id}`);
+      loadSavedViews();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to remove saved view');
+    }
+  }
+
+  const hasActiveFilters = tab !== 'ALL' || assigneeFilter !== '' || priorityFilter !== '';
 
   function toggleSelected(id: string) {
     setSelected((s) => {
@@ -120,6 +162,56 @@ export function TicketsQueue() {
             <SearchIcon width={15} height={15} className="text-slate-400" />
             <span className="text-[13px] text-slate-400">Search tickets…</span>
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {savedViews.map((v) => (
+            <span
+              key={v.id}
+              className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white pl-3 pr-1.5 py-1 text-[12.5px] font-medium text-slate-600"
+            >
+              <button onClick={() => applySavedView(v)} className="hover:text-indigo-700">
+                {v.name}
+              </button>
+              <button onClick={() => removeSavedView(v.id)} className="text-slate-300 hover:text-rose-600">
+                ×
+              </button>
+            </span>
+          ))}
+
+          <select
+            value={assigneeFilter}
+            onChange={(e) => setAssigneeFilter(e.target.value)}
+            className="rounded-[7px] border border-slate-200 bg-white px-2 py-1 text-[12.5px] text-slate-600"
+          >
+            <option value="">Anyone</option>
+            {payload && <option value={payload.sub}>Assigned to me</option>}
+            <option value="unassigned">Unassigned</option>
+            {users.filter((u) => u.id !== payload?.sub).map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value as TicketPriority | '')}
+            className="rounded-[7px] border border-slate-200 bg-white px-2 py-1 text-[12.5px] text-slate-600"
+          >
+            <option value="">Any priority</option>
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+
+          {hasActiveFilters && (
+            <button onClick={() => setShowSaveView(true)} className="text-[12.5px] font-medium text-indigo-600 hover:underline">
+              + Save this view
+            </button>
+          )}
         </div>
 
         {canBulkEdit && selected.size > 0 && (
@@ -269,7 +361,79 @@ export function TicketsQueue() {
       </div>
 
       {showRequest && <RequestFromCatalogModal onClose={() => setShowRequest(false)} />}
+      {showSaveView && (
+        <SaveViewModal
+          filters={{
+            statusCategory: tab === 'ALL' ? undefined : tab,
+            assigneeId: assigneeFilter || undefined,
+            priority: priorityFilter || undefined,
+          }}
+          onClose={() => setShowSaveView(false)}
+          onSaved={loadSavedViews}
+        />
+      )}
     </div>
+  );
+}
+
+function SaveViewModal({
+  filters,
+  onClose,
+  onSaved,
+}: {
+  filters: { statusCategory?: TicketStatusCategory; assigneeId?: string; priority?: TicketPriority };
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await apiPost('/saved-views', { name, filters });
+      onSaved();
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to save view');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Save this view" onClose={onClose}>
+      <form onSubmit={onSubmit} className="space-y-3">
+        <label className="block text-sm">
+          <span className="mb-1 block font-medium text-slate-700">Name</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="My open tickets"
+            required
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          />
+        </label>
+
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {submitting ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

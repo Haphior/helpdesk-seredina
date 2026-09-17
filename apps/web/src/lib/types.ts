@@ -419,3 +419,17 @@ export interface EscalationRun {
   acknowledgedByUser: { id: string; name: string } | null;
   createdAt: string;
 }
+
+export interface SavedViewFilters {
+  statusCategory?: TicketStatusCategory;
+  assigneeId?: string;
+  priority?: TicketPriority;
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  filters: SavedViewFilters;
+  sortOrder: number;
+  createdAt: string;
+}

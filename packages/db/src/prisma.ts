@@ -58,6 +58,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   OnCallShift: 'tenantId',
   EscalationTier: 'tenantId',
   EscalationRun: 'tenantId',
+  SavedView: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);
