@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { apiGet } from '../lib/api';
+import type { Permission } from '../lib/types';
 import { Avatar } from './Avatar';
 import {
   AssetsIcon,
@@ -33,26 +34,50 @@ interface Me {
   tenantName: string;
 }
 
-const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
-  { to: '/tickets', label: 'Tickets', icon: TicketIcon },
-  { to: '/processes', label: 'Processes', icon: ChecklistIcon, permission: 'tickets:write' as const },
-  { to: '/problems', label: 'Problems', icon: WarningIcon, permission: 'tickets:write' as const },
-  { to: '/knowledge-base', label: 'Knowledge Base', icon: BookIcon, permission: 'tickets:read' as const },
-  { to: '/assets', label: 'Assets', icon: AssetsIcon },
-  { to: '/equipment-catalog', label: 'Equipment Catalog', icon: LayersIcon, permission: 'assets:manage' as const },
-  { to: '/services', label: 'Services', icon: ServiceMapIcon, permission: 'assets:manage' as const },
-  { to: '/api-keys', label: 'API Keys', icon: KeyIcon },
-  { to: '/users', label: 'Users', icon: UsersIcon, permission: 'users:manage' as const },
-  { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' as const },
-  { to: '/custom-fields', label: 'Custom Fields', icon: SlidersIcon, permission: 'tickets:manage_all' as const },
-  { to: '/service-catalog', label: 'Service Catalog', icon: CatalogIcon, permission: 'tickets:manage_all' as const },
-  { to: '/process-templates', label: 'Process Templates', icon: ChecklistIcon, permission: 'tickets:manage_all' as const },
-  { to: '/webhooks', label: 'Webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' as const },
-  { to: '/macros', label: 'Macros', icon: BoltIcon, permission: 'tickets:manage_all' as const },
-  { to: '/sla-policies', label: 'SLA Policies', icon: ClockIcon, permission: 'tickets:manage_all' as const },
-  { to: '/on-call', label: 'On-Call & Escalation', icon: BellIcon, permission: 'tickets:manage_all' as const },
-  { to: '/business-hours', label: 'Business Hours', icon: CalendarIcon, permission: 'tickets:manage_all' as const },
+// Grouped, not one flat list -- past ~8 items a sidebar needs chunking to stay
+// scannable. Groups follow how an agent actually thinks about the app: daily
+// work, the CMDB, then the two flavors of admin-only configuration (how
+// tickets/processes behave, vs. tenant/account-level setup).
+const navGroups: { label: string; items: { to: string; label: string; icon: ComponentType<SVGProps<SVGSVGElement>>; permission?: Permission }[] }[] = [
+  {
+    label: 'Work',
+    items: [
+      { to: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
+      { to: '/tickets', label: 'Tickets', icon: TicketIcon },
+      { to: '/processes', label: 'Processes', icon: ChecklistIcon, permission: 'tickets:write' },
+      { to: '/problems', label: 'Problems', icon: WarningIcon, permission: 'tickets:write' },
+      { to: '/knowledge-base', label: 'Knowledge Base', icon: BookIcon, permission: 'tickets:read' },
+    ],
+  },
+  {
+    label: 'CMDB',
+    items: [
+      { to: '/assets', label: 'Assets', icon: AssetsIcon },
+      { to: '/equipment-catalog', label: 'Equipment Catalog', icon: LayersIcon, permission: 'assets:manage' },
+      { to: '/services', label: 'Services', icon: ServiceMapIcon, permission: 'assets:manage' },
+    ],
+  },
+  {
+    label: 'Configuration',
+    items: [
+      { to: '/custom-fields', label: 'Custom Fields', icon: SlidersIcon, permission: 'tickets:manage_all' },
+      { to: '/service-catalog', label: 'Service Catalog', icon: CatalogIcon, permission: 'tickets:manage_all' },
+      { to: '/process-templates', label: 'Process Templates', icon: ChecklistIcon, permission: 'tickets:manage_all' },
+      { to: '/macros', label: 'Macros', icon: BoltIcon, permission: 'tickets:manage_all' },
+      { to: '/webhooks', label: 'Webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' },
+      { to: '/sla-policies', label: 'SLA Policies', icon: ClockIcon, permission: 'tickets:manage_all' },
+      { to: '/on-call', label: 'On-Call & Escalation', icon: BellIcon, permission: 'tickets:manage_all' },
+      { to: '/business-hours', label: 'Business Hours', icon: CalendarIcon, permission: 'tickets:manage_all' },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { to: '/users', label: 'Users', icon: UsersIcon, permission: 'users:manage' },
+      { to: '/api-keys', label: 'API Keys', icon: KeyIcon },
+      { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' },
+    ],
+  },
 ];
 
 export function Layout() {
@@ -76,23 +101,34 @@ export function Layout() {
           <span className="truncate pl-[35px] text-xs text-slate-400">{me?.tenantName ?? ' '}</span>
         </div>
 
-        <nav className="flex-1 space-y-0.5 p-3">
-          {navItems
-            .filter((item) => !item.permission || hasPermission(item.permission))
-            .map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium ${
-                    isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'
-                  }`
-                }
-              >
-                <item.icon />
-                {item.label}
-              </NavLink>
-            ))}
+        <nav className="flex-1 space-y-4 overflow-y-auto p-3">
+          {navGroups.map((group) => {
+            const visibleItems = group.items.filter((item) => !item.permission || hasPermission(item.permission));
+            if (visibleItems.length === 0) return null;
+            return (
+              <div key={group.label}>
+                <span className="mb-1 block px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  {group.label}
+                </span>
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium ${
+                          isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'
+                        }`
+                      }
+                    >
+                      <item.icon />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-2.5 border-t border-slate-100 px-4 py-3.5">
