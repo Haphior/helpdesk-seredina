@@ -1,7 +1,15 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { createService, deleteService, linkAssetToService, listServices, unlinkAssetFromService } from './service';
+import { resolveTenantIdBySlug } from '../tenants/service';
+import {
+  createService,
+  deleteService,
+  getPublicStatusPage,
+  linkAssetToService,
+  listServices,
+  unlinkAssetFromService,
+} from './service';
 
 const createServiceSchema = z.object({
   name: z.string().min(1).max(150),
@@ -69,4 +77,16 @@ export default async function serviceRoutes(app: FastifyInstance) {
       }
     },
   );
+
+  // Deliberately no auth -- an anonymous visitor checking "is it down for
+  // everyone" has no Seredina account, same posture as the KB public portal
+  // (modules/kb/routes.ts). tenantSlug resolves via the same mechanism
+  // login/register/the KB portal already use.
+  app.get('/public/:tenantSlug/status', async (request, reply) => {
+    const { tenantSlug } = request.params as { tenantSlug: string };
+    const tenantId = await resolveTenantIdBySlug(tenantSlug);
+    if (!tenantId) return reply.code(404).send({ error: 'not found' });
+    const status = await getPublicStatusPage(tenantId);
+    return reply.send(status);
+  });
 }

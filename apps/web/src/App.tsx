@@ -31,6 +31,7 @@ import { AiUsage } from './pages/AiUsage';
 import { DataExport } from './pages/DataExport';
 import { PublicKb } from './pages/PublicKb';
 import { PublicKbArticlePage } from './pages/PublicKbArticle';
+import { PublicStatus } from './pages/PublicStatus';
 
 export function App() {
   return (
@@ -40,6 +41,7 @@ export function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/kb/:tenantSlug" element={<PublicKb />} />
         <Route path="/kb/:tenantSlug/:slug" element={<PublicKbArticlePage />} />
+        <Route path="/status/:tenantSlug" element={<PublicStatus />} />
 
         <Route element={<RequireAuth />}>
           <Route element={<Layout />}>

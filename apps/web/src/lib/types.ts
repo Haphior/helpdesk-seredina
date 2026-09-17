@@ -470,6 +470,20 @@ export interface TicketAiUsage {
   totalCostUsd: number;
 }
 
+export type PublicServiceStatusLevel = 'operational' | 'degraded' | 'outage';
+
+export interface PublicServiceStatus {
+  id: string;
+  name: string;
+  status: PublicServiceStatusLevel;
+  openIncidents: number;
+}
+
+export interface PublicStatusPage {
+  overall: PublicServiceStatusLevel;
+  services: PublicServiceStatus[];
+}
+
 export interface AiUsageSummary {
   totalCalls: number;
   totalCostUsd: number;

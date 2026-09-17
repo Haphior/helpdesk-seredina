@@ -3,9 +3,14 @@ import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
 import type { AssetSummary, Service } from '../lib/types';
 import { Modal } from '../components/Modal';
 
+interface Me {
+  tenantSlug: string;
+}
+
 export function Services() {
   const [services, setServices] = useState<Service[] | null>(null);
   const [allAssets, setAllAssets] = useState<AssetSummary[]>([]);
+  const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [assetToLink, setAssetToLink] = useState<Record<string, string>>({});
@@ -19,7 +24,12 @@ export function Services() {
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load services'));
   }
 
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+    apiGet<Me>('/auth/me')
+      .then((me) => setTenantSlug(me.tenantSlug))
+      .catch(() => {});
+  }, []);
 
   async function remove(service: Service) {
     if (!confirm(`Delete "${service.name}"? This only removes the service record and its asset links.`)) return;
@@ -64,8 +74,10 @@ export function Services() {
         </button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Business-facing services — "Email," "Payroll" — and which assets actually underpin them. A ticket linked to one of
-        those assets shows which services it affects.
+        Business-facing services — "Email," "Payroll" — and which assets actually underpin them. An open alert-channel
+        ticket linked to one of those assets shows on your public status page at{' '}
+        {tenantSlug ? <code className="rounded bg-slate-100 px-1">/status/{tenantSlug}</code> : 'your status page'} —
+        no account needed, auto-updating, nothing to publish by hand.
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}

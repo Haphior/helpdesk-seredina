@@ -926,19 +926,39 @@ gaps against Jira SM/GLPI/ServiceDesk Plus; these three are things none of
 them do, chosen because each one is cheap specifically because it reuses a
 piece already being built for another reason:**
 
-- **A public status page, auto-driven by Service Configuration Management +
-  the alert channel.** Shows which business `Service`s are currently affected
-  and why, in real time, with zero manual maintenance — Atlassian sells this
-  as a separate product (Statuspage) on top of Jira SM; GLPI and ServiceDesk
-  Plus don't offer it at all. Buildable almost entirely from two things
-  already planned above: `Service`→`Asset` links (Service Configuration
-  Management) and open `channel: 'alert'` tickets already flowing in from
-  monitoring tools — a status page is mostly a public, unauthenticated,
-  read-only view over "which Services have an open alert-linked ticket right
-  now," not a new data model. The real work is deciding exactly what an
-  anonymous visitor is allowed to see (ticket subjects/descriptions almost
-  certainly not — a service name and a status color, probably yes) — a
-  privacy/scoping design question, not a technical one.
+**A public status page, auto-driven by Service Configuration Management + the
+alert channel ✅ (this pass, differentiator 3 of 3)** — shows which business
+`Service`s are currently affected and why, in real time, with zero manual
+maintenance: Atlassian sells this as a separate product (Statuspage) on top
+of Jira SM; GLPI and ServiceDesk Plus don't offer it at all. No new table —
+derived entirely from `Service`→`Asset` links (Service Configuration
+Management, already shipped) and open `channel: 'alert'` tickets tagged with
+an affected asset via the CMDB's existing ticket-asset linkage. Three levels
+(`operational`/`degraded`/`outage`), derived from ticket priority, not a
+fourth data field. The privacy/scoping decision the roadmap flagged as the
+real work: an anonymous visitor sees a service name, a status, and a bare
+incident *count* — never a ticket subject, description, or Asset detail
+(hostname, IP, type). `GET /public/:tenantSlug/status` needs no auth, same
+posture as the KB public portal (ADR 0018), resolving the tenant via the same
+`resolveTenantIdBySlug()` mechanism. See `docs/adr/0025-public-status-page.md`.
+
+Verified: 6 new integration tests against real Postgres (operational with no
+incidents; degraded at LOW/NORMAL priority; outage at HIGH/URGENT and it
+bumps the tenant-wide overall; a non-alert-channel ticket on the same asset
+is correctly ignored regardless of priority; closing the alert ticket
+returns the service to operational; cross-tenant isolation holds), full
+suite 118/118 green, both `apps/api`/`apps/web` typecheck clean.
+Browser-verified end to end: registered a tenant, built the CMDB fixture
+(asset + service + link) via the authenticated API, fired a real
+`POST /v1/alerts` with `severity: 'CRITICAL'` through an API key exactly as a
+real monitoring tool would, tagged the resulting ticket with the asset, then
+confirmed the internal Services page's new hint shows the real
+`/status/<slug>` URL and — in a separate, unauthenticated browser context —
+the public page shows "Major outage affecting one or more systems" and
+"Email: Outage (1 active incident)." Confirmed the alert's own title never
+appears anywhere in the public page's rendered text, proving the
+privacy/scoping decision holds through the real HTTP response. Zero console
+errors.
 **AI cost transparency, per ticket and per tenant ✅ (this pass)** — because
 the `LlmProviderAdapter` is already bring-your-own-key, Seredina can show a
 tenant exactly what each AI action cost in real dollars, something no
