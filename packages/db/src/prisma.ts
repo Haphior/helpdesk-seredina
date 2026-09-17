@@ -59,6 +59,8 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   EscalationTier: 'tenantId',
   EscalationRun: 'tenantId',
   SavedView: 'tenantId',
+  Notification: 'tenantId',
+  NotificationPreference: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

@@ -2,8 +2,10 @@ import IORedis from 'ioredis';
 import { Queue } from 'bullmq';
 import {
   ESCALATION_ADVANCE_QUEUE_NAME,
+  NOTIFICATION_EMAIL_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type EscalationAdvanceJobPayload,
+  type NotificationEmailJobPayload,
   type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
 
@@ -28,3 +30,12 @@ export const webhookDeliveryQueue = new Queue<WebhookDeliveryJobPayload>(WEBHOOK
  * apps/api's queue module (apps/worker never depends on apps/api).
  */
 export const escalationAdvanceQueue = new Queue<EscalationAdvanceJobPayload>(ESCALATION_ADVANCE_QUEUE_NAME, { connection });
+
+/**
+ * apps/api also produces onto this same queue name (from updateTicket, for
+ * TICKET_ASSIGNED) -- this worker-side producer instance is only used for
+ * NEW_REPLY, enqueued from the worker's own inbound-email ingest. Only
+ * apps/worker ever consumes it (it's the only place nodemailer/EmailChannel
+ * wiring exists). See docs/adr/0022-notifications.md.
+ */
+export const notificationEmailQueue = new Queue<NotificationEmailJobPayload>(NOTIFICATION_EMAIL_QUEUE_NAME, { connection });

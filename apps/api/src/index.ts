@@ -27,6 +27,7 @@ import serviceRoutes from './modules/services/routes';
 import kbRoutes from './modules/kb/routes';
 import onCallRoutes from './modules/oncall/routes';
 import savedViewRoutes from './modules/savedviews/routes';
+import notificationRoutes from './modules/notifications/routes';
 
 initErrorTracking();
 
@@ -77,6 +78,7 @@ export function buildApp() {
   app.register(kbRoutes);
   app.register(onCallRoutes);
   app.register(savedViewRoutes);
+  app.register(notificationRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

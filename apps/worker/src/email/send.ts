@@ -1,11 +1,5 @@
-import nodemailer from 'nodemailer';
 import { prisma, withTenantTx } from '@seredina/db';
-import { decryptSecret } from '@seredina/shared';
-
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-if (!ENCRYPTION_KEY) {
-  throw new Error('ENCRYPTION_KEY env var is required');
-}
+import { createTransportForChannel } from './transport';
 
 export async function sendEmailMessage(tenantId: string, ticketId: string, messageId: string): Promise<void> {
   const data = await withTenantTx(prisma, tenantId, async (tx) => {
@@ -27,13 +21,7 @@ export async function sendEmailMessage(tenantId: string, ticketId: string, messa
     return { message, ticket, channel, lastInbound };
   });
 
-  const password = decryptSecret(data.channel.smtpPasswordEncrypted, ENCRYPTION_KEY!);
-  const transport = nodemailer.createTransport({
-    host: data.channel.smtpHost,
-    port: data.channel.smtpPort,
-    secure: data.channel.smtpSecure,
-    auth: { user: data.channel.smtpUsername, pass: password },
-  });
+  const transport = createTransportForChannel(data.channel);
 
   // Stored as this outbound message's own externalId below -- if the customer
   // replies to THIS email, its In-Reply-To will carry this id and ingest.ts's

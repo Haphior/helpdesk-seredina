@@ -65,6 +65,8 @@ model Tenant {
   escalationTiers       EscalationTier[]
   escalationRuns        EscalationRun[]
   savedViews            SavedView[]
+  notifications         Notification[]
+  notificationPreferences NotificationPreference[]
 
   @@map("tenants")
 }
@@ -130,6 +132,8 @@ model User {
   escalationTiers      EscalationTier[]
   acknowledgedEscalations EscalationRun[]
   savedViews           SavedView[]
+  notifications        Notification[]
+  notificationPreferences NotificationPreference[]
 
   @@unique([tenantId, email])
   @@map("users")
@@ -265,6 +269,7 @@ model Ticket {
   assets          TicketAsset[]
   processSteps    ProcessStepInstance[]
   escalationRuns  EscalationRun[]
+  notifications   Notification[]
 
   @@unique([tenantId, number])
   @@index([tenantId, channel, externalId])
@@ -1012,4 +1017,51 @@ model SavedView {
 
   @@unique([userId, name])
   @@map("saved_views")
+}
+
+// A real Postgres enum, not a validated jsonb string like SavedView.filters --
+// this one is referenced from BOTH apps/api and apps/worker (apps/worker never
+// imports apps/api code, see docs/adr/0020-oncall-escalation.md), so a
+// generated Prisma type both sides get for free is worth more here than the
+// open-endedness DashboardWidget.widgetType optimized for.
+enum NotificationEventType {
+  TICKET_ASSIGNED
+  NEW_REPLY
+}
+
+// One row per notification actually delivered in-app -- only created when the
+// recipient's NotificationPreference (or its default) calls for inApp: true.
+// See docs/adr/0022-notifications.md.
+model Notification {
+  id        String                @id @default(uuid()) @db.Uuid
+  tenantId  String                @map("tenant_id") @db.Uuid
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String                @map("user_id") @db.Uuid
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType NotificationEventType @map("event_type")
+  ticketId  String?               @map("ticket_id") @db.Uuid
+  ticket    Ticket?               @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  body      String
+  readAt    DateTime?             @map("read_at")
+  createdAt DateTime              @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+// "No row = default" -- same posture as SlaPolicy/DashboardWidget: a user who
+// never touched their notification settings has no rows here at all, and the
+// service layer resolves inApp: true, email: false for any (userId, eventType)
+// pair with no row. Only an explicit change ever creates one.
+model NotificationPreference {
+  id        String                @id @default(uuid()) @db.Uuid
+  tenantId  String                @map("tenant_id") @db.Uuid
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String                @map("user_id") @db.Uuid
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType NotificationEventType @map("event_type")
+  inApp     Boolean               @default(true) @map("in_app")
+  email     Boolean               @default(false)
+
+  @@unique([userId, eventType])
+  @@map("notification_preferences")
 }

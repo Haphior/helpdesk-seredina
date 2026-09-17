@@ -4,11 +4,13 @@ import {
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
   ESCALATION_ADVANCE_QUEUE_NAME,
+  NOTIFICATION_EMAIL_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
   type EscalationAdvanceJobPayload,
+  type NotificationEmailJobPayload,
   type SlaBreachCheckJobPayload,
   type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
@@ -18,6 +20,7 @@ import { sendEmailMessage } from './email/send';
 import { deliverWebhook, markWebhookDeliveryFailed } from './webhooks/deliver';
 import { checkSlaBreach } from './sla/checkBreach';
 import { advanceEscalation } from './oncall/escalate';
+import { sendNotificationEmail } from './notifications/sendEmail';
 import { captureError, initErrorTracking } from './lib/errorTracking';
 
 initErrorTracking();
@@ -76,6 +79,14 @@ const escalationAdvanceWorker = new Worker<EscalationAdvanceJobPayload>(
   { connection, concurrency: 4 },
 );
 
+const notificationEmailWorker = new Worker<NotificationEmailJobPayload>(
+  NOTIFICATION_EMAIL_QUEUE_NAME,
+  async (job) => {
+    await sendNotificationEmail(job.data);
+  },
+  { connection, concurrency: 4 },
+);
+
 discoveryWorker.on('failed', (job, err) => {
   console.error(`[worker] discovery job ${job?.id} failed:`, err);
   captureError(err);
@@ -100,6 +111,10 @@ slaBreachWorker.on('failed', (job, err) => {
 });
 escalationAdvanceWorker.on('failed', (job, err) => {
   console.error(`[worker] escalation advance ${job?.id} failed:`, err);
+  captureError(err);
+});
+notificationEmailWorker.on('failed', (job, err) => {
+  console.error(`[worker] notification email ${job?.id} failed:`, err);
   captureError(err);
 });
 
@@ -132,5 +147,6 @@ console.log(
   WEBHOOK_DELIVERY_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
   ESCALATION_ADVANCE_QUEUE_NAME,
+  NOTIFICATION_EMAIL_QUEUE_NAME,
 );
 console.log('[worker] polling email channels every', EMAIL_POLL_INTERVAL_MS, 'ms');

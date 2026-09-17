@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { apiGet } from '../lib/api';
 import type { Permission } from '../lib/types';
 import { Avatar } from './Avatar';
+import { NotificationBell } from './NotificationBell';
 import {
   AssetsIcon,
   BellIcon,
@@ -94,9 +95,12 @@ export function Layout() {
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
       <aside className="flex w-[248px] flex-col border-r border-slate-200 bg-white">
         <div className="flex flex-col gap-0.5 border-b border-slate-100 px-5 py-4">
-          <div className="flex items-center gap-2.5">
-            <Logo size={26} />
-            <span className="text-[15px] font-extrabold tracking-tight text-slate-900">Seredina</span>
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <Logo size={26} />
+              <span className="text-[15px] font-extrabold tracking-tight text-slate-900">Seredina</span>
+            </div>
+            <NotificationBell />
           </div>
           <span className="truncate pl-[35px] text-xs text-slate-400">{me?.tenantName ?? ' '}</span>
         </div>

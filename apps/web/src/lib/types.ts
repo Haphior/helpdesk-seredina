@@ -433,3 +433,21 @@ export interface SavedView {
   sortOrder: number;
   createdAt: string;
 }
+
+export type NotificationEventType = 'TICKET_ASSIGNED' | 'NEW_REPLY';
+
+export interface AppNotification {
+  id: string;
+  eventType: NotificationEventType;
+  ticket: { id: string; number: number; subject: string } | null;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationPreference {
+  eventType: NotificationEventType;
+  label: string;
+  inApp: boolean;
+  email: boolean;
+}

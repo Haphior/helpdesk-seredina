@@ -679,9 +679,30 @@ both `apps/api`/`apps/web` typecheck clean. Browser-verified end to end:
 filtered the queue to URGENT priority, saved it as a named view, cleared
 filters, re-applied the view via its chip, and deleted the chip — all
 correctly narrowing/restoring the ticket list. Zero console errors.
-- **Notification preferences per agent.** Email vs. in-app, immediate vs.
-  digest — currently there's no per-agent choice at all in how they're told
-  about ticket activity.
+**Notification preferences per agent ✅ (this pass)** — email vs. in-app,
+per event type. Two trigger events for v1: `TICKET_ASSIGNED` and
+`NEW_REPLY` (a contact's reply landing on a ticket that already has an
+assignee) — the two highest-value cases, not the full space of "ticket
+activity." "No row = default" (`inApp: true`, `email: false`), same posture
+as `SlaPolicy`/`DashboardWidget`. The email-sending logic is duplicated
+across `apps/api` (fires from `updateTicket`) and `apps/worker` (fires from
+its own inbound-email ingest) rather than shared, for the same
+`apps/worker`-never-imports-`apps/api` reason ADR 0020's escalation engine
+already established — both producers target one queue name, only
+`apps/worker` consumes it. No digest mode yet — deferred, not built. See
+`docs/adr/0022-notifications.md`.
+
+Verified: 8 new integration tests against real Postgres (default
+resolution, per-event-type preference isolation, per-user scoping,
+mark-read/mark-all-read, assignment notifying only on a genuine change to a
+new assignee), full suite 104/104 green, all three of
+`apps/api`/`apps/web`/`apps/worker` typecheck clean. Browser-verified end
+to end: assigned a ticket to a second agent, confirmed the bell badge and
+dropdown, clicked through to the ticket, confirmed the badge cleared, and
+confirmed a toggled email preference persists after reload. Also caught
+and fixed an unrelated pre-existing bug found during verification: a race
+in `Users.tsx` where creating a user could silently fail if the roles list
+hadn't loaded yet when the "New user" modal opened. Zero console errors.
 - Custom roles (already listed under Phase 4 below) and the Service Catalog's
   per-request-type forms (already added above) both belong to this same
   theme — listed once each, not repeated here.

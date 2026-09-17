@@ -11,6 +11,20 @@ export interface InboundEmail {
   references: string[];
 }
 
+export interface AssigneeNotice {
+  userId: string;
+  ticketNumber: number;
+  ticketSubject: string;
+}
+
+export interface IngestResult {
+  ticketId: string;
+  // Set only when this reply landed on an EXISTING, already-assigned ticket --
+  // a brand new ticket has no assignee yet. The caller notifies AFTER this
+  // transaction closes (see poll.ts) -- see docs/adr/0022-notifications.md.
+  assigneeToNotify: AssigneeNotice | null;
+}
+
 /**
  * Threads a reply onto its existing ticket by matching In-Reply-To/References
  * against a stored Message.externalId (set on both inbound and outbound messages --
@@ -20,7 +34,7 @@ export interface InboundEmail {
  * either way, not a new occurrence of a recurring problem the way a re-fired
  * monitoring alert is.
  */
-export async function ingestInboundEmail(email: InboundEmail): Promise<string> {
+export async function ingestInboundEmail(email: InboundEmail): Promise<IngestResult> {
   return withTenantTx(prisma, email.tenantId, async (tx) => {
     const candidateIds = [email.inReplyTo, ...email.references].filter((v): v is string => Boolean(v));
 
@@ -39,6 +53,7 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<string> {
     });
 
     let ticketId: string;
+    let assigneeToNotify: AssigneeNotice | null = null;
 
     if (existingMessage) {
       const ticket = await tx.ticket.findUniqueOrThrow({
@@ -52,6 +67,10 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<string> {
         if (openStatus) {
           await tx.ticket.update({ where: { id: ticketId }, data: { statusId: openStatus.id, closedAt: null } });
         }
+      }
+
+      if (ticket.assigneeId) {
+        assigneeToNotify = { userId: ticket.assigneeId, ticketNumber: ticket.number, ticketSubject: ticket.subject };
       }
     } else {
       const openStatus = await tx.ticketStatus.findFirst({ where: { key: 'open' } });
@@ -86,6 +105,6 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<string> {
       },
     });
 
-    return ticketId;
+    return { ticketId, assigneeToNotify };
   });
 }

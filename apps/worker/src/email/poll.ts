@@ -3,6 +3,7 @@ import { simpleParser } from 'mailparser';
 import { prisma, withTenantTx } from '@seredina/db';
 import { decryptSecret } from '@seredina/shared';
 import { ingestInboundEmail } from './ingest';
+import { notifyUser } from '../notifications/notify';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 if (!ENCRYPTION_KEY) {
@@ -51,7 +52,7 @@ async function pollEmailChannel(channel: EmailChannelRow): Promise<void> {
             ? [parsed.references]
             : [];
 
-        await ingestInboundEmail({
+        const { assigneeToNotify } = await ingestInboundEmail({
           tenantId: channel.tenantId,
           fromAddress,
           fromName: from?.name || fromAddress,
@@ -61,6 +62,13 @@ async function pollEmailChannel(channel: EmailChannelRow): Promise<void> {
           inReplyTo: parsed.inReplyTo ?? null,
           references,
         });
+
+        if (assigneeToNotify) {
+          await notifyUser(channel.tenantId, assigneeToNotify.userId, 'NEW_REPLY', {
+            body: `New reply on #${assigneeToNotify.ticketNumber}: ${assigneeToNotify.ticketSubject}`,
+            subject: `[#${assigneeToNotify.ticketNumber}] New reply: ${assigneeToNotify.ticketSubject}`,
+          });
+        }
 
         processedUids.push(message.uid);
       }

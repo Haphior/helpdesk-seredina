@@ -3,6 +3,7 @@ import { emailSendQueue } from '../../lib/queue';
 import { dispatchWebhookEvent } from '../../lib/webhookDispatch';
 import { computeSlaDueAts, scheduleSlaBreachChecks } from '../sla/service';
 import { getActiveEscalationForTicket } from '../oncall/service';
+import { notifyUser } from '../notifications/service';
 
 const DEFAULT_TICKET_STATUSES: { key: string; label: string; category: TicketStatusCategory; sortOrder: number }[] = [
   { key: 'open', label: 'Open', category: 'OPEN', sortOrder: 0 },
@@ -333,10 +334,19 @@ export interface UpdateTicketInput {
 
 export async function updateTicket(tenantId: string, ticketId: string, input: UpdateTicketInput) {
   let priorityChanged = false;
+  let newAssigneeId: string | null = null;
 
   const updated = await withTenantTx(prisma, tenantId, async (tx) => {
     const ticket = await tx.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) throw new Error('ticket not found');
+
+    // Captured here, acted on after the transaction closes -- notifyUser does
+    // its own I/O (a queue enqueue for email), which never belongs inside
+    // withTenantTx. Only a genuine change to a NEW, real assignee notifies --
+    // clearing an assignee, or re-saving the same one, is not "assigned to you."
+    if (input.assigneeId && input.assigneeId !== ticket.assigneeId) {
+      newAssigneeId = input.assigneeId;
+    }
 
     const data: Prisma.TicketUpdateInput = {
       priority: input.priority,
@@ -386,6 +396,13 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
   });
   if (priorityChanged) {
     await scheduleSlaBreachChecks(tenantId, updated.id, { firstResponseDueAt: updated.firstResponseDueAt, resolutionDueAt: updated.resolutionDueAt });
+  }
+  if (newAssigneeId) {
+    await notifyUser(tenantId, newAssigneeId, 'TICKET_ASSIGNED', {
+      ticketId: updated.id,
+      body: `You were assigned to #${updated.number}: ${updated.subject}`,
+      subject: `[#${updated.number}] Assigned to you: ${updated.subject}`,
+    });
   }
   return updated;
 }

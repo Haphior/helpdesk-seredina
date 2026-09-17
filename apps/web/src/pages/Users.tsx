@@ -106,6 +106,16 @@ function CreateUserModal({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // roles can still be [] at mount if this modal opens before the parent's own
+  // /roles fetch resolves -- the useState initializer above only ever runs
+  // once, so a still-empty roleKey needs this effect to pick a default once
+  // roles actually arrive, or "Create" silently 400s on an empty roleKey.
+  useEffect(() => {
+    if (!roleKey && roles.length > 0) {
+      setRoleKey(roles.find((r) => r.key === 'agent')?.key ?? roles[0].key);
+    }
+  }, [roles, roleKey]);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
