@@ -496,13 +496,17 @@ model DiscoveryJob {
 // Deliberately NOT the same model as Macro (a one-shot bundle of actions applied
 // instantly to a single ticket) -- see docs/adr/0008-it-processes.md.
 //
-// `kind` distinguishes Change Enablement (ITIL) templates from a general
-// process, added rather than a separate Change model -- see
+// `kind` distinguishes Change Enablement and Release Management (ITIL)
+// templates from a general process, added rather than separate models -- see
 // docs/adr/0013-change-enablement.md for why a Change is "this same engine,
-// plus a risk assessment," not a new subsystem.
+// plus a risk assessment," not a new subsystem. RELEASE follows the same
+// reasoning, added in docs/adr/0014-release-management.md: a Release is
+// "this same engine, plus a version and an optional link back to the Change
+// that approved it."
 enum ProcessTemplateKind {
   GENERAL
   CHANGE
+  RELEASE
 }
 
 model ProcessTemplate {
@@ -575,9 +579,29 @@ model ProcessInstance {
   // starting a Change; plannedStart/plannedEnd/rollbackPlan stay optional --
   // useful, not enforced, for a first pass.
   riskLevel    ChangeRiskLevel? @map("risk_level")
+  // plannedStart/plannedEnd/rollbackPlan are shared with Release Management
+  // below -- a planned window and a rollback plan are just as meaningful for
+  // a deployment as for a change decision, so these three columns aren't
+  // Change-exclusive despite living in the block introduced for Change.
   plannedStart DateTime?        @map("planned_start")
   plannedEnd   DateTime?        @map("planned_end")
   rollbackPlan String?          @map("rollback_plan")
+
+  // Release Management fields -- only ever set when spawned from a
+  // ProcessTemplate.kind = RELEASE (enforced at the service layer, not the
+  // DB). releaseVersion is required when starting a Release, same reasoning
+  // as riskLevel for Change: a release with no identified version isn't
+  // tracking what's actually being deployed. changeInstanceId is an optional
+  // self-relation back to the Change instance that approved this release --
+  // "the natural place a Change instance hands off to once approved," per
+  // docs/adr/0013-change-enablement.md's Consequences section. SetNull, not
+  // the schema default of Cascade for a required relation, because this FK is
+  // already nullable -- explicit here anyway, not left to rely on that
+  // default, after the onDelete mistake caught in docs/adr/0008-it-processes.md.
+  releaseVersion   String?           @map("release_version")
+  changeInstanceId String?           @map("change_instance_id") @db.Uuid
+  changeInstance   ProcessInstance?  @relation("ReleaseChangeLink", fields: [changeInstanceId], references: [id], onDelete: SetNull)
+  releases         ProcessInstance[] @relation("ReleaseChangeLink")
 
   steps ProcessStepInstance[]
 

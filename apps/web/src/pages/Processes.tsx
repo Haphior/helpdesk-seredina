@@ -62,6 +62,7 @@ export function Processes() {
                         {inst.riskLevel} risk
                       </Badge>
                     )}
+                    {inst.releaseVersion && <Badge tone="indigo">{inst.releaseVersion}</Badge>}
                   </div>
                   <div className="text-[12.5px] text-slate-400">{inst.templateName}</div>
                 </div>
@@ -82,11 +83,65 @@ export function Processes() {
   );
 }
 
+function PlannedWindowFields({
+  plannedStart,
+  setPlannedStart,
+  plannedEnd,
+  setPlannedEnd,
+  rollbackPlan,
+  setRollbackPlan,
+}: {
+  plannedStart: string;
+  setPlannedStart: (v: string) => void;
+  plannedEnd: string;
+  setPlannedEnd: (v: string) => void;
+  rollbackPlan: string;
+  setRollbackPlan: (v: string) => void;
+}) {
+  return (
+    <>
+      <div className="flex gap-2">
+        <label className="block flex-1 text-xs">
+          <span className="mb-1 block font-medium text-slate-700">Planned start (optional)</span>
+          <input
+            type="datetime-local"
+            value={plannedStart}
+            onChange={(e) => setPlannedStart(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+          />
+        </label>
+        <label className="block flex-1 text-xs">
+          <span className="mb-1 block font-medium text-slate-700">Planned end (optional)</span>
+          <input
+            type="datetime-local"
+            value={plannedEnd}
+            onChange={(e) => setPlannedEnd(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+          />
+        </label>
+      </div>
+      <label className="block text-xs">
+        <span className="mb-1 block font-medium text-slate-700">Rollback plan (optional)</span>
+        <textarea
+          value={rollbackPlan}
+          onChange={(e) => setRollbackPlan(e.target.value)}
+          rows={2}
+          placeholder="How do we undo this if it goes wrong?"
+          className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+        />
+      </label>
+    </>
+  );
+}
+
 function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStarted: () => void }) {
   const [templates, setTemplates] = useState<ProcessTemplate[]>([]);
+  const [changeInstances, setChangeInstances] = useState<ProcessInstance[]>([]);
   const [templateId, setTemplateId] = useState('');
   const [subject, setSubject] = useState('');
   const [riskLevel, setRiskLevel] = useState<ChangeRiskLevel>('MEDIUM');
+  const [releaseVersion, setReleaseVersion] = useState('');
+  const [changeInstanceId, setChangeInstanceId] = useState('');
   const [plannedStart, setPlannedStart] = useState('');
   const [plannedEnd, setPlannedEnd] = useState('');
   const [rollbackPlan, setRollbackPlan] = useState('');
@@ -100,10 +155,16 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
         setTemplateId(res.templates[0]?.id ?? '');
       })
       .catch(() => {});
+    // Only needed to populate the "link to a Change" dropdown below -- any
+    // instance with a riskLevel came from a CHANGE-kind template.
+    apiGet<{ instances: ProcessInstance[] }>('/process-instances')
+      .then((res) => setChangeInstances(res.instances.filter((i) => i.riskLevel)))
+      .catch(() => {});
   }, []);
 
   const selectedTemplate = templates.find((t) => t.id === templateId);
   const isChange = selectedTemplate?.kind === 'CHANGE';
+  const isRelease = selectedTemplate?.kind === 'RELEASE';
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -113,9 +174,10 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
       await apiPost('/process-instances', {
         templateId,
         subject,
-        ...(isChange
+        ...(isChange ? { riskLevel } : {}),
+        ...(isRelease ? { releaseVersion, changeInstanceId: changeInstanceId || undefined } : {}),
+        ...(isChange || isRelease
           ? {
-              riskLevel,
               plannedStart: plannedStart || undefined,
               plannedEnd: plannedEnd || undefined,
               rollbackPlan: rollbackPlan || undefined,
@@ -130,6 +192,7 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
       setSubmitting(false);
     }
   }
+
 
   return (
     <Modal title="Start a process" onClose={onClose}>
@@ -148,6 +211,7 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
                 <option key={t.id} value={t.id}>
                   {t.name}
                   {t.kind === 'CHANGE' ? ' (Change)' : ''}
+                  {t.kind === 'RELEASE' ? ' (Release)' : ''}
                 </option>
               ))}
             </select>
@@ -179,36 +243,53 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
                   <option value="HIGH">High</option>
                 </select>
               </label>
-              <div className="flex gap-2">
-                <label className="block flex-1 text-xs">
-                  <span className="mb-1 block font-medium text-slate-700">Planned start (optional)</span>
-                  <input
-                    type="datetime-local"
-                    value={plannedStart}
-                    onChange={(e) => setPlannedStart(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
-                  />
-                </label>
-                <label className="block flex-1 text-xs">
-                  <span className="mb-1 block font-medium text-slate-700">Planned end (optional)</span>
-                  <input
-                    type="datetime-local"
-                    value={plannedEnd}
-                    onChange={(e) => setPlannedEnd(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
-                  />
-                </label>
-              </div>
+              <PlannedWindowFields
+                plannedStart={plannedStart}
+                setPlannedStart={setPlannedStart}
+                plannedEnd={plannedEnd}
+                setPlannedEnd={setPlannedEnd}
+                rollbackPlan={rollbackPlan}
+                setRollbackPlan={setRollbackPlan}
+              />
+            </div>
+          )}
+
+          {isRelease && (
+            <div className="space-y-2.5 rounded-md border border-indigo-200 bg-indigo-50 p-2.5">
+              <p className="text-xs font-semibold text-indigo-800">Release Management — a version is required.</p>
               <label className="block text-xs">
-                <span className="mb-1 block font-medium text-slate-700">Rollback plan (optional)</span>
-                <textarea
-                  value={rollbackPlan}
-                  onChange={(e) => setRollbackPlan(e.target.value)}
-                  rows={2}
-                  placeholder="How do we undo this if it goes wrong?"
+                <span className="mb-1 block font-medium text-slate-700">Version</span>
+                <input
+                  value={releaseVersion}
+                  onChange={(e) => setReleaseVersion(e.target.value)}
+                  placeholder="v2.4.0"
+                  required
                   className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
                 />
               </label>
+              <label className="block text-xs">
+                <span className="mb-1 block font-medium text-slate-700">Approved by which Change? (optional)</span>
+                <select
+                  value={changeInstanceId}
+                  onChange={(e) => setChangeInstanceId(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                >
+                  <option value="">No linked change</option>
+                  {changeInstances.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.subject}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <PlannedWindowFields
+                plannedStart={plannedStart}
+                setPlannedStart={setPlannedStart}
+                plannedEnd={plannedEnd}
+                setPlannedEnd={setPlannedEnd}
+                rollbackPlan={rollbackPlan}
+                setRollbackPlan={setRollbackPlan}
+              />
             </div>
           )}
 

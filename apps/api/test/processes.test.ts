@@ -147,4 +147,68 @@ describe.skipIf(!hasDb)('IT processes', () => {
       expect(instance.riskLevel).toBeNull();
     });
   });
+
+  describe('Release Management', () => {
+    it('starting a RELEASE-kind template without a version is rejected', async () => {
+      const template = await createProcessTemplate(tenantId, {
+        name: 'API Service Release',
+        kind: 'RELEASE',
+        steps: [{ label: 'Build' }, { label: 'Stage' }, { label: 'Deploy' }],
+      });
+      await expect(startProcessInstance(tenantId, template.id, 'ship it')).rejects.toThrow(
+        'starting a release requires a version',
+      );
+    });
+
+    it('a RELEASE instance stores its version, optional planned window/rollback plan, and an optional link back to the Change that approved it', async () => {
+      const changeTemplate = await createProcessTemplate(tenantId, {
+        name: 'Release Test Change',
+        kind: 'CHANGE',
+        steps: [{ label: 'CAB approval', requiresApproval: true }],
+      });
+      const change = await startProcessInstance(tenantId, changeTemplate.id, 'Approve v2.4.0 release', { riskLevel: 'MEDIUM' });
+
+      const releaseTemplate = await createProcessTemplate(tenantId, {
+        name: 'Web App Release',
+        kind: 'RELEASE',
+        steps: [{ label: 'Build' }, { label: 'Stage' }, { label: 'Deploy' }, { label: 'Confirm' }],
+      });
+      const plannedStart = new Date('2026-03-01T01:00:00Z');
+      const release = await startProcessInstance(tenantId, releaseTemplate.id, 'Deploy v2.4.0', {
+        releaseVersion: 'v2.4.0',
+        changeInstanceId: change.id,
+        plannedStart,
+        rollbackPlan: 'Redeploy the previous container image.',
+      });
+
+      expect(release.releaseVersion).toBe('v2.4.0');
+      expect(release.changeInstanceId).toBe(change.id);
+      expect(release.plannedStart).toEqual(plannedStart);
+      expect(release.rollbackPlan).toBe('Redeploy the previous container image.');
+      expect(release.riskLevel).toBeNull(); // Release-kind, not Change-kind -- never set here
+      expect(release.steps.map((s) => s.label)).toEqual(['Build', 'Stage', 'Deploy', 'Confirm']);
+    });
+
+    it('rejects a changeInstanceId that does not exist', async () => {
+      const releaseTemplate = await createProcessTemplate(tenantId, {
+        name: 'Bad Link Release',
+        kind: 'RELEASE',
+        steps: [{ label: 'Deploy' }],
+      });
+      await expect(
+        startProcessInstance(tenantId, releaseTemplate.id, 'Deploy something', {
+          releaseVersion: 'v1.0.0',
+          changeInstanceId: '00000000-0000-0000-0000-000000000000',
+        }),
+      ).rejects.toThrow('linked change instance not found');
+    });
+
+    it('a release version provided against a GENERAL template is silently ignored, not stored', async () => {
+      const template = await createProcessTemplate(tenantId, { name: 'Yet Another Plain Process', steps: [{ label: 'Step 1' }] });
+      const instance = await startProcessInstance(tenantId, template.id, 'has a version but should not keep it', {
+        releaseVersion: 'v9.9.9',
+      });
+      expect(instance.releaseVersion).toBeNull();
+    });
+  });
 });

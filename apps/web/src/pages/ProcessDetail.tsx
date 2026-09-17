@@ -65,6 +65,7 @@ export function ProcessDetail() {
               {instance.riskLevel} risk
             </Badge>
           )}
+          {instance.releaseVersion && <Badge tone="indigo">{instance.releaseVersion}</Badge>}
           <span className="text-[13px] text-slate-400">from {instance.templateName}</span>
         </div>
       </div>
@@ -73,6 +74,40 @@ export function ProcessDetail() {
         <div className="mb-5 rounded-xl border border-orange-200 bg-orange-50 p-4">
           <div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-orange-800">Change Enablement</div>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-slate-700">
+            {instance.plannedStart && (
+              <span>
+                <span className="text-slate-500">Planned start:</span> {formatDateTime(instance.plannedStart)}
+              </span>
+            )}
+            {instance.plannedEnd && (
+              <span>
+                <span className="text-slate-500">Planned end:</span> {formatDateTime(instance.plannedEnd)}
+              </span>
+            )}
+          </div>
+          {instance.rollbackPlan && (
+            <div className="mt-2 text-[13px] text-slate-700">
+              <span className="text-slate-500">Rollback plan:</span> {instance.rollbackPlan}
+            </div>
+          )}
+        </div>
+      )}
+
+      {instance.releaseVersion && (
+        <div className="mb-5 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+          <div className="mb-1 text-[12px] font-bold uppercase tracking-wide text-indigo-800">Release Management</div>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-slate-700">
+            <span>
+              <span className="text-slate-500">Version:</span> {instance.releaseVersion}
+            </span>
+            {instance.changeInstance && (
+              <span>
+                <span className="text-slate-500">Approved by:</span>{' '}
+                <Link to={`/processes/${instance.changeInstance.id}`} className="font-medium text-indigo-700 hover:underline">
+                  {instance.changeInstance.subject}
+                </Link>
+              </span>
+            )}
             {instance.plannedStart && (
               <span>
                 <span className="text-slate-500">Planned start:</span> {formatDateTime(instance.plannedStart)}

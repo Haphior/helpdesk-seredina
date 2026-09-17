@@ -730,14 +730,30 @@ step, started a HIGH-risk instance with a rollback plan, confirmed the risk
 badge and Change Enablement panel render correctly on both the list and
 detail pages, and confirmed the CAB step still only offers
 APPROVED/REJECTED/SKIPPED, never a plain DONE — zero console errors.
-- **Release Management (ITIL).** ITIL 4 treats this as its own practice,
-  distinct from Change Enablement: a Change is the *decision and approval* to
-  make a change; a Release is *actually making it available to users*. Same
-  reuse story as Change Enablement above — a release is another
-  `ProcessTemplate` shape (build → stage → deploy → confirm), not a new
-  subsystem — and it's the natural place a future Change Enablement instance
-  hands off to once approved. Sequenced right after Change Enablement for
-  that reason.
+**Release Management ✅ (this pass)** — ITIL 4 treats this as its own practice,
+distinct from Change Enablement: a Change is the *decision and approval* to
+make a change; a Release is *actually making it available to users*. Same
+reuse story as Change Enablement — built as a third `ProcessTemplateKind`
+(`RELEASE`) plus `releaseVersion` and a self-relation `changeInstanceId` on
+`ProcessInstance` (linking a Release back to the Change that approved it);
+`plannedStart`/`plannedEnd`/`rollbackPlan`, already added for Change
+Enablement, are reused as-is rather than duplicated. `releaseVersion` is
+required when starting a `RELEASE` instance; the Change link, planned window,
+and rollback plan stay optional. See `docs/adr/0014-release-management.md`.
+
+Verified: 4 new integration tests against real Postgres (starting a `RELEASE`
+instance without a version is rejected; version, an optional link to a real
+`CHANGE` instance, planned window, and rollback plan all persist correctly
+while `riskLevel` stays null; a nonexistent `changeInstanceId` is rejected; a
+version sent against a `GENERAL` template is confirmed not stored), full
+suite 47/47 green (9 skipped, unrelated), both `apps/api`/`apps/web` typecheck
+clean. Browser-verified end to end: created a Change template and a Release
+template, started a Change instance, started a Release instance with a
+version linked to that Change plus a rollback plan, confirmed the version
+badge and Release Management panel — including a working link to the linked
+Change's detail page — render correctly on both the list and detail pages,
+and confirmed the Change instance's own Change Enablement panel still renders
+unmodified alongside it. Zero console errors.
 - **Problem Management (ITIL).** Distinguishing a root cause ("Problem") from
   the individual incidents it's causing — Jira Service Management treats this
   as a first-class, separate concept from ticket/incident. Not yet designed in

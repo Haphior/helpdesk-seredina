@@ -78,6 +78,7 @@ export async function getProcessInstance(tenantId: string, id: string) {
           orderBy: { sortOrder: 'asc' },
           include: { assignee: { select: { id: true, name: true } }, ticket: { select: { id: true, number: true, subject: true } } },
         },
+        changeInstance: { select: { id: true, subject: true } },
       },
     });
     if (!instance) throw new Error('process instance not found');
@@ -85,29 +86,65 @@ export async function getProcessInstance(tenantId: string, id: string) {
   });
 }
 
-export interface StartChangeFields {
-  riskLevel: ChangeRiskLevel;
+/**
+ * Covers both Change and Release fields in one shape -- plannedStart/
+ * plannedEnd/rollbackPlan are shared (see schema comment), riskLevel is
+ * Change-only, releaseVersion/changeInstanceId are Release-only. Which ones
+ * are required/stored depends on the template's kind, checked below.
+ */
+export interface StartProcessOptions {
+  riskLevel?: ChangeRiskLevel;
+  releaseVersion?: string | null;
+  changeInstanceId?: string | null;
   plannedStart?: Date | null;
   plannedEnd?: Date | null;
   rollbackPlan?: string | null;
 }
 
 /**
- * `change` is required when `template.kind === 'CHANGE'` -- a Change without
- * a risk assessment isn't following the practice, so this is enforced here
- * rather than left as an optional field nobody fills in. Ignored (never
- * stored) for a GENERAL template, since these columns are null for every
- * ordinary process instance by design -- see docs/adr/0013-change-enablement.md.
+ * `options.riskLevel` is required when `template.kind === 'CHANGE'`, and
+ * `options.releaseVersion` when it's `RELEASE` -- a Change without a risk
+ * assessment, or a Release with no identified version, isn't following the
+ * practice it's named after, so both are enforced here rather than left as
+ * fields nobody fills in. Every Change/Release column is ignored (never
+ * stored) for a GENERAL template, since they're null for every ordinary
+ * process instance by design -- see docs/adr/0013-change-enablement.md and
+ * docs/adr/0014-release-management.md.
  */
-export async function startProcessInstance(tenantId: string, templateId: string, subject: string, change?: StartChangeFields) {
+export async function startProcessInstance(tenantId: string, templateId: string, subject: string, options?: StartProcessOptions) {
   return withTenantTx(prisma, tenantId, async (tx) => {
     const template = await tx.processTemplate.findUnique({
       where: { id: templateId },
       include: { steps: { orderBy: { sortOrder: 'asc' } } },
     });
     if (!template) throw new Error('process template not found');
-    if (template.kind === 'CHANGE' && !change?.riskLevel) {
+    if (template.kind === 'CHANGE' && !options?.riskLevel) {
       throw new Error('starting a change requires a risk level');
+    }
+    if (template.kind === 'RELEASE' && !options?.releaseVersion) {
+      throw new Error('starting a release requires a version');
+    }
+    if (options?.changeInstanceId) {
+      const changeInstance = await tx.processInstance.findUnique({ where: { id: options.changeInstanceId } });
+      if (!changeInstance) throw new Error('linked change instance not found');
+    }
+
+    let kindFields: Record<string, unknown> = {};
+    if (template.kind === 'CHANGE') {
+      kindFields = {
+        riskLevel: options!.riskLevel,
+        plannedStart: options?.plannedStart ?? null,
+        plannedEnd: options?.plannedEnd ?? null,
+        rollbackPlan: options?.rollbackPlan ?? null,
+      };
+    } else if (template.kind === 'RELEASE') {
+      kindFields = {
+        releaseVersion: options!.releaseVersion,
+        changeInstanceId: options?.changeInstanceId ?? null,
+        plannedStart: options?.plannedStart ?? null,
+        plannedEnd: options?.plannedEnd ?? null,
+        rollbackPlan: options?.rollbackPlan ?? null,
+      };
     }
 
     return tx.processInstance.create({
@@ -116,14 +153,7 @@ export async function startProcessInstance(tenantId: string, templateId: string,
         processTemplateId: template.id,
         templateName: template.name,
         subject,
-        ...(template.kind === 'CHANGE'
-          ? {
-              riskLevel: change!.riskLevel,
-              plannedStart: change?.plannedStart ?? null,
-              plannedEnd: change?.plannedEnd ?? null,
-              rollbackPlan: change?.rollbackPlan ?? null,
-            }
-          : {}),
+        ...kindFields,
         steps: {
           create: template.steps.map((s) => ({
             tenantId,

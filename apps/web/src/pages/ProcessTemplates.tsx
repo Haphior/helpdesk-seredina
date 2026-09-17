@@ -62,6 +62,7 @@ export function ProcessTemplates() {
                   <div className="flex items-center gap-2">
                     <span className="text-[14.5px] font-semibold text-slate-800">{t.name}</span>
                     {t.kind === 'CHANGE' && <Badge tone="orange">Change</Badge>}
+                    {t.kind === 'RELEASE' && <Badge tone="indigo">Release</Badge>}
                   </div>
                   {t.description && <div className="text-[12.5px] text-slate-400">{t.description}</div>}
                 </div>
@@ -176,6 +177,13 @@ function CreateTemplateModal({ onClose, onCreated }: { onClose: () => void; onCr
             <span>
               <span className="block font-medium text-slate-700">Change (ITIL)</span>
               <span className="block text-slate-400">Starting an instance will require a risk level and offer a planned window/rollback plan.</span>
+            </span>
+          </label>
+          <label className="flex flex-1 items-start gap-2 text-xs">
+            <input type="radio" className="mt-0.5" checked={kind === 'RELEASE'} onChange={() => setKind('RELEASE')} />
+            <span>
+              <span className="block font-medium text-slate-700">Release (ITIL)</span>
+              <span className="block text-slate-400">Starting an instance will require a version and can link back to the Change that approved it.</span>
             </span>
           </label>
         </div>
