@@ -244,6 +244,14 @@ model Ticket {
   problemId String?  @map("problem_id") @db.Uuid
   problem   Problem? @relation(fields: [problemId], references: [id], onDelete: SetNull)
 
+  // Set when this ticket was folded into another via mergeTicket() -- see
+  // docs/adr/0019-collision-merge-bulk-actions.md. SetNull, not Cascade, so
+  // deleting the target later never takes the (already-closed) source down
+  // with it -- same reasoning as every other optional self-relation FK here.
+  mergedIntoId  String?   @map("merged_into_id") @db.Uuid
+  mergedInto    Ticket?   @relation("TicketMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedTickets Ticket[]  @relation("TicketMerge")
+
   messages     Message[]
   assets       TicketAsset[]
   processSteps ProcessStepInstance[]

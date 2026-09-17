@@ -78,6 +78,7 @@ export interface Ticket {
   firstRespondedAt: string | null;
   resolutionDueAt: string | null;
   problemId: string | null;
+  mergedIntoId: string | null;
 }
 
 export interface SlaPolicy {
@@ -183,6 +184,8 @@ export interface TicketDetail extends Ticket {
   messages: Message[];
   assets: { assetId: string; asset: AssetSummary }[];
   problem?: { id: string; number: number; title: string } | null;
+  mergedInto?: { id: string; number: number; subject: string } | null;
+  mergedTickets?: { id: string; number: number; subject: string }[];
 }
 
 export interface ApiKeySummary {

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiGet, apiPost, ApiError } from '../lib/api';
-import type { CustomFieldDefinition, ServiceCatalogItem, Ticket, TicketStatusCategory } from '../lib/types';
+import { apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
+import type { CustomFieldDefinition, ServiceCatalogItem, Ticket, TicketStatus, TicketStatusCategory, UserSummary } from '../lib/types';
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
@@ -19,22 +19,69 @@ const TABS: { key: TicketStatusCategory | 'ALL'; label: string }[] = [
 
 const CHANNEL_TONE: Record<string, 'rose' | 'slate'> = { alert: 'rose', email: 'slate', api: 'slate' };
 
-const ROW_COLUMNS = '56px 1fr 108px 120px 130px 110px 100px';
+const ROW_COLUMNS = '24px 56px 1fr 108px 120px 130px 110px 100px';
 
 export function TicketsQueue() {
   const { hasPermission } = useAuth();
+  const canBulkEdit = hasPermission('tickets:write');
   const [tab, setTab] = useState<TicketStatusCategory | 'ALL'>('ALL');
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showRequest, setShowRequest] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [statuses, setStatuses] = useState<TicketStatus[]>([]);
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [applyingBulk, setApplyingBulk] = useState(false);
 
-  useEffect(() => {
+  function load() {
     setError(null);
     const query = tab === 'ALL' ? '' : `?statusCategory=${tab}`;
     apiGet<{ tickets: Ticket[] }>(`/tickets${query}`)
       .then((res) => setTickets(res.tickets))
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load tickets'));
+  }
+
+  useEffect(() => {
+    load();
+    setSelected(new Set());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
+
+  useEffect(() => {
+    if (!canBulkEdit) return;
+    apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses').then((res) => setStatuses(res.statuses)).catch(() => {});
+    apiGet<{ users: UserSummary[] }>('/users').then((res) => setUsers(res.users)).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function toggleSelected(id: string) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (!tickets) return;
+    setSelected((s) => (s.size === tickets.length ? new Set() : new Set(tickets.map((t) => t.id))));
+  }
+
+  // Loops over the existing single-ticket PATCH -- see
+  // docs/adr/0019-collision-merge-bulk-actions.md: bulk actions are UI over
+  // updateTicket, not new backend logic.
+  async function applyBulk(data: Record<string, unknown>) {
+    setApplyingBulk(true);
+    try {
+      await Promise.all([...selected].map((id) => apiPatch(`/tickets/${id}`, data)));
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Bulk update failed');
+    } finally {
+      setApplyingBulk(false);
+    }
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -74,6 +121,61 @@ export function TicketsQueue() {
             <span className="text-[13px] text-slate-400">Search tickets…</span>
           </div>
         </div>
+
+        {canBulkEdit && selected.size > 0 && (
+          <div className="flex items-center gap-3 rounded-[9px] border border-indigo-200 bg-indigo-50 px-3.5 py-2">
+            <span className="text-[13px] font-semibold text-indigo-700">{selected.size} selected</span>
+            <select
+              defaultValue=""
+              disabled={applyingBulk}
+              onChange={(e) => e.target.value && applyBulk({ assigneeId: e.target.value })}
+              className="rounded-md border border-indigo-200 bg-white px-2 py-1 text-xs text-slate-600"
+            >
+              <option value="" disabled>
+                Assign to…
+              </option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            <select
+              defaultValue=""
+              disabled={applyingBulk}
+              onChange={(e) => e.target.value && applyBulk({ statusId: e.target.value })}
+              className="rounded-md border border-indigo-200 bg-white px-2 py-1 text-xs text-slate-600"
+            >
+              <option value="" disabled>
+                Set status…
+              </option>
+              {statuses.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <select
+              defaultValue=""
+              disabled={applyingBulk}
+              onChange={(e) => e.target.value && applyBulk({ priority: e.target.value })}
+              className="rounded-md border border-indigo-200 bg-white px-2 py-1 text-xs text-slate-600"
+            >
+              <option value="" disabled>
+                Set priority…
+              </option>
+              {(['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const).map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            {applyingBulk && <span className="text-xs text-indigo-500">Applying…</span>}
+            <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-indigo-600 hover:underline">
+              Clear selection
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-8 pb-7">
@@ -87,6 +189,16 @@ export function TicketsQueue() {
               className="grid items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-400"
               style={{ gridTemplateColumns: ROW_COLUMNS }}
             >
+              <span>
+                {canBulkEdit && (
+                  <input
+                    type="checkbox"
+                    checked={selected.size === tickets.length}
+                    onChange={toggleSelectAll}
+                    className="h-3.5 w-3.5 accent-indigo-600"
+                  />
+                )}
+              </span>
               <span>#</span>
               <span>Subject</span>
               <span>Status</span>
@@ -98,47 +210,58 @@ export function TicketsQueue() {
 
             <div className="divide-y divide-slate-100">
               {tickets.map((ticket) => (
-                <Link
+                <div
                   key={ticket.id}
-                  to={`/tickets/${ticket.id}`}
                   className="grid items-center gap-3 px-5 py-3.5 hover:bg-slate-50"
                   style={{ gridTemplateColumns: ROW_COLUMNS }}
                 >
-                  <span className="text-[13px] font-medium text-slate-400">{ticket.number}</span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      {isTicketOverdue(ticket) && (
-                        <span title="SLA overdue">
-                          <ClockIcon width={13} height={13} className="flex-shrink-0 text-rose-500" />
-                        </span>
-                      )}
-                      <span className="truncate text-[14px] font-semibold text-slate-800">{ticket.subject}</span>
+                  <span>
+                    {canBulkEdit && (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(ticket.id)}
+                        onChange={() => toggleSelected(ticket.id)}
+                        className="h-3.5 w-3.5 accent-indigo-600"
+                      />
+                    )}
+                  </span>
+                  <Link to={`/tickets/${ticket.id}`} className="contents">
+                    <span className="text-[13px] font-medium text-slate-400">{ticket.number}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {isTicketOverdue(ticket) && (
+                          <span title="SLA overdue">
+                            <ClockIcon width={13} height={13} className="flex-shrink-0 text-rose-500" />
+                          </span>
+                        )}
+                        <span className="truncate text-[14px] font-semibold text-slate-800">{ticket.subject}</span>
+                      </div>
+                      <div className="truncate text-[12.5px] text-slate-400">{ticket.contact.name}</div>
                     </div>
-                    <div className="truncate text-[12.5px] text-slate-400">{ticket.contact.name}</div>
-                  </div>
-                  <span className="w-fit">
-                    <Badge tone={STATUS_CATEGORY_TONE[ticket.status.category]} dot>
-                      {ticket.status.label}
-                    </Badge>
-                  </span>
-                  <span className="w-fit">
-                    <Badge tone={PRIORITY_TONE[ticket.priority]} dot>
-                      {ticket.priority}
-                    </Badge>
-                  </span>
-                  {ticket.assignee ? (
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <Avatar name={ticket.assignee.name} size={19} />
-                      <span className="truncate text-[12.5px] text-slate-600">{ticket.assignee.name}</span>
-                    </div>
-                  ) : (
-                    <span className="text-[12.5px] text-slate-400">Unassigned</span>
-                  )}
-                  <span className="w-fit">
-                    <Badge tone={CHANNEL_TONE[ticket.channel] ?? 'slate'}>{ticket.channel}</Badge>
-                  </span>
-                  <span className="text-right text-[12px] text-slate-400">{formatDateTime(ticket.updatedAt)}</span>
-                </Link>
+                    <span className="w-fit">
+                      <Badge tone={STATUS_CATEGORY_TONE[ticket.status.category]} dot>
+                        {ticket.status.label}
+                      </Badge>
+                    </span>
+                    <span className="w-fit">
+                      <Badge tone={PRIORITY_TONE[ticket.priority]} dot>
+                        {ticket.priority}
+                      </Badge>
+                    </span>
+                    {ticket.assignee ? (
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <Avatar name={ticket.assignee.name} size={19} />
+                        <span className="truncate text-[12.5px] text-slate-600">{ticket.assignee.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[12.5px] text-slate-400">Unassigned</span>
+                    )}
+                    <span className="w-fit">
+                      <Badge tone={CHANNEL_TONE[ticket.channel] ?? 'slate'}>{ticket.channel}</Badge>
+                    </span>
+                    <span className="text-right text-[12px] text-slate-400">{formatDateTime(ticket.updatedAt)}</span>
+                  </Link>
+                </div>
               ))}
             </div>
           </div>

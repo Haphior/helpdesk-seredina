@@ -232,6 +232,8 @@ export async function getTicket(tenantId: string, ticketId: string) {
           },
         },
         problem: { select: { id: true, number: true, title: true } },
+        mergedInto: { select: { id: true, number: true, subject: true } },
+        mergedTickets: { select: { id: true, number: true, subject: true } },
       },
     });
     if (!ticket) throw new Error('ticket not found');
@@ -370,4 +372,82 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
     await scheduleSlaBreachChecks(tenantId, updated.id, { firstResponseDueAt: updated.firstResponseDueAt, resolutionDueAt: updated.resolutionDueAt });
   }
   return updated;
+}
+
+/**
+ * Folds sourceTicketId's messages into intoTicketId and closes the source --
+ * mechanically close to ingestAlert's re-fire-folding above, reused rather than
+ * invented from scratch. See docs/adr/0019-collision-merge-bulk-actions.md.
+ *
+ * Order matters: existing messages move to the target FIRST, so the
+ * "merged into #X" system message added to the source afterward is the one
+ * message that stays there -- the one thing anyone opening the old ticket URL
+ * needs to see. mergedIntoId records the redirect permanently; closing sets
+ * resolvedAt too (if not already set), same as any other close.
+ */
+export async function mergeTicket(tenantId: string, sourceTicketId: string, intoTicketId: string) {
+  if (sourceTicketId === intoTicketId) throw new Error('cannot merge a ticket into itself');
+
+  const { source, targetMessage } = await withTenantTx(prisma, tenantId, async (tx) => {
+    const [source, target] = await Promise.all([
+      tx.ticket.findUnique({ where: { id: sourceTicketId } }),
+      tx.ticket.findUnique({ where: { id: intoTicketId } }),
+    ]);
+    if (!source) throw new Error('source ticket not found');
+    if (!target) throw new Error('target ticket not found');
+    if (source.mergedIntoId) throw new Error('this ticket has already been merged into another one');
+    if (target.mergedIntoId) throw new Error('cannot merge into a ticket that has itself been merged elsewhere');
+
+    const closedStatus = await tx.ticketStatus.findFirst({ where: { category: 'CLOSED' }, orderBy: { sortOrder: 'asc' } });
+    if (!closedStatus) throw new Error('tenant has no "closed" ticket status configured');
+
+    await tx.message.updateMany({ where: { ticketId: sourceTicketId }, data: { ticketId: intoTicketId } });
+
+    const targetMessage = await tx.message.create({
+      data: {
+        tenantId,
+        ticketId: intoTicketId,
+        authorType: 'SYSTEM',
+        body: `Merged ticket #${source.number} ("${source.subject}") into this ticket.`,
+        isPrivateNote: false,
+      },
+    });
+    await tx.message.create({
+      data: {
+        tenantId,
+        ticketId: sourceTicketId,
+        authorType: 'SYSTEM',
+        body: `This ticket was merged into #${target.number} ("${target.subject}").`,
+        isPrivateNote: false,
+      },
+    });
+
+    const now = new Date();
+    const updatedSource = await tx.ticket.update({
+      where: { id: sourceTicketId },
+      data: {
+        mergedIntoId: intoTicketId,
+        statusId: closedStatus.id,
+        closedAt: now,
+        resolvedAt: source.resolvedAt ?? now,
+      },
+    });
+
+    return { source: updatedSource, targetMessage };
+  });
+
+  await dispatchWebhookEvent(tenantId, 'ticket.updated', {
+    ticketId: source.id,
+    number: source.number,
+    statusId: source.statusId,
+    priority: source.priority,
+    assigneeId: source.assigneeId,
+  });
+  await dispatchWebhookEvent(tenantId, 'message.created', {
+    ticketId: targetMessage.ticketId,
+    messageId: targetMessage.id,
+    body: targetMessage.body,
+  });
+
+  return source;
 }

@@ -8,9 +8,11 @@ import {
   ingestAlert,
   listTickets,
   listTicketStatuses,
+  mergeTicket,
   updateTicket,
 } from './service';
 import { linkAssetToTicket, unlinkAssetFromTicket } from '../assets/service';
+import { listPresence, markPresence } from '../../lib/presence';
 
 const PRIORITY = z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']);
 const STATUS_CATEGORY = z.enum(['OPEN', 'PENDING', 'RESOLVED', 'CLOSED']);
@@ -38,6 +40,7 @@ const updateTicketSchema = z.object({
 });
 
 const linkAssetSchema = z.object({ assetId: z.string().uuid() });
+const mergeTicketSchema = z.object({ intoTicketId: z.string().uuid() });
 
 const ingestAlertSchema = z.object({
   source: z.string().min(1).max(100),
@@ -178,6 +181,48 @@ export default async function ticketRoutes(app: FastifyInstance) {
       } catch (err) {
         return reply.code(404).send({ error: (err as Error).message });
       }
+    },
+  );
+
+  // See docs/adr/0019-collision-merge-bulk-actions.md.
+  app.post(
+    '/tickets/:id/merge',
+    { preHandler: [app.authenticate, requirePermission('tickets:write')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = mergeTicketSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        await mergeTicket(request.user.tenantId, id, parsed.data.intoTicketId);
+        const ticket = await getTicket(request.user.tenantId, id);
+        return reply.send(ticket);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  // Collision detection: a short-poll heartbeat, not a WebSocket -- see
+  // docs/adr/0019-collision-merge-bulk-actions.md for why that's the right call
+  // here. POST records "I'm still looking at this ticket"; GET answers "who else
+  // is." Both tickets:write, the same tier as every other ticket-detail action.
+  app.post(
+    '/tickets/:id/presence',
+    { preHandler: [app.authenticate, requirePermission('tickets:write')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      await markPresence(request.user.tenantId, id, request.user.sub);
+      return reply.code(204).send();
+    },
+  );
+
+  app.get(
+    '/tickets/:id/presence',
+    { preHandler: [app.authenticate, requirePermission('tickets:write')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const userIds = await listPresence(request.user.tenantId, id, request.user.sub);
+      return reply.send({ userIds });
     },
   );
 }

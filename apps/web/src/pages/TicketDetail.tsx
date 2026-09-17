@@ -7,6 +7,7 @@ import type {
   Macro,
   Problem,
   Team,
+  Ticket,
   TicketDetail as TicketDetailType,
   TicketPriority,
   TicketStatus,
@@ -14,7 +15,8 @@ import type {
 } from '../lib/types';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
-import { BackArrowIcon, BoltIcon, ChevronDownIcon, ClockIcon, LockIcon, SparkleIcon } from '../components/icons';
+import { Modal } from '../components/Modal';
+import { BackArrowIcon, BoltIcon, ChevronDownIcon, ClockIcon, EyeIcon, LockIcon, SparkleIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime, isFirstResponseOverdue, isResolutionOverdue } from '../lib/format';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
@@ -32,6 +34,8 @@ export function TicketDetail() {
   const [macros, setMacros] = useState<Macro[]>([]);
   const [applyingMacroId, setApplyingMacroId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [presenceUserIds, setPresenceUserIds] = useState<string[]>([]);
+  const [showMerge, setShowMerge] = useState(false);
 
   const [reply, setReply] = useState('');
   const [isPrivateNote, setIsPrivateNote] = useState(false);
@@ -72,6 +76,30 @@ export function TicketDetail() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Collision detection: "who else has this ticket open right now" -- a short-poll
+  // heartbeat, not a WebSocket (see docs/adr/0019-collision-merge-bulk-actions.md).
+  // Best-effort: a failed heartbeat just means the presence pill is a beat stale,
+  // never worth surfacing as a page error.
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    async function tick() {
+      try {
+        await apiPost(`/tickets/${id}/presence`);
+        const res = await apiGet<{ userIds: string[] }>(`/tickets/${id}/presence`);
+        if (!cancelled) setPresenceUserIds(res.userIds);
+      } catch {
+        // best-effort, see comment above
+      }
+    }
+    tick();
+    const interval = setInterval(tick, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [id]);
 
   async function patch(data: Record<string, unknown>) {
     if (!id) return;
@@ -197,6 +225,21 @@ export function TicketDetail() {
             )}
 
             <div className="ml-auto flex items-center gap-2">
+              {presenceUserIds.length > 0 && (
+                <div className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                  <EyeIcon width={12} height={12} />
+                  Also viewing:{' '}
+                  {presenceUserIds.map((uid) => users.find((u) => u.id === uid)?.name ?? 'Someone').join(', ')}
+                </div>
+              )}
+              {!ticket.mergedIntoId && (
+                <button
+                  onClick={() => setShowMerge(true)}
+                  className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50"
+                >
+                  Merge into…
+                </button>
+              )}
               {macros.length > 0 && (
                 <div className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1">
                   <BoltIcon width={12} height={12} className="text-slate-400" />
@@ -228,6 +271,29 @@ export function TicketDetail() {
             </div>
           </div>
         </div>
+
+        {ticket.mergedInto && (
+          <div className="mb-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-[13.5px] text-orange-800">
+            This ticket was merged into{' '}
+            <Link to={`/tickets/${ticket.mergedInto.id}`} className="font-semibold underline">
+              #{ticket.mergedInto.number} {ticket.mergedInto.subject}
+            </Link>
+            .
+          </div>
+        )}
+        {ticket.mergedTickets && ticket.mergedTickets.length > 0 && (
+          <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13.5px] text-slate-600">
+            Merged from:{' '}
+            {ticket.mergedTickets.map((t, i) => (
+              <span key={t.id}>
+                {i > 0 && ', '}
+                <Link to={`/tickets/${t.id}`} className="font-medium text-indigo-700 hover:underline">
+                  #{t.number} {t.subject}
+                </Link>
+              </span>
+            ))}
+          </div>
+        )}
 
         {error && <p className="mb-2 text-sm text-rose-600">{error}</p>}
         {aiError && <p className="mb-2 text-sm text-rose-600">{aiError}</p>}
@@ -489,7 +555,87 @@ export function TicketDetail() {
           </div>
         </FieldGroup>
       </aside>
+
+      {showMerge && ticket && (
+        <MergeModal currentTicket={ticket} onClose={() => setShowMerge(false)} onMerged={load} />
+      )}
     </div>
+  );
+}
+
+function MergeModal({
+  currentTicket,
+  onClose,
+  onMerged,
+}: {
+  currentTicket: TicketDetailType;
+  onClose: () => void;
+  onMerged: () => void;
+}) {
+  const [candidates, setCandidates] = useState<Ticket[]>([]);
+  const [intoTicketId, setIntoTicketId] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    apiGet<{ tickets: Ticket[] }>('/tickets')
+      .then((res) => setCandidates(res.tickets.filter((t) => t.id !== currentTicket.id && !t.mergedIntoId)))
+      .catch(() => {});
+  }, [currentTicket.id]);
+
+  async function onSubmit() {
+    if (!intoTicketId) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      await apiPost(`/tickets/${currentTicket.id}/merge`, { intoTicketId });
+      onMerged();
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to merge ticket');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Merge this ticket" onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-[13px] text-slate-500">
+          #{currentTicket.number}'s messages move onto the target ticket, and this one closes with a note pointing there.
+        </p>
+        <label className="block text-sm">
+          <span className="mb-1 block font-medium text-slate-700">Merge into</span>
+          <select
+            value={intoTicketId}
+            onChange={(e) => setIntoTicketId(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          >
+            <option value="">Choose a ticket…</option>
+            {candidates.map((t) => (
+              <option key={t.id} value={t.id}>
+                #{t.number} {t.subject}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+            Cancel
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={submitting || !intoTicketId}
+            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {submitting ? 'Merging…' : 'Merge'}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

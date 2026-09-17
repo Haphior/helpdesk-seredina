@@ -677,16 +677,37 @@ and ManageEngine ServiceDesk Plus — see the research notes below each item.
 Ordered here roughly by how directly each one builds on something already
 shipped, not by external priority:**
 
-- **Agent collision detection + ticket merge + bulk actions.** The three items
-  that showed up as "must-have" in essentially every source checked, and the
-  cheapest of everything in this addition — no new data model. Collision
-  detection is "who else has this ticket open right now," a presence signal
-  (WebSocket or short-poll) keyed by `ticketId`, not a new table. Merge folds
-  one ticket's messages into another's and closes the source — mechanically
-  close to what `ingestAlert`'s re-fire-folding already does for a different
-  reason, so there's a real precedent to reuse rather than invent. Bulk actions
-  (assign/close/tag several tickets from the queue) are UI + a loop over the
-  existing single-ticket `updateTicket`, not new backend logic.
+**Agent collision detection + ticket merge + bulk actions ✅ (this pass)** —
+the three items that showed up as "must-have" in essentially every source
+checked, and the cheapest of everything in this addition. Collision
+detection is a Redis short-poll heartbeat (20s TTL key per tenant+ticket+
+user, refreshed every 8s), not a WebSocket — no WS infrastructure exists in
+this codebase yet, and building one would have been a much bigger lift than
+this item's own "cheapest of everything" framing promised. Merge folds one
+ticket's messages into another's and closes the source, reusing
+`ingestAlert`'s re-fire-folding mechanism rather than inventing a new one; a
+`mergedIntoId` self-relation (not explicitly named in this note, but the one
+addition beyond "fold and close" needed so a merged ticket doesn't just look
+like an ordinarily-closed one) records the redirect permanently. Bulk
+actions (assign/set status/set priority on several tickets from the queue)
+are UI + a loop over the existing single-ticket `updateTicket` — exactly as
+described, no new backend endpoint at all for that part. See
+`docs/adr/0019-collision-merge-bulk-actions.md`.
+
+Verified: 9 new integration tests against real Postgres and Redis (merge
+moves messages and adds system notes on both sides; the source closes and
+gets a `resolvedAt`; the target's `mergedTickets` lists the source;
+self-merge, re-merging, and merging into an already-merged target are all
+rejected; presence correctly excludes the caller and is scoped per ticket
+and per tenant), full suite 82/82 green, both `apps/api`/`apps/web`
+typecheck clean. Browser-verified end to end: merged one ticket into
+another and confirmed both sides' banners/notes; created a second, distinct
+agent account and confirmed "Also viewing: Second Agent" renders after the
+heartbeat interval (an early test that logged into the same account twice
+never triggered this — correctly, since presence excludes the caller's own
+user, and two contexts sharing one account are not a collision); bulk-
+assigned two tickets from the queue via the new checkboxes and confirmed
+both picked up the new assignee immediately. Zero console errors.
 - **On-call scheduling + SLA escalation chains.** The direct sequel to this
   pass's SLA engine, not a separate concern — Opsgenie-inside-Jira-SM is the
   clearest competitive example of exactly this combination. Where the SLA
