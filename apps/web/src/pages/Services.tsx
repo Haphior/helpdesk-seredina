@@ -16,7 +16,9 @@ export function Services() {
   const [assetToLink, setAssetToLink] = useState<Record<string, string>>({});
 
   function load() {
-    Promise.all([apiGet<{ services: Service[] }>('/services'), apiGet<{ assets: AssetSummary[] }>('/assets')])
+    // limit=200 (the max) -- feeds the "link an asset" picker below, which
+    // needs the whole list. See the identical note in TicketDetail.tsx.
+    Promise.all([apiGet<{ services: Service[] }>('/services'), apiGet<{ assets: AssetSummary[] }>('/assets?limit=200')])
       .then(([s, a]) => {
         setServices(s.services);
         setAllAssets(a.assets);

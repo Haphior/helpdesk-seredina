@@ -79,7 +79,11 @@ export function TicketDetail() {
         apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses'),
         apiGet<{ teams: Team[] }>('/teams'),
         apiGet<{ users: UserSummary[] }>('/users'),
-        apiGet<{ assets: AssetSummary[] }>('/assets'),
+        // limit=200 (the max) -- this feeds the "link an asset" picker below,
+        // which needs the whole list, not one page of it. A tenant with more
+        // than 200 assets would need a real search-based picker here, same
+        // limitation as the Problem-detail ticket picker (ADR 0026).
+        apiGet<{ assets: AssetSummary[] }>('/assets?limit=200'),
         apiGet<{ customFields: CustomFieldDefinition[] }>('/custom-fields'),
         apiGet<{ macros: Macro[] }>('/macros'),
         apiGet<{ problems: Problem[] }>('/problems'),

@@ -1,4 +1,4 @@
-import { prisma, withTenantTx, type AssetStatus, type AssetType } from '@seredina/db';
+import { prisma, withTenantTx, type AssetStatus, type AssetType, type Prisma } from '@seredina/db';
 
 export interface AssetInput {
   name: string;
@@ -39,13 +39,48 @@ export async function deleteAsset(tenantId: string, id: string) {
   });
 }
 
-export async function listAssets(tenantId: string) {
-  return withTenantTx(prisma, tenantId, (tx) =>
-    tx.asset.findMany({
-      orderBy: { name: 'asc' },
-      include: { catalogModel: { include: { manufacturer: true } } },
-    }),
-  );
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
+export interface ListAssetsFilter {
+  assetType?: AssetType;
+  status?: AssetStatus;
+  // Case-insensitive match against name, IP, or hostname -- same posture as
+  // ticket search (modules/tickets/service.ts): a console search box, not a
+  // search product.
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listAssets(tenantId: string, filter: ListAssetsFilter = {}) {
+  const limit = Math.min(filter.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
+  const offset = filter.offset ?? 0;
+  const where: Prisma.AssetWhereInput = {
+    assetType: filter.assetType,
+    status: filter.status,
+    OR: filter.q
+      ? [
+          { name: { contains: filter.q, mode: 'insensitive' } },
+          { ipAddress: { contains: filter.q, mode: 'insensitive' } },
+          { hostname: { contains: filter.q, mode: 'insensitive' } },
+        ]
+      : undefined,
+  };
+
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const [assets, total] = await Promise.all([
+      tx.asset.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        include: { catalogModel: { include: { manufacturer: true } } },
+        take: limit,
+        skip: offset,
+      }),
+      tx.asset.count({ where }),
+    ]);
+    return { assets, total };
+  });
 }
 
 export async function getAsset(tenantId: string, id: string) {
@@ -54,11 +89,15 @@ export async function getAsset(tenantId: string, id: string) {
       where: { id },
       include: {
         tickets: { include: { ticket: { select: { id: true, number: true, subject: true } } } },
+        // Flattened below into a plain services[] -- same reasoning as
+        // getTicket's identical flatten (modules/tickets/service.ts): the
+        // frontend shouldn't need to know a ServiceAsset join table exists.
+        services: { include: { service: { select: { id: true, name: true } } } },
         catalogModel: { include: { manufacturer: true } },
       },
     });
     if (!asset) throw new Error('asset not found');
-    return asset;
+    return { ...asset, services: asset.services.map((sa) => sa.service) };
   });
 }
 

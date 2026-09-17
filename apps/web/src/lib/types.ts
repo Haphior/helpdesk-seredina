@@ -176,6 +176,11 @@ export interface AssetSummary {
   services?: { id: string; name: string }[];
 }
 
+export interface AssetDetail extends Asset {
+  tickets: { ticket: { id: string; number: number; subject: string } }[];
+  services: { id: string; name: string }[];
+}
+
 export type DiscoveryJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
 
 export interface DiscoveryJob {

@@ -9,6 +9,7 @@ import { TicketsQueue } from './pages/TicketsQueue';
 import { TicketDetail } from './pages/TicketDetail';
 import { ApiKeys } from './pages/ApiKeys';
 import { Assets } from './pages/Assets';
+import { AssetDetail } from './pages/AssetDetail';
 import { Users } from './pages/Users';
 import { EmailChannels } from './pages/EmailChannels';
 import { CustomFields } from './pages/CustomFields';
@@ -50,6 +51,7 @@ export function App() {
             <Route path="/tickets" element={<TicketsQueue />} />
             <Route path="/tickets/:id" element={<TicketDetail />} />
             <Route path="/assets" element={<Assets />} />
+            <Route path="/assets/:id" element={<AssetDetail />} />
             <Route path="/api-keys" element={<ApiKeys />} />
             <Route path="/users" element={<Users />} />
             <Route path="/email-channels" element={<EmailChannels />} />

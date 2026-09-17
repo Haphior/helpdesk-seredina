@@ -34,10 +34,20 @@ const updateAssetSchema = z.object({
   ...assetFieldsSchema,
 });
 
+const listAssetsQuerySchema = z.object({
+  assetType: ASSET_TYPE.optional(),
+  status: ASSET_STATUS.optional(),
+  q: z.string().max(200).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
 export default async function assetRoutes(app: FastifyInstance) {
   app.get('/assets', { preHandler: [app.authenticate, requirePermission('assets:read')] }, async (request, reply) => {
-    const assets = await listAssets(request.user.tenantId);
-    return reply.send({ assets });
+    const query = listAssetsQuerySchema.safeParse(request.query);
+    if (!query.success) return reply.code(400).send({ error: query.error.flatten() });
+    const { assets, total } = await listAssets(request.user.tenantId, query.data);
+    return reply.send({ assets, total });
   });
 
   app.get(
