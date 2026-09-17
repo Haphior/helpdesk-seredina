@@ -132,6 +132,16 @@ export function TicketDetail() {
     }
   }
 
+  async function acknowledgeEscalation() {
+    if (!id) return;
+    try {
+      await apiPost(`/tickets/${id}/escalation/acknowledge`);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to acknowledge');
+    }
+  }
+
   async function sendReply() {
     if (!id || !reply.trim()) return;
     setSending(true);
@@ -292,6 +302,36 @@ export function TicketDetail() {
                 </Link>
               </span>
             ))}
+          </div>
+        )}
+
+        {ticket.escalation && ticket.escalation.status !== 'ACKNOWLEDGED' && (
+          <div
+            className={`mb-3 flex items-center justify-between rounded-xl border px-4 py-2.5 text-[13.5px] ${
+              ticket.escalation.status === 'EXHAUSTED'
+                ? 'border-rose-200 bg-rose-50 text-rose-800'
+                : 'border-amber-200 bg-amber-50 text-amber-800'
+            }`}
+          >
+            <span>
+              {ticket.escalation.status === 'EXHAUSTED'
+                ? `Escalation exhausted (tier ${ticket.escalation.currentTierIndex + 1}) -- no one acknowledged.`
+                : `SLA breached -- currently at escalation tier ${ticket.escalation.currentTierIndex + 1}.`}
+            </span>
+            {ticket.escalation.status === 'ACTIVE' && (
+              <button
+                onClick={acknowledgeEscalation}
+                className="flex-shrink-0 rounded-md bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-700"
+              >
+                Acknowledge
+              </button>
+            )}
+          </div>
+        )}
+        {ticket.escalation?.status === 'ACKNOWLEDGED' && (
+          <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13.5px] text-emerald-800">
+            Escalation acknowledged by {ticket.escalation.acknowledgedByUser?.name ?? 'someone'}
+            {ticket.escalation.acknowledgedAt && ` at ${formatDateTime(ticket.escalation.acknowledgedAt)}`}.
           </div>
         )}
 

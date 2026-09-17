@@ -1,6 +1,7 @@
 import { prisma, withTenantTx } from '@seredina/db';
 import type { SlaBreachCheckJobPayload } from '@seredina/shared';
 import { dispatchWebhookEvent } from '../lib/webhookDispatch';
+import { startEscalationIfConfigured } from '../oncall/escalate';
 
 /**
  * Fires once, at the due-at timestamp captured when this job was scheduled (see
@@ -25,6 +26,7 @@ export async function checkSlaBreach(payload: SlaBreachCheckJobPayload): Promise
       subject: ticket.subject,
       firstResponseDueAt: ticket.firstResponseDueAt.toISOString(),
     });
+    await startEscalationIfConfigured(payload.tenantId, ticket.id);
     return;
   }
 
@@ -37,4 +39,5 @@ export async function checkSlaBreach(payload: SlaBreachCheckJobPayload): Promise
     subject: ticket.subject,
     resolutionDueAt: ticket.resolutionDueAt.toISOString(),
   });
+  await startEscalationIfConfigured(payload.tenantId, ticket.id);
 }

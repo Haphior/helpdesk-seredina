@@ -2,6 +2,7 @@ import { prisma, withTenantTx, type Prisma, type TicketPriority, type TicketStat
 import { emailSendQueue } from '../../lib/queue';
 import { dispatchWebhookEvent } from '../../lib/webhookDispatch';
 import { computeSlaDueAts, scheduleSlaBreachChecks } from '../sla/service';
+import { getActiveEscalationForTicket } from '../oncall/service';
 
 const DEFAULT_TICKET_STATUSES: { key: string; label: string; category: TicketStatusCategory; sortOrder: number }[] = [
   { key: 'open', label: 'Open', category: 'OPEN', sortOrder: 0 },
@@ -209,7 +210,7 @@ export async function listTickets(tenantId: string, filter: ListTicketsFilter = 
 }
 
 export async function getTicket(tenantId: string, ticketId: string) {
-  return withTenantTx(prisma, tenantId, async (tx) => {
+  const ticket = await withTenantTx(prisma, tenantId, async (tx) => {
     const ticket = await tx.ticket.findUnique({
       where: { id: ticketId },
       include: {
@@ -249,6 +250,11 @@ export async function getTicket(tenantId: string, ticketId: string) {
       })),
     };
   });
+
+  // A separate transaction, not nested inside the one above -- getActiveEscalationForTicket
+  // opens its own withTenantTx. See docs/adr/0020-oncall-escalation.md.
+  const escalation = await getActiveEscalationForTicket(tenantId, ticketId);
+  return { ...ticket, escalation };
 }
 
 export interface AddMessageInput {

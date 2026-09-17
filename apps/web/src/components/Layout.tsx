@@ -5,6 +5,7 @@ import { apiGet } from '../lib/api';
 import { Avatar } from './Avatar';
 import {
   AssetsIcon,
+  BellIcon,
   BoltIcon,
   BookIcon,
   CalendarIcon,
@@ -50,6 +51,7 @@ const navItems = [
   { to: '/webhooks', label: 'Webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' as const },
   { to: '/macros', label: 'Macros', icon: BoltIcon, permission: 'tickets:manage_all' as const },
   { to: '/sla-policies', label: 'SLA Policies', icon: ClockIcon, permission: 'tickets:manage_all' as const },
+  { to: '/on-call', label: 'On-Call & Escalation', icon: BellIcon, permission: 'tickets:manage_all' as const },
   { to: '/business-hours', label: 'Business Hours', icon: CalendarIcon, permission: 'tickets:manage_all' as const },
 ];
 

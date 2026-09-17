@@ -708,15 +708,27 @@ never triggered this — correctly, since presence excludes the caller's own
 user, and two contexts sharing one account are not a collision); bulk-
 assigned two tickets from the queue via the new checkboxes and confirmed
 both picked up the new assignee immediately. Zero console errors.
-- **On-call scheduling + SLA escalation chains.** The direct sequel to this
-  pass's SLA engine, not a separate concern — Opsgenie-inside-Jira-SM is the
-  clearest competitive example of exactly this combination. Where the SLA
-  engine's breach webhook (`sla.*_breached`) is the endpoint today, this adds
-  what actually receives it: an on-call rotation (`OnCallSchedule` +
-  `OnCallShift`, whoever's on shift right now) and an escalation chain ("if
-  the on-call person hasn't acknowledged in N minutes, escalate to the next
-  tier") that consumes the same breach-check delayed-job mechanism already
-  built rather than a second scheduler.
+**On-call scheduling + SLA escalation chains ✅ (this pass)** — the direct
+sequel to the SLA engine, not a separate concern: where the breach webhook
+(`sla.*_breached`) was the endpoint before, this adds what actually receives
+it. `OnCallSchedule` + `OnCallShift` model "whoever's on shift right now";
+one ordered `EscalationTier` chain per tenant (each tier notifying either a
+fixed person or an on-call schedule) escalates through tiers when nobody
+acknowledges in time, tracked by `EscalationRun`. The engine lives entirely
+in `apps/worker` — it schedules its own follow-up delayed BullMQ job after
+notifying each tier and re-checks live state when that job fires, the exact
+same pattern `checkSlaBreach` already used, not a second scheduler. See
+`docs/adr/0020-oncall-escalation.md`.
+
+Verified: 9 new integration tests against real Postgres (schedule/shift
+CRUD, `whoIsOnShift`, tier validation and ordering, the acknowledge path),
+full suite 91/91 green, all three of `apps/api`/`apps/web`/`apps/worker`
+typecheck clean. Browser-verified end to end **with the actual worker
+process live**: set a 1-minute SLA, built a real 2-tier escalation chain,
+created a ticket and never responded, then watched in real time (~2.5
+minutes of actual delayed-job execution) the breach fire, tier 1 get
+notified, tier 1 time out, tier 2 get notified, and the acknowledgement
+banner update correctly after clicking Acknowledge. Zero console errors.
 **Service Catalog ✅ (this pass)** — a tenant-defined list of *requestable
 things* ("new laptop," "VPN access," "onboard a contractor"), each pointing
 at its own form. The missing piece `docs/adr/0006-custom-fields.md` already

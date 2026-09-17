@@ -60,6 +60,10 @@ model Tenant {
   services              Service[]
   serviceAssets         ServiceAsset[]
   kbArticles            KbArticle[]
+  onCallSchedules       OnCallSchedule[]
+  onCallShifts          OnCallShift[]
+  escalationTiers       EscalationTier[]
+  escalationRuns        EscalationRun[]
 
   @@map("tenants")
 }
@@ -121,6 +125,9 @@ model User {
   processStepAssignments ProcessStepInstance[]
   dashboardWidgets     DashboardWidget[]
   kbArticles           KbArticle[]
+  onCallShifts         OnCallShift[]
+  escalationTiers      EscalationTier[]
+  acknowledgedEscalations EscalationRun[]
 
   @@unique([tenantId, email])
   @@map("users")
@@ -252,9 +259,10 @@ model Ticket {
   mergedInto    Ticket?   @relation("TicketMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
   mergedTickets Ticket[]  @relation("TicketMerge")
 
-  messages     Message[]
-  assets       TicketAsset[]
-  processSteps ProcessStepInstance[]
+  messages        Message[]
+  assets          TicketAsset[]
+  processSteps    ProcessStepInstance[]
+  escalationRuns  EscalationRun[]
 
   @@unique([tenantId, number])
   @@index([tenantId, channel, externalId])
@@ -895,4 +903,91 @@ model Problem {
 
   @@unique([tenantId, number])
   @@map("problems")
+}
+
+// "Whoever's on shift right now" -- a named rotation (e.g. "Primary IT
+// On-Call") that EscalationTier below can point at instead of a fixed user.
+// See docs/adr/0020-oncall-escalation.md.
+model OnCallSchedule {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  shifts          OnCallShift[]
+  escalationTiers EscalationTier[]
+
+  @@unique([tenantId, name])
+  @@map("on_call_schedules")
+}
+
+// A block of time one user is on-call for a schedule. Overlapping shifts on the
+// same schedule aren't prevented at the DB level (same posture as everywhere
+// else a scheduling conflict is a service-layer concern, not a constraint) --
+// "who's on shift right now" just picks the first match if more than one
+// overlaps.
+model OnCallShift {
+  id         String         @id @default(uuid()) @db.Uuid
+  tenantId   String         @map("tenant_id") @db.Uuid
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  scheduleId String         @map("schedule_id") @db.Uuid
+  schedule   OnCallSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  userId     String         @map("user_id") @db.Uuid
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startsAt   DateTime       @map("starts_at")
+  endsAt     DateTime       @map("ends_at")
+
+  @@map("on_call_shifts")
+}
+
+// One ordered chain per tenant (like BusinessHours, at most meaningfully one
+// "the" chain -- no separate named-policy wrapper for v1). Exactly one of
+// userId/onCallScheduleId is set per tier -- who this tier notifies, either a
+// fixed person or "whoever's on shift right now." escalateAfterMinutes is how
+// long this tier waits for an acknowledgement before the chain moves on (or,
+// on the last tier, before giving up) -- meaningful on every tier, including
+// the last, not just the ones with a "next."
+model EscalationTier {
+  id                   String          @id @default(uuid()) @db.Uuid
+  tenantId             String          @map("tenant_id") @db.Uuid
+  tenant               Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sortOrder            Int             @default(0) @map("sort_order")
+  userId               String?         @map("user_id") @db.Uuid
+  user                 User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  onCallScheduleId     String?         @map("on_call_schedule_id") @db.Uuid
+  onCallSchedule       OnCallSchedule? @relation(fields: [onCallScheduleId], references: [id], onDelete: Cascade)
+  escalateAfterMinutes Int             @map("escalate_after_minutes")
+
+  @@map("escalation_tiers")
+}
+
+// ACTIVE until acknowledged (-> ACKNOWLEDGED) or every tier's wait elapses with
+// no ack (-> EXHAUSTED, a dead end in v1 -- see ADR).
+enum EscalationRunStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  EXHAUSTED
+}
+
+// One per SLA breach that actually started an escalation -- "consumes the same
+// breach-check delayed-job mechanism already built rather than a second
+// scheduler" (docs/ROADMAP.md): apps/worker schedules its own follow-up delayed
+// job after notifying each tier, re-checking this row's live state when it
+// fires, exactly like apps/worker/src/sla/checkBreach.ts already does for the
+// breach check itself.
+model EscalationRun {
+  id                   String              @id @default(uuid()) @db.Uuid
+  tenantId             String              @map("tenant_id") @db.Uuid
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ticketId             String              @map("ticket_id") @db.Uuid
+  ticket               Ticket              @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  currentTierIndex     Int                 @default(0) @map("current_tier_index")
+  status               EscalationRunStatus @default(ACTIVE)
+  acknowledgedAt       DateTime?           @map("acknowledged_at")
+  acknowledgedByUserId String?             @map("acknowledged_by_user_id") @db.Uuid
+  acknowledgedByUser   User?               @relation(fields: [acknowledgedByUserId], references: [id], onDelete: SetNull)
+  createdAt            DateTime            @default(now()) @map("created_at")
+
+  @@map("escalation_runs")
 }

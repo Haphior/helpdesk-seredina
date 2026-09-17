@@ -54,6 +54,10 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   Service: 'tenantId',
   ServiceAsset: 'tenantId',
   KbArticle: 'tenantId',
+  OnCallSchedule: 'tenantId',
+  OnCallShift: 'tenantId',
+  EscalationTier: 'tenantId',
+  EscalationRun: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

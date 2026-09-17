@@ -186,6 +186,7 @@ export interface TicketDetail extends Ticket {
   problem?: { id: string; number: number; title: string } | null;
   mergedInto?: { id: string; number: number; subject: string } | null;
   mergedTickets?: { id: string; number: number; subject: string }[];
+  escalation?: EscalationRun | null;
 }
 
 export interface ApiKeySummary {
@@ -384,4 +385,37 @@ export interface PublicKbArticle {
   slug: string;
   body: string;
   updatedAt: string;
+}
+
+export interface OnCallShift {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  user: { id: string; name: string };
+}
+
+export interface OnCallSchedule {
+  id: string;
+  name: string;
+  createdAt: string;
+  shifts: OnCallShift[];
+}
+
+export interface EscalationTier {
+  id: string;
+  sortOrder: number;
+  escalateAfterMinutes: number;
+  user: { id: string; name: string } | null;
+  onCallSchedule: { id: string; name: string } | null;
+}
+
+export type EscalationRunStatus = 'ACTIVE' | 'ACKNOWLEDGED' | 'EXHAUSTED';
+
+export interface EscalationRun {
+  id: string;
+  currentTierIndex: number;
+  status: EscalationRunStatus;
+  acknowledgedAt: string | null;
+  acknowledgedByUser: { id: string; name: string } | null;
+  createdAt: string;
 }

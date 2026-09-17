@@ -3,10 +3,12 @@ import { Worker } from 'bullmq';
 import {
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
+  ESCALATION_ADVANCE_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
+  type EscalationAdvanceJobPayload,
   type SlaBreachCheckJobPayload,
   type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
@@ -15,6 +17,7 @@ import { pollActiveEmailChannels } from './email/poll';
 import { sendEmailMessage } from './email/send';
 import { deliverWebhook, markWebhookDeliveryFailed } from './webhooks/deliver';
 import { checkSlaBreach } from './sla/checkBreach';
+import { advanceEscalation } from './oncall/escalate';
 import { captureError, initErrorTracking } from './lib/errorTracking';
 
 initErrorTracking();
@@ -65,6 +68,14 @@ const slaBreachWorker = new Worker<SlaBreachCheckJobPayload>(
   { connection, concurrency: 4 },
 );
 
+const escalationAdvanceWorker = new Worker<EscalationAdvanceJobPayload>(
+  ESCALATION_ADVANCE_QUEUE_NAME,
+  async (job) => {
+    await advanceEscalation(job.data);
+  },
+  { connection, concurrency: 4 },
+);
+
 discoveryWorker.on('failed', (job, err) => {
   console.error(`[worker] discovery job ${job?.id} failed:`, err);
   captureError(err);
@@ -85,6 +96,10 @@ webhookDeliveryWorker.on('failed', (job, err) => {
 });
 slaBreachWorker.on('failed', (job, err) => {
   console.error(`[worker] sla breach check ${job?.id} failed:`, err);
+  captureError(err);
+});
+escalationAdvanceWorker.on('failed', (job, err) => {
+  console.error(`[worker] escalation advance ${job?.id} failed:`, err);
   captureError(err);
 });
 
@@ -110,5 +125,12 @@ async function pollLoop() {
 
 pollLoop();
 
-console.log('[worker] listening on queues:', DISCOVERY_QUEUE_NAME, EMAIL_SEND_QUEUE_NAME, WEBHOOK_DELIVERY_QUEUE_NAME, SLA_BREACH_QUEUE_NAME);
+console.log(
+  '[worker] listening on queues:',
+  DISCOVERY_QUEUE_NAME,
+  EMAIL_SEND_QUEUE_NAME,
+  WEBHOOK_DELIVERY_QUEUE_NAME,
+  SLA_BREACH_QUEUE_NAME,
+  ESCALATION_ADVANCE_QUEUE_NAME,
+);
 console.log('[worker] polling email channels every', EMAIL_POLL_INTERVAL_MS, 'ms');

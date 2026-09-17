@@ -25,6 +25,7 @@ import { ProblemDetail } from './pages/ProblemDetail';
 import { ServiceCatalog } from './pages/ServiceCatalog';
 import { Services } from './pages/Services';
 import { KnowledgeBase } from './pages/KnowledgeBase';
+import { OnCall } from './pages/OnCall';
 import { PublicKb } from './pages/PublicKb';
 import { PublicKbArticlePage } from './pages/PublicKbArticle';
 
@@ -57,6 +58,7 @@ export function App() {
             <Route path="/service-catalog" element={<ServiceCatalog />} />
             <Route path="/services" element={<Services />} />
             <Route path="/knowledge-base" element={<KnowledgeBase />} />
+            <Route path="/on-call" element={<OnCall />} />
             <Route path="/webhooks" element={<Webhooks />} />
             <Route path="/macros" element={<Macros />} />
             <Route path="/sla-policies" element={<SlaPolicies />} />

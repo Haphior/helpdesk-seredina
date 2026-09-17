@@ -271,3 +271,13 @@ export function BookIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function BellIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M5 14.5V9a5 5 0 0 1 10 0v5.5" />
+      <path d="M3.5 14.5h13" />
+      <path d="M8.3 17a1.8 1.8 0 0 0 3.4 0" />
+    </Icon>
+  );
+}
