@@ -3,6 +3,10 @@ import { apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Role, UserSummary } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Card } from '../components/Card';
 import { useAuth } from '../auth/AuthContext';
 
 export function Users() {
@@ -56,12 +60,7 @@ export function Users() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Users</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New user
-        </button>
+        <Button onClick={() => setShowCreate(true)}>New user</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Agents/admins in this organization. No invite email yet: share the password with them directly.
@@ -71,7 +70,7 @@ export function Users() {
       {users === null && <p className="text-sm text-slate-500">Loading…</p>}
 
       {users && users.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="grid grid-cols-[1fr_1fr_140px_160px_170px] items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-400">
             <span>Name</span>
             <span>Email</span>
@@ -87,18 +86,19 @@ export function Users() {
               >
                 <span className="truncate text-[13.5px] font-semibold text-slate-800">{u.name}</span>
                 <span className="truncate text-[13px] text-slate-500">{u.email}</span>
-                <select
+                <Select
+                  hideLabel
+                  aria-label={`Role for ${u.name}`}
                   value={u.role?.key ?? ''}
                   onChange={(e) => changeRole(u.id, e.target.value)}
                   disabled={!u.isActive}
-                  className="w-fit rounded-md border border-slate-300 px-2 py-1 text-xs disabled:opacity-50"
                 >
                   {roles.map((r) => (
                     <option key={r.id} value={r.key}>
                       {r.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <div className="flex items-center gap-1.5">
                   {u.isActive ? (
                     <Badge tone="emerald" dot>
@@ -130,7 +130,7 @@ export function Users() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {showCreate && <CreateUserModal roles={roles} onClose={() => setShowCreate(false)} onCreated={load} />}
@@ -185,64 +185,33 @@ function CreateUserModal({
   return (
     <Modal title="New user" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Initial password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Role</span>
-          <select
-            value={roleKey}
-            onChange={(e) => setRoleKey(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-          >
-            {roles.map((r) => (
-              <option key={r.id} value={r.key}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Input
+          label="Initial password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={8}
+        />
+        <Select label="Role" value={roleKey} onChange={(e) => setRoleKey(e.target.value)}>
+          {roles.map((r) => (
+            <option key={r.id} value={r.key}>
+              {r.name}
+            </option>
+          ))}
+        </Select>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Creating…' : 'Create'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -277,41 +246,29 @@ function ResetPasswordModal({ user, onClose }: { user: UserSummary; onClose: () 
             Password reset. Share the new password with {user.name} directly — there's no email flow to send it for you.
           </p>
           <div className="flex justify-end">
-            <button
-              onClick={onClose}
-              className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
-            >
-              Done
-            </button>
+            <Button onClick={onClose}>Done</Button>
           </div>
         </div>
       ) : (
         <form onSubmit={onSubmit} className="space-y-3">
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">New password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-            />
-          </label>
+          <Input
+            label="New password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+          />
 
           {error && <p className="text-sm text-rose-600">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+            <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" isLoading={submitting}>
               {submitting ? 'Saving…' : 'Reset password'}
-            </button>
+            </Button>
           </div>
         </form>
       )}

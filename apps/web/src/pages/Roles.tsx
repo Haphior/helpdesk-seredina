@@ -3,6 +3,9 @@ import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Permission, Role } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Card } from '../components/Card';
 
 const ALL_PERMISSIONS: Permission[] = [
   'tickets:read',
@@ -44,12 +47,7 @@ export function Roles() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Roles</h1>
-        <button
-          onClick={() => setEditing('new')}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New role
-        </button>
+        <Button onClick={() => setEditing('new')}>New role</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Every role here is available immediately when assigning a user (Administration → Users) —
@@ -60,7 +58,7 @@ export function Roles() {
       {roles === null && <p className="text-sm text-slate-500">Loading…</p>}
 
       {roles && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="divide-y divide-slate-100">
             {roles.map((r) => (
               <div key={r.id} className="flex items-center justify-between px-5 py-3.5">
@@ -85,7 +83,7 @@ export function Roles() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {editing && <RoleModal role={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={load} />}
@@ -127,36 +125,25 @@ function RoleModal({ role, onClose, onSaved }: { role: Role | null; onClose: () 
     <Modal title={role ? 'Edit role' : 'New role'} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         {!role && (
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Key</span>
-            <input
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              placeholder="billing_viewer"
-              required
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-            />
+          <div>
+            <Input label="Key" value={key} onChange={(e) => setKey(e.target.value)} placeholder="billing_viewer" required />
             <span className="mt-1 block text-[12px] text-slate-400">Lowercase, alphanumeric and underscores. Can't be changed later.</span>
-          </label>
+          </div>
         )}
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Billing Viewer"
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Billing Viewer" required />
 
         <div>
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Permissions</span>
           <div className="grid grid-cols-2 gap-1.5">
             {ALL_PERMISSIONS.map((p) => (
               <label key={p} className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1.5 text-[12.5px]">
-                <input type="checkbox" checked={permissions.includes(p)} onChange={() => togglePermission(p)} />
+                <input
+                  type="checkbox"
+                  checked={permissions.includes(p)}
+                  onChange={() => togglePermission(p)}
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                />
                 <span className="font-mono">{p}</span>
               </label>
             ))}
@@ -166,16 +153,12 @@ function RoleModal({ role, onClose, onSaved }: { role: Role | null; onClose: () 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

@@ -4,6 +4,8 @@ import { apiGet, apiPatch, ApiError } from '../lib/api';
 import type { ProcessInstance, ProcessStepStatus, UserSummary } from '../lib/types';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
+import { Select } from '../components/Select';
+import { Card } from '../components/Card';
 import { BackArrowIcon, LockIcon } from '../components/icons';
 import { formatDateTime, RISK_TONE } from '../lib/format';
 
@@ -135,7 +137,7 @@ export function ProcessDetail() {
             ? ['PENDING', 'APPROVED', 'REJECTED', 'SKIPPED']
             : ['PENDING', 'DONE', 'SKIPPED'];
           return (
-            <div key={step.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Card key={step.id}>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5">
                   <span className="text-[13px] font-medium text-slate-400">{i + 1}.</span>
@@ -153,41 +155,42 @@ export function ProcessDetail() {
               </div>
 
               <div className="mt-3 flex items-center gap-4">
-                <label className="flex items-center gap-2 text-[12.5px] text-slate-500">
-                  Status
-                  <select
-                    value={step.status}
-                    onChange={(e) => patchStep(step.id, { status: e.target.value })}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-[12.5px]"
-                  >
-                    {statusOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="flex items-center gap-2 text-[12.5px] text-slate-500">
+                  <span>Status</span>
+                  <div className="w-32">
+                    <Select hideLabel aria-label={`Status for step ${step.label}`} value={step.status} onChange={(e) => patchStep(step.id, { status: e.target.value })}>
+                      {statusOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
 
-                <label className="flex items-center gap-2 text-[12.5px] text-slate-500">
-                  Assignee
-                  <select
-                    value={step.assigneeId ?? ''}
-                    onChange={(e) => patchStep(step.id, { assigneeId: e.target.value || null })}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-[12.5px]"
-                  >
-                    <option value="">Unassigned</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="flex items-center gap-2 text-[12.5px] text-slate-500">
+                  <span>Assignee</span>
+                  <div className="w-36">
+                    <Select
+                      hideLabel
+                      aria-label={`Assignee for step ${step.label}`}
+                      value={step.assigneeId ?? ''}
+                      onChange={(e) => patchStep(step.id, { assigneeId: e.target.value || null })}
+                    >
+                      <option value="">Unassigned</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
 
                 {step.assignee && <Avatar name={step.assignee.name} size={20} />}
                 {step.completedAt && <span className="text-[11.5px] text-slate-400">{formatDateTime(step.completedAt)}</span>}
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

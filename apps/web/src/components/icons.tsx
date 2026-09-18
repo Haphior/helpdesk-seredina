@@ -307,3 +307,16 @@ export function ShieldIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+// Not drawn from the `Icon` base (that fixed stroke reads as a static glyph
+// mid-spin) -- a spinner needs a partial arc so rotation is visible, and
+// motion-sensitive users get the honest alternative (see Button.tsx) rather
+// than prefers-reduced-motion just freezing an ambiguous full ring in place.
+export function SpinnerIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="none" {...props}>
+      <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.6" opacity="0.25" />
+      <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}

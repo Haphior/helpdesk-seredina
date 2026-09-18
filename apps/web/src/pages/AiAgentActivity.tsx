@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { AiAgentRun, AiAgentRunStatus, AiToolDefinitionSummary, AutonomyPolicy } from '../lib/types';
 import { Badge, type BadgeTone } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Card } from '../components/Card';
 import { formatDateTime } from '../lib/format';
 
 const STATUS_TONE: Record<AiAgentRunStatus, BadgeTone> = {
@@ -103,7 +107,7 @@ export function AiAgentActivity() {
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
 
-      <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <Card className="mb-8 !p-5">
         <h2 className="mb-1 text-[15px] font-bold text-slate-800">Auto-execute policy</h2>
         <p className="mb-4 text-[12.5px] text-slate-500">
           A tool checked here runs immediately when an AI agent calls it. Unchecked tools always wait for approval —
@@ -137,40 +141,46 @@ export function AiAgentActivity() {
 
             <label className="flex max-w-xs items-center justify-between gap-3 text-[13px] text-slate-600">
               <span>Max auto-executed actions per day</span>
-              <input
-                type="number"
-                min={0}
-                max={1000}
-                value={policy.maxActionsPerDay}
-                onChange={(e) => updateMaxActions(Number(e.target.value))}
-                disabled={savingPolicy}
-                className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
-              />
+              <div className="w-20">
+                <Input
+                  hideLabel
+                  aria-label="Max auto-executed actions per day"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  value={policy.maxActionsPerDay}
+                  onChange={(e) => updateMaxActions(Number(e.target.value))}
+                  disabled={savingPolicy}
+                />
+              </div>
             </label>
           </>
         )}
-      </section>
+      </Card>
 
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-[15px] font-bold text-slate-800">Activity log</h2>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as AiAgentRunStatus | '')}
-          className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
-        >
-          <option value="PENDING_APPROVAL">Needs approval</option>
-          <option value="EXECUTED">Executed</option>
-          <option value="REJECTED">Rejected</option>
-          <option value="FAILED">Failed</option>
-          <option value="">All</option>
-        </select>
+        <div className="w-40">
+          <Select
+            hideLabel
+            aria-label="Filter activity by status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as AiAgentRunStatus | '')}
+          >
+            <option value="PENDING_APPROVAL">Needs approval</option>
+            <option value="EXECUTED">Executed</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="FAILED">Failed</option>
+            <option value="">All</option>
+          </Select>
+        </div>
       </div>
 
       {runs === null && <p className="text-sm text-slate-500">Loading…</p>}
       {runs?.length === 0 && <p className="text-sm text-slate-500">Nothing here yet.</p>}
 
       {runs && runs.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="divide-y divide-slate-100">
             {runs.map((run) => (
               <div key={run.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
@@ -196,26 +206,18 @@ export function AiAgentActivity() {
                 </div>
                 {run.status === 'PENDING_APPROVAL' && (
                   <div className="flex flex-shrink-0 gap-2">
-                    <button
-                      onClick={() => act(run.id, 'reject')}
-                      disabled={actingOnId === run.id}
-                      className="rounded-md border border-slate-200 px-3 py-1.5 text-[12.5px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                    >
+                    <Button size="sm" variant="secondary" onClick={() => act(run.id, 'reject')} isLoading={actingOnId === run.id}>
                       Reject
-                    </button>
-                    <button
-                      onClick={() => act(run.id, 'approve')}
-                      disabled={actingOnId === run.id}
-                      className="rounded-md bg-indigo-600 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-                    >
+                    </Button>
+                    <Button size="sm" onClick={() => act(run.id, 'approve')} isLoading={actingOnId === run.id}>
                       Approve
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

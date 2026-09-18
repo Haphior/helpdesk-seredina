@@ -11,8 +11,10 @@ import type {
   WidgetType,
 } from '../lib/types';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Card } from '../components/Card';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, EyeIcon, EyeOffIcon } from '../components/icons';
-import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
+import { PRIORITY_TONE, STATUS_CATEGORY_TONE } from '../lib/format';
 
 const WIDGET_LABEL: Record<WidgetType, string> = {
   onboarding_checklist: 'Get started',
@@ -92,9 +94,9 @@ export function Dashboard() {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="mb-1 text-2xl font-semibold text-slate-900">Dashboard</h1>
-      <p className="mb-5 text-sm text-slate-500">
+    <div className="px-8 py-7">
+      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">Dashboard</h1>
+      <p className="mb-5 text-[13.5px] text-slate-500">
         Hide or reorder widgets with the controls that appear on hover — it's saved per person, not tenant-wide.
       </p>
 
@@ -139,24 +141,45 @@ function WidgetCard({
   onMoveDown: () => void;
   children: React.ReactNode;
 }) {
+  const label = WIDGET_LABEL[pref.widgetType];
   return (
-    <div className={`group rounded-xl border border-slate-200 bg-white p-4 shadow-sm ${!pref.visible ? 'opacity-50' : ''}`}>
+    <Card className={`group ${!pref.visible ? 'opacity-50' : ''}`}>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[13.5px] font-semibold text-slate-700">{WIDGET_LABEL[pref.widgetType]}</h2>
+        <h2 className="text-[13.5px] font-semibold text-slate-700">{label}</h2>
         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <button onClick={onMoveUp} disabled={!canMoveUp} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30">
+          <Button
+            iconOnly
+            variant="ghost"
+            size="sm"
+            aria-label={`Move ${label} widget up`}
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
+          >
             <ChevronUpIcon width={13} height={13} />
-          </button>
-          <button onClick={onMoveDown} disabled={!canMoveDown} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30">
+          </Button>
+          <Button
+            iconOnly
+            variant="ghost"
+            size="sm"
+            aria-label={`Move ${label} widget down`}
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+          >
             <ChevronDownIcon width={13} height={13} />
-          </button>
-          <button onClick={onToggle} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+          </Button>
+          <Button
+            iconOnly
+            variant="ghost"
+            size="sm"
+            aria-label={pref.visible ? `Hide ${label} widget` : `Show ${label} widget`}
+            onClick={onToggle}
+          >
             {pref.visible ? <EyeIcon width={13} height={13} /> : <EyeOffIcon width={13} height={13} />}
-          </button>
+          </Button>
         </div>
       </div>
       {pref.visible ? children : <p className="text-xs text-slate-400">Hidden</p>}
-    </div>
+    </Card>
   );
 }
 
@@ -211,6 +234,20 @@ function formatShortDate(iso?: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+// The one-segment gauge shared by PriorityBreakdownWidget and
+// AgentWorkloadWidget -- three near-identical inline copies of this same
+// h-2/rounded-full/bg-slate-100 + colored fill markup existed before this
+// pass; SlaComplianceWidget's two-segment bar below is a different enough
+// shape (met/breached split, not a single value against a shared max) to
+// stay its own thing rather than forcing a shared abstraction over both.
+function ProgressBar({ value, max, colorClassName }: { value: number; max: number; colorClassName: string }) {
+  return (
+    <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+      <div className={`h-full rounded-full ${colorClassName}`} style={{ width: `${(value / max) * 100}%` }} />
+    </div>
+  );
+}
+
 const PRIORITY_ORDER = ['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const;
 
 function PriorityBreakdownWidget({ counts }: { counts: Record<string, number> }) {
@@ -224,9 +261,7 @@ function PriorityBreakdownWidget({ counts }: { counts: Record<string, number> })
             <Badge tone={PRIORITY_TONE[p]} dot>
               {p}
             </Badge>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-indigo-400" style={{ width: `${(count / max) * 100}%` }} />
-            </div>
+            <ProgressBar value={count} max={max} colorClassName="bg-indigo-400" />
             <span className="w-6 text-right text-[12.5px] font-medium text-slate-600">{count}</span>
           </div>
         );
@@ -265,18 +300,14 @@ function AgentWorkloadWidget({ report }: { report: AgentWorkloadReport }) {
       {report.agents.map((a) => (
         <div key={a.userId} className="flex items-center gap-2.5">
           <span className="w-24 truncate text-[12.5px] text-slate-600">{a.name}</span>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-indigo-400" style={{ width: `${(a.count / max) * 100}%` }} />
-          </div>
+          <ProgressBar value={a.count} max={max} colorClassName="bg-indigo-400" />
           <span className="w-6 text-right text-[12.5px] font-medium text-slate-600">{a.count}</span>
         </div>
       ))}
       {report.unassigned > 0 && (
         <div className="flex items-center gap-2.5">
           <span className="w-24 truncate text-[12.5px] text-slate-400">Unassigned</span>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-slate-300" style={{ width: `${(report.unassigned / max) * 100}%` }} />
-          </div>
+          <ProgressBar value={report.unassigned} max={max} colorClassName="bg-slate-300" />
           <span className="w-6 text-right text-[12.5px] font-medium text-slate-400">{report.unassigned}</span>
         </div>
       )}

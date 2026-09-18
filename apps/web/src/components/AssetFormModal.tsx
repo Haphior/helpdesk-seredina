@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { apiGet } from '../lib/api';
 import { Modal } from './Modal';
+import { Button } from './Button';
+import { Input } from './Input';
+import { Select } from './Select';
 import type { Asset, AssetModel, AssetStatus, AssetType } from '../lib/types';
 
 const ASSET_TYPES: AssetType[] = ['SERVER', 'WORKSTATION', 'NETWORK_DEVICE', 'PRINTER', 'MOBILE_DEVICE', 'OTHER'];
@@ -93,154 +96,81 @@ export function AssetFormModal({
   return (
     <Modal title={asset ? 'Edit asset' : 'New asset'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <TextField label="Name" value={values.name} onChange={(v) => setField('name', v)} required />
+        <Input label="Name" value={values.name} onChange={(e) => setField('name', e.target.value)} required />
 
         <div className="grid grid-cols-2 gap-2">
-          <SelectField
-            label="Type"
-            value={values.assetType}
-            onChange={(v) => setField('assetType', v as AssetType)}
-            options={ASSET_TYPES}
-          />
-          <SelectField
-            label="Status"
-            value={values.status}
-            onChange={(v) => setField('status', v as AssetStatus)}
-            options={ASSET_STATUSES}
-          />
+          <Select label="Type" value={values.assetType} onChange={(e) => setField('assetType', e.target.value as AssetType)}>
+            {ASSET_TYPES.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </Select>
+          <Select label="Status" value={values.status} onChange={(e) => setField('status', e.target.value as AssetStatus)}>
+            {ASSET_STATUSES.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </Select>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <TextField
+          <Input
             label="IP address"
             value={values.ipAddress ?? ''}
-            onChange={(v) => setField('ipAddress', v || null)}
+            onChange={(e) => setField('ipAddress', e.target.value || null)}
             placeholder="192.168.1.10"
           />
-          <TextField
-            label="MAC address"
-            value={values.macAddress ?? ''}
-            onChange={(v) => setField('macAddress', v || null)}
-          />
+          <Input label="MAC address" value={values.macAddress ?? ''} onChange={(e) => setField('macAddress', e.target.value || null)} />
         </div>
 
-        <TextField
-          label="Hostname"
-          value={values.hostname ?? ''}
-          onChange={(v) => setField('hostname', v || null)}
-        />
+        <Input label="Hostname" value={values.hostname ?? ''} onChange={(e) => setField('hostname', e.target.value || null)} />
 
         {catalogModels.length > 0 && (
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Catalog model</span>
-            <select
-              value={values.modelId ?? ''}
-              onChange={(e) => pickCatalogModel(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-            >
-              <option value="">— pick to prefill manufacturer/model/type —</option>
-              {catalogModels.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.manufacturer.name} / {m.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select label="Catalog model" value={values.modelId ?? ''} onChange={(e) => pickCatalogModel(e.target.value)}>
+            <option value="">— pick to prefill manufacturer/model/type —</option>
+            {catalogModels.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.manufacturer.name} / {m.name}
+              </option>
+            ))}
+          </Select>
         )}
 
         <div className="grid grid-cols-2 gap-2">
-          <TextField
+          <Input
             label="Manufacturer"
             value={values.manufacturer ?? ''}
-            onChange={(v) => setField('manufacturer', v || null)}
+            onChange={(e) => setField('manufacturer', e.target.value || null)}
           />
-          <TextField label="Model" value={values.model ?? ''} onChange={(v) => setField('model', v || null)} />
+          <Input label="Model" value={values.model ?? ''} onChange={(e) => setField('model', e.target.value || null)} />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <TextField
+          <Input
             label="Serial number"
             value={values.serialNumber ?? ''}
-            onChange={(v) => setField('serialNumber', v || null)}
+            onChange={(e) => setField('serialNumber', e.target.value || null)}
           />
-          <TextField
+          <Input
             label="Operating system"
             value={values.operatingSystem ?? ''}
-            onChange={(v) => setField('operatingSystem', v || null)}
+            onChange={(e) => setField('operatingSystem', e.target.value || null)}
           />
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
-  );
-}
-
-function TextField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  required,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block font-medium text-slate-700">{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-      />
-    </label>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-}) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block font-medium text-slate-700">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-      >
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }

@@ -15,6 +15,8 @@ import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
 import { ClockIcon, SearchIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime, isTicketOverdue } from '../lib/format';
 
@@ -157,14 +159,7 @@ export function TicketsQueue() {
               </span>
             )}
           </div>
-          {hasPermission('tickets:write') && (
-            <button
-              onClick={() => setShowRequest(true)}
-              className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-            >
-              New ticket
-            </button>
-          )}
+          {hasPermission('tickets:write') && <Button onClick={() => setShowRequest(true)}>New ticket</Button>}
         </div>
 
         <div className="flex items-center justify-between gap-4">
@@ -182,13 +177,14 @@ export function TicketsQueue() {
             ))}
           </div>
 
-          <div className="flex w-[280px] items-center gap-2 rounded-[9px] border border-slate-200 bg-white px-3 py-2">
-            <SearchIcon width={15} height={15} className="text-slate-400" />
-            <input
+          <div className="w-[280px]">
+            <Input
+              hideLabel
+              aria-label="Search tickets"
+              icon={<SearchIcon width={15} height={15} />}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search tickets…"
-              className="w-full bg-transparent text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none"
             />
           </div>
         </div>

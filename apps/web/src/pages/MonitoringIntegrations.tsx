@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API_URL } from '../lib/api';
+import { Button } from '../components/Button';
+import { Card } from '../components/Card';
 
 function CopyableField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -23,12 +25,9 @@ function CopyableField({ label, value }: { label: string; value: string }) {
         <code className="flex-1 truncate rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-700">
           {value}
         </code>
-        <button
-          onClick={copy}
-          className="flex-shrink-0 rounded-md border border-slate-200 px-3 py-1.5 text-[12.5px] font-medium text-slate-600 hover:bg-slate-50"
-        >
+        <Button variant="secondary" size="sm" onClick={copy} className="flex-shrink-0">
           {copied ? 'Copied' : 'Copy'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -49,7 +48,7 @@ export function MonitoringIntegrations() {
         for the generic API too.
       </p>
 
-      <section className="max-w-xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <Card className="max-w-xl !p-5">
         <h2 className="mb-1 text-[15px] font-bold text-slate-800">Grafana Alerting</h2>
         <p className="mb-4 text-[12.5px] text-slate-500">
           Works with Grafana's default alert notification payload — no custom notification
@@ -83,7 +82,7 @@ export function MonitoringIntegrations() {
           severity label default to Normal priority. Re-firing and resolved notifications for the same alert
           group fold into the same ticket while it's still open, instead of creating a new one each time.
         </p>
-      </section>
+      </Card>
     </div>
   );
 }

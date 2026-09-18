@@ -332,7 +332,7 @@ export function TicketDetail() {
                     value=""
                     disabled={applyingMacroId !== null}
                     onChange={(e) => handleApplyMacro(e.target.value)}
-                    className="bg-transparent text-xs font-semibold text-slate-500 focus:outline-none"
+                    className="rounded bg-transparent text-xs font-semibold text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
                   >
                     <option value="" disabled>
                       {applyingMacroId ? 'Applying…' : 'Run macro…'}
@@ -515,7 +515,7 @@ export function TicketDetail() {
             onChange={(e) => setReply(e.target.value)}
             placeholder="Write a reply…"
             rows={3}
-            className="w-full resize-none rounded-lg border-0 px-2.5 py-2 text-[13.5px] focus:outline-none"
+            className="w-full resize-none rounded-lg border-0 px-2.5 py-2 text-[13.5px] focus:outline-none focus:ring-2 focus:ring-indigo-100"
           />
           {usedArticles.length > 0 && (
             <p className="mb-1.5 px-1.5 text-[12px] text-slate-400">

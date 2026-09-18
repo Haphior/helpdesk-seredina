@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
 import { apiDelete, apiGet, apiPatch, ApiError } from '../lib/api';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Card } from '../components/Card';
 
 interface TenantAiSettings {
   provider: 'anthropic' | 'openai' | 'ollama' | null;
@@ -91,79 +95,59 @@ export function AiSettings() {
       {!settings ? (
         <p className="text-sm text-slate-500">Loading…</p>
       ) : (
-        <form onSubmit={handleSave} className="max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <label className="mb-3 block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Provider</span>
-            <select
-              value={provider}
-              onChange={(e) => setProvider(e.target.value as typeof provider)}
-              className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
-            >
-              <option value="">Use deployment default</option>
-              {Object.entries(PROVIDER_LABEL).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <Card className="max-w-md !p-5">
+          <form onSubmit={handleSave}>
+            <div className="mb-3">
+              <Select label="Provider" value={provider} onChange={(e) => setProvider(e.target.value as typeof provider)}>
+                <option value="">Use deployment default</option>
+                {Object.entries(PROVIDER_LABEL).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-          {provider && provider !== 'ollama' && (
-            <label className="mb-3 block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">
-                API key {settings.hasApiKey && <span className="text-slate-400">(currently set — leave blank to keep it)</span>}
-              </span>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={settings.hasApiKey ? '••••••••••••' : 'sk-...'}
-                className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
-              />
-            </label>
-          )}
+            {provider && provider !== 'ollama' && (
+              <div className="mb-3">
+                <Input
+                  label="API key"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={settings.hasApiKey ? '••••••••••••' : 'sk-...'}
+                />
+                {settings.hasApiKey && <span className="mt-1 block text-xs text-slate-400">Currently set — leave blank to keep it.</span>}
+              </div>
+            )}
 
-          {provider === 'ollama' && (
-            <label className="mb-3 block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Base URL</span>
-              <input
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="http://localhost:11434/v1"
-                className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
-              />
-            </label>
-          )}
+            {provider === 'ollama' && (
+              <div className="mb-3">
+                <Input label="Base URL" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="http://localhost:11434/v1" />
+              </div>
+            )}
 
-          {provider && (
-            <label className="mb-4 block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Model override (optional)</span>
-              <input
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder={provider === 'ollama' ? 'llama3.1' : provider === 'openai' ? 'gpt-4.1' : 'claude-opus-5'}
-                className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
-              />
-            </label>
-          )}
+            {provider && (
+              <div className="mb-4">
+                <Input
+                  label="Model override (optional)"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder={provider === 'ollama' ? 'llama3.1' : provider === 'openai' ? 'gpt-4.1' : 'claude-opus-5'}
+                />
+              </div>
+            )}
 
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleClear}
-              className="text-[13px] font-medium text-slate-500 hover:text-rose-600"
-            >
-              Clear (use deployment default)
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        </form>
+            <div className="flex items-center justify-between">
+              <button type="button" onClick={handleClear} className="text-[13px] font-medium text-slate-500 hover:text-rose-600">
+                Clear (use deployment default)
+              </button>
+              <Button type="submit" isLoading={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
     </div>
   );

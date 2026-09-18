@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { downloadFile, ApiError } from '../lib/api';
+import { Button } from '../components/Button';
 
 export function DataExport() {
   const [status, setStatus] = useState<'idle' | 'downloading' | 'error'>('idle');
@@ -26,14 +27,9 @@ export function DataExport() {
         backup. Secrets (passwords, API key hashes, webhook signing secrets) are never included.
       </p>
 
-      <button
-        type="button"
-        onClick={handleDownload}
-        disabled={status === 'downloading'}
-        className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
-      >
+      <Button type="button" onClick={handleDownload} isLoading={status === 'downloading'}>
         {status === 'downloading' ? 'Preparing download…' : 'Download export (JSON)'}
-      </button>
+      </Button>
 
       {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
     </div>

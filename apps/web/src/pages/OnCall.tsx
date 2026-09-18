@@ -2,6 +2,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { EscalationTier, OnCallSchedule, UserSummary } from '../lib/types';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Card } from '../components/Card';
 import { ChevronDownIcon, ChevronUpIcon } from '../components/icons';
 import { formatDateTime } from '../lib/format';
 
@@ -134,19 +138,16 @@ export function OnCall() {
       <div className="mb-8">
         <div className="mb-2.5 flex items-center justify-between">
           <h2 className="text-[15px] font-bold text-slate-800">On-call schedules</h2>
-          <button
-            onClick={() => setShowCreateSchedule(true)}
-            className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-[12.5px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-          >
+          <Button size="sm" onClick={() => setShowCreateSchedule(true)}>
             New schedule
-          </button>
+          </Button>
         </div>
 
         {schedules?.length === 0 && <p className="text-sm text-slate-500">No on-call schedules yet.</p>}
 
         <div className="flex flex-col gap-3">
           {schedules?.map((s) => (
-            <div key={s.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Card key={s.id}>
               <div className="mb-2.5 flex items-center justify-between">
                 <span className="text-[14.5px] font-semibold text-slate-800">{s.name}</span>
                 <div className="flex items-center gap-3">
@@ -174,38 +175,42 @@ export function OnCall() {
               </div>
 
               <div className="flex flex-wrap items-end gap-2">
-                <select
-                  value={shiftForm[s.id]?.userId ?? ''}
-                  onChange={(e) => setShiftForm((f) => ({ ...f, [s.id]: { ...f[s.id], userId: e.target.value, startsAt: f[s.id]?.startsAt ?? '', endsAt: f[s.id]?.endsAt ?? '' } }))}
-                  className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-                >
-                  <option value="">Who…</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-                <input
+                <div className="w-28">
+                  <Select
+                    hideLabel
+                    aria-label={`Who for a new shift on ${s.name}`}
+                    value={shiftForm[s.id]?.userId ?? ''}
+                    onChange={(e) => setShiftForm((f) => ({ ...f, [s.id]: { ...f[s.id], userId: e.target.value, startsAt: f[s.id]?.startsAt ?? '', endsAt: f[s.id]?.endsAt ?? '' } }))}
+                  >
+                    <option value="">Who…</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <Input
+                  hideLabel
+                  aria-label={`Shift start for ${s.name}`}
                   type="datetime-local"
                   value={shiftForm[s.id]?.startsAt ?? ''}
                   onChange={(e) => setShiftForm((f) => ({ ...f, [s.id]: { userId: f[s.id]?.userId ?? '', endsAt: f[s.id]?.endsAt ?? '', startsAt: e.target.value } }))}
-                  className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                  className="w-auto"
                 />
-                <input
+                <Input
+                  hideLabel
+                  aria-label={`Shift end for ${s.name}`}
                   type="datetime-local"
                   value={shiftForm[s.id]?.endsAt ?? ''}
                   onChange={(e) => setShiftForm((f) => ({ ...f, [s.id]: { userId: f[s.id]?.userId ?? '', startsAt: f[s.id]?.startsAt ?? '', endsAt: e.target.value } }))}
-                  className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                  className="w-auto"
                 />
-                <button
-                  onClick={() => addShift(s.id)}
-                  className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700"
-                >
+                <Button size="sm" onClick={() => addShift(s.id)}>
                   Add shift
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       </div>
@@ -223,20 +228,28 @@ export function OnCall() {
             <div key={t.id} className="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3.5 py-2.5">
               <div className="flex items-center gap-1.5">
                 <div className="flex flex-col opacity-0 transition-opacity group-hover:opacity-100">
-                  <button
+                  <Button
+                    iconOnly
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Move tier ${i + 1} up`}
                     onClick={() => moveTier(t, -1)}
                     disabled={i === 0}
-                    className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30"
+                    className="!h-5 !w-5"
                   >
                     <ChevronUpIcon width={12} height={12} />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    iconOnly
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Move tier ${i + 1} down`}
                     onClick={() => moveTier(t, 1)}
                     disabled={i === (tiers?.length ?? 0) - 1}
-                    className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30"
+                    className="!h-5 !w-5"
                   >
                     <ChevronDownIcon width={12} height={12} />
-                  </button>
+                  </Button>
                 </div>
                 <span className="text-[13.5px] text-slate-700">
                   <span className="font-semibold">Tier {i + 1}:</span>{' '}
@@ -245,21 +258,21 @@ export function OnCall() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[12.5px] text-slate-400">escalates after</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={tierMinutesEdit[t.id] ?? String(t.escalateAfterMinutes)}
-                  onChange={(e) => setTierMinutesEdit((v) => ({ ...v, [t.id]: e.target.value }))}
-                  className="w-16 rounded-md border border-slate-300 px-2 py-1 text-xs"
-                />
+                <div className="w-16">
+                  <Input
+                    hideLabel
+                    aria-label={`Escalation minutes for tier ${i + 1}`}
+                    type="number"
+                    min={1}
+                    value={tierMinutesEdit[t.id] ?? String(t.escalateAfterMinutes)}
+                    onChange={(e) => setTierMinutesEdit((v) => ({ ...v, [t.id]: e.target.value }))}
+                  />
+                </div>
                 <span className="text-[12.5px] text-slate-400">min</span>
                 {tierMinutesEdit[t.id] !== undefined && tierMinutesEdit[t.id] !== String(t.escalateAfterMinutes) && (
-                  <button
-                    onClick={() => saveTierMinutes(t)}
-                    className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-indigo-700"
-                  >
+                  <Button size="sm" onClick={() => saveTierMinutes(t)}>
                     Save
-                  </button>
+                  </Button>
                 )}
                 <button onClick={() => removeTier(t.id)} className="text-xs text-slate-400 hover:text-rose-600">
                   remove
@@ -270,47 +283,40 @@ export function OnCall() {
         </div>
 
         <div className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <select
-            value={tierType}
-            onChange={(e) => {
-              setTierType(e.target.value as 'user' | 'schedule');
-              setTierTargetId('');
-            }}
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-          >
-            <option value="user">A specific person</option>
-            <option value="schedule">Whoever's on call for…</option>
-          </select>
-          <select
-            value={tierTargetId}
-            onChange={(e) => setTierTargetId(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-          >
-            <option value="">Choose…</option>
-            {(tierType === 'user' ? users : schedules ?? []).map((opt) => (
-              <option key={opt.id} value={opt.id}>
-                {opt.name}
-              </option>
-            ))}
-          </select>
+          <div className="w-40">
+            <Select
+              hideLabel
+              aria-label="Escalation target type"
+              value={tierType}
+              onChange={(e) => {
+                setTierType(e.target.value as 'user' | 'schedule');
+                setTierTargetId('');
+              }}
+            >
+              <option value="user">A specific person</option>
+              <option value="schedule">Whoever's on call for…</option>
+            </Select>
+          </div>
+          <div className="w-36">
+            <Select hideLabel aria-label="Escalation target" value={tierTargetId} onChange={(e) => setTierTargetId(e.target.value)}>
+              <option value="">Choose…</option>
+              {(tierType === 'user' ? users : schedules ?? []).map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.name}
+                </option>
+              ))}
+            </Select>
+          </div>
           <label className="flex items-center gap-1.5 text-xs text-slate-600">
             Escalate after
-            <input
-              type="number"
-              min={1}
-              value={tierMinutes}
-              onChange={(e) => setTierMinutes(e.target.value)}
-              className="w-16 rounded-md border border-slate-300 px-2 py-1 text-xs"
-            />
+            <div className="w-16">
+              <Input hideLabel aria-label="Escalate after minutes" type="number" min={1} value={tierMinutes} onChange={(e) => setTierMinutes(e.target.value)} />
+            </div>
             minutes
           </label>
-          <button
-            onClick={addTier}
-            disabled={!tierTargetId}
-            className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          <Button size="sm" onClick={addTier} disabled={!tierTargetId}>
             Add tier
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -353,29 +359,17 @@ function RenameScheduleModal({
   return (
     <Modal title="Rename schedule" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -405,30 +399,17 @@ function CreateScheduleModal({ onClose, onCreated }: { onClose: () => void; onCr
   return (
     <Modal title="New on-call schedule" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Primary IT On-Call"
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Primary IT On-Call" required />
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

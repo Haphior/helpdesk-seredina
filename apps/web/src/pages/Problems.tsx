@@ -5,6 +5,11 @@ import type { Problem, ProblemStatus, UserSummary } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
 import { Avatar } from '../components/Avatar';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Textarea } from '../components/Textarea';
+import { Card } from '../components/Card';
 import { PROBLEM_STATUS_TONE } from '../lib/format';
 
 const TABS: { key: ProblemStatus | 'ALL'; label: string }[] = [
@@ -54,12 +59,7 @@ export function Problems() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Problems</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New problem
-        </button>
+        <Button onClick={() => setShowCreate(true)}>New problem</Button>
       </div>
       <p className="mb-4 text-[13.5px] text-slate-500">
         A root cause behind one or more tickets — separate from the incidents it's causing, so a fix (and a workaround while
@@ -85,7 +85,7 @@ export function Problems() {
       {problems?.length === 0 && <p className="text-sm text-slate-500">No problems here.</p>}
 
       {problems && problems.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="divide-y divide-slate-100">
             {problems.map((p) => (
               <Link
@@ -119,18 +119,14 @@ export function Problems() {
               </Link>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {problems && problems.length < total && (
         <div className="flex justify-center pt-4">
-          <button
-            onClick={() => load(problems.length)}
-            disabled={loadingMore}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-          >
+          <Button variant="secondary" onClick={() => load(problems.length)} isLoading={loadingMore}>
             {loadingMore ? 'Loading…' : `Load more (${total - problems.length} remaining)`}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -172,56 +168,28 @@ function CreateProblemModal({
   return (
     <Modal title="New problem" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Title</span>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Intermittent VPN drops"
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Intermittent VPN drops" required />
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Description (optional)</span>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Textarea label="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Owner (optional)</span>
-          <select
-            value={ownerId}
-            onChange={(e) => setOwnerId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">Unowned</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select label="Owner (optional)" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+          <option value="">Unowned</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </Select>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Creating…' : 'Create'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

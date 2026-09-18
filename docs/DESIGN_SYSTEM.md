@@ -83,6 +83,15 @@ one of those pages anyway, align it to `rose-600`.
 
 ## Components
 
+- **`components/Button.tsx`**, **`components/Input.tsx`**, **`components/Select.tsx`**,
+  **`components/Card.tsx`** — the shared primitives an app-wide UI pass (see the
+  "not yet reviewed" note below, now closed) extracted after finding the same
+  button/input/select/card Tailwind strings hand-duplicated with visible drift
+  across 10+ pages. Compose these for any new control or surface instead of
+  reaching for another inline Tailwind string. `Button`/`Input`/`Select` each
+  require either a visible label or an explicit `aria-label` at the type level
+  (a discriminated union, not just a lint rule) — an unlabeled icon-only button
+  or hidden-label input fails to compile.
 - **`components/Badge.tsx`** — pill badge, optional leading `dot` prop for
   status/priority (see color table above). Never render a badge with an inline
   one-off color; add a tone to `TONES` instead.
@@ -104,12 +113,27 @@ one of those pages anyway, align it to `rose-600`.
   (`PropertyRow`/`PropertySelect`). Reuse this shape for any future "detail view
   with a right-side inspector" screen (e.g. an Asset detail page) rather than
   reintroducing the old label-above-input `FieldGroup` shape.
+- **`components/Modal.tsx`** — traps focus while open (Tab/Shift+Tab cycle
+  within the dialog, Escape closes it) and restores focus to whatever
+  triggered it on close. This was a real gap until the app-wide UI pass below;
+  a modal opened from a page with no focus management left keyboard focus
+  stranded once it closed.
 
-## What's still just Tailwind defaults (not yet reviewed)
+## App-wide UI pass (Impeccable + Vercel/Rauno interface guidelines)
+
+The "not yet reviewed" gap noted below was closed by a systematic pass across
+every page: extracted the missing `Button`/`Input`/`Select`/`Card` primitives,
+fixed `Modal`'s missing focus trap, added `aria-label`s to icon-only controls
+that had none, and replaced every bare `focus:outline-none` (several existed
+with no replacement focus indicator — a real regression vs. the browser
+default) with the shared focus-ring treatment. See `docs/DESIGN.md` for the
+machine-readable token extraction this pass produced for Impeccable's own
+design-detector hook.
+
+### Previously "not yet reviewed" (now covered)
 
 `pages/Assets.tsx`, `pages/Users.tsx`, `pages/ApiKeys.tsx`,
 `pages/EmailChannels.tsx`, and `components/AssetFormModal.tsx` were left alone in
-the redesign pass (scope was the 4 highest-traffic screens) — they still use the
-pre-redesign plain-Tailwind look apart from the shared `Badge`/`Layout` components
-they already consume, which picked up the new tones/sidebar for free. Bringing them
-in line with this design system is a reasonable next pass, not yet done.
+the original 4-screen redesign pass — they used the pre-redesign plain-Tailwind
+look apart from the shared `Badge`/`Layout` components they already consumed.
+Brought in line with the rest of the app in the pass above.

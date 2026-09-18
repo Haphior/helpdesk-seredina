@@ -8,3 +8,10 @@ build/
 .DS_Store
 coverage/
 apps/api/prisma/generated/
+
+# Impeccable (github.com/pbakaus/impeccable) -- local UI-design tooling only,
+# not required for other contributors to build or run this app.
+.claude/skills/impeccable/
+.claude/agents/impeccable-*
+.claude/settings.local.json
+.impeccable/

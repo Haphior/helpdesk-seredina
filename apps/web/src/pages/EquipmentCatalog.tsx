@@ -3,6 +3,10 @@ import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
 import type { AssetModel, AssetType, Manufacturer } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Card } from '../components/Card';
 
 const ASSET_TYPES: AssetType[] = ['SERVER', 'WORKSTATION', 'NETWORK_DEVICE', 'PRINTER', 'MOBILE_DEVICE', 'OTHER'];
 
@@ -40,12 +44,7 @@ export function EquipmentCatalog() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Equipment Catalog</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New model
-        </button>
+        <Button onClick={() => setShowCreate(true)}>New model</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Manufacturer/model reference list — pick one when adding an asset instead of retyping specs every time.
@@ -56,7 +55,7 @@ export function EquipmentCatalog() {
       {models?.length === 0 && <p className="text-sm text-slate-500">No models cataloged yet.</p>}
 
       {models && models.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="divide-y divide-slate-100">
             {models.map((m) => (
               <div key={m.id} className="flex items-center justify-between px-5 py-3.5">
@@ -74,7 +73,7 @@ export function EquipmentCatalog() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {showCreate && manufacturers && (
@@ -125,74 +124,44 @@ function CreateModelModal({
   return (
     <Modal title="New equipment model" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Manufacturer</span>
-          <select
-            value={manufacturerId}
-            onChange={(e) => setManufacturerId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            {manufacturers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-            <option value="__new__">+ New manufacturer…</option>
-          </select>
-        </label>
+        <Select label="Manufacturer" value={manufacturerId} onChange={(e) => setManufacturerId(e.target.value)}>
+          {manufacturers.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+          <option value="__new__">+ New manufacturer…</option>
+        </Select>
 
         {creatingNewManufacturer && (
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">New manufacturer name</span>
-            <input
-              value={newManufacturerName}
-              onChange={(e) => setNewManufacturerName(e.target.value)}
-              placeholder="Dell"
-              required
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-            />
-          </label>
+          <Input
+            label="New manufacturer name"
+            value={newManufacturerName}
+            onChange={(e) => setNewManufacturerName(e.target.value)}
+            placeholder="Dell"
+            required
+          />
         )}
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Model name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="OptiPlex 7090"
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Model name" value={name} onChange={(e) => setName(e.target.value)} placeholder="OptiPlex 7090" required />
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Default type</span>
-          <select
-            value={assetType}
-            onChange={(e) => setAssetType(e.target.value as AssetType)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          >
-            {ASSET_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select label="Default type" value={assetType} onChange={(e) => setAssetType(e.target.value as AssetType)}>
+          {ASSET_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </Select>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting || (creatingNewManufacturer && !newManufacturerName.trim())}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting} disabled={creatingNewManufacturer && !newManufacturerName.trim()}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

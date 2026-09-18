@@ -2,6 +2,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { CustomFieldDefinition, ServiceCatalogItem } from '../lib/types';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
+import { Card } from '../components/Card';
 
 export function ServiceCatalog() {
   const [items, setItems] = useState<ServiceCatalogItem[] | null>(null);
@@ -38,12 +42,7 @@ export function ServiceCatalog() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Service Catalog</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New item
-        </button>
+        <Button onClick={() => setShowCreate(true)}>New item</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Requestable things — "new laptop," "VPN access," "onboard a contractor." Agents request one from the Tickets page,
@@ -55,7 +54,7 @@ export function ServiceCatalog() {
       {items?.length === 0 && <p className="text-sm text-slate-500">No catalog items yet.</p>}
 
       {items && items.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="divide-y divide-slate-100">
             {items.map((item) => (
               <div key={item.id} className="flex items-center justify-between px-5 py-3.5">
@@ -82,7 +81,7 @@ export function ServiceCatalog() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {showCreate && (
@@ -146,44 +145,28 @@ function ItemModal({
     <Modal title={item ? `Edit "${item.name}"` : 'New catalog item'} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <div className="flex gap-2">
-          <label className="block w-16 text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Icon</span>
-            <input
-              value={icon}
-              onChange={(e) => setIcon(e.target.value)}
-              placeholder="💻"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-center text-sm"
-            />
-          </label>
-          <label className="block flex-1 text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Name</span>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="New laptop"
-              required
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-            />
-          </label>
+          <div className="w-16">
+            <Input label="Icon" value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="💻" className="text-center" />
+          </div>
+          <div className="flex-1">
+            <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="New laptop" required />
+          </div>
         </div>
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Description (optional)</span>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Textarea label="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
 
         {customFields.length > 0 && (
           <div>
             <span className="mb-1.5 block text-sm font-medium text-slate-700">Fields to ask for</span>
             <div className="flex flex-col gap-1.5 rounded-md border border-slate-200 p-2">
               {customFields.map((f) => (
-                <label key={f.id} className="flex items-center gap-2 text-sm text-slate-600">
-                  <input type="checkbox" checked={selectedKeys.includes(f.key)} onChange={() => toggleKey(f.key)} />
+                <label key={f.id} className="flex items-center gap-2 text-[13px] text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={selectedKeys.includes(f.key)}
+                    onChange={() => toggleKey(f.key)}
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                  />
                   {f.label}
                 </label>
               ))}
@@ -194,16 +177,12 @@ function ItemModal({
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

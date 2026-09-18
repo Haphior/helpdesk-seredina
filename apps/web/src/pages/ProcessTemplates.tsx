@@ -3,6 +3,10 @@ import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { ProcessTemplate, ProcessTemplateKind, Team } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Card } from '../components/Card';
 
 interface StepDraft {
   label: string;
@@ -38,12 +42,7 @@ export function ProcessTemplates() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Process Templates</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New template
-        </button>
+        <Button onClick={() => setShowCreate(true)}>New template</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Multi-step checklists for things that outlive a single ticket — onboarding, a contract approval chain. Start one from
@@ -57,7 +56,7 @@ export function ProcessTemplates() {
       {templates && templates.length > 0 && (
         <div className="flex flex-col gap-3">
           {templates.map((t) => (
-            <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Card key={t.id}>
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
@@ -88,7 +87,7 @@ export function ProcessTemplates() {
                   </span>
                 ))}
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
@@ -167,25 +166,9 @@ function TemplateModal({
   return (
     <Modal title={template ? `Edit "${template.name}"` : 'New process template'} onClose={onClose}>
       <form onSubmit={onSubmit} className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Employee Onboarding"
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Employee Onboarding" required />
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Description (optional)</span>
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
 
         {template ? (
           <p className="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-500">
@@ -225,30 +208,35 @@ function TemplateModal({
               <div key={i} className="flex items-start gap-2 rounded-md border border-slate-200 p-2">
                 <span className="mt-2 text-xs text-slate-400">{i + 1}.</span>
                 <div className="flex-1 space-y-1.5">
-                  <input
+                  <Input
+                    hideLabel
+                    aria-label={`Label for step ${i + 1}`}
                     value={step.label}
                     onChange={(e) => updateStep(i, { label: e.target.value })}
                     placeholder="Step label"
-                    className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
                   />
                   <div className="flex items-center gap-3">
-                    <select
-                      value={step.teamId}
-                      onChange={(e) => updateStep(i, { teamId: e.target.value })}
-                      className="rounded-md border border-slate-300 px-1.5 py-1 text-xs"
-                    >
-                      <option value="">No team</option>
-                      {teams.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="w-32">
+                      <Select
+                        hideLabel
+                        aria-label={`Team for step ${i + 1}`}
+                        value={step.teamId}
+                        onChange={(e) => updateStep(i, { teamId: e.target.value })}
+                      >
+                        <option value="">No team</option>
+                        {teams.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
                     <label className="flex items-center gap-1.5 text-xs text-slate-600">
                       <input
                         type="checkbox"
                         checked={step.requiresApproval}
                         onChange={(e) => updateStep(i, { requiresApproval: e.target.checked })}
+                        className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
                       />
                       Requires approval
                     </label>
@@ -270,16 +258,12 @@ function TemplateModal({
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

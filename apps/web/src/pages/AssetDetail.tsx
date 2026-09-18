@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiDelete, apiGet, apiPatch, ApiError } from '../lib/api';
 import type { AssetDetail as AssetDetailType } from '../lib/types';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Card } from '../components/Card';
 import { AssetFormModal, type AssetFormValues } from '../components/AssetFormModal';
 import { BackArrowIcon } from '../components/icons';
 import { formatDateTime } from '../lib/format';
@@ -69,18 +71,12 @@ export function AssetDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setEditing(true)}
-            className="rounded-lg border border-slate-200 px-3.5 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50"
-          >
+          <Button variant="secondary" onClick={() => setEditing(true)}>
             Edit
-          </button>
-          <button
-            onClick={removeAsset}
-            className="rounded-lg border border-slate-200 px-3.5 py-1.5 text-[13px] font-medium text-rose-600 hover:bg-rose-50"
-          >
+          </Button>
+          <Button variant="dangerOutline" onClick={removeAsset}>
             Delete
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -88,7 +84,7 @@ export function AssetDetail() {
 
       <div className="grid grid-cols-[1fr_280px] gap-5">
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <Card>
             <h2 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-slate-400">Specs</h2>
             <dl className="grid grid-cols-2 gap-3 text-[13px]">
               <Spec label="IP address" value={asset.ipAddress} />
@@ -106,9 +102,9 @@ export function AssetDetail() {
                 <p className="text-[12.5px] text-slate-500">{asset.snmpSysDescr}</p>
               </div>
             )}
-          </div>
+          </Card>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <Card>
             <h2 className="mb-2.5 text-[13px] font-bold uppercase tracking-wide text-slate-400">
               Linked tickets ({asset.tickets.length})
             </h2>
@@ -127,10 +123,10 @@ export function AssetDetail() {
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <Card>
           <h2 className="mb-2.5 text-[13px] font-bold uppercase tracking-wide text-slate-400">
             Services underpinned ({asset.services.length})
           </h2>
@@ -151,7 +147,7 @@ export function AssetDetail() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       {editing && <AssetFormModal asset={asset} onClose={() => setEditing(false)} onSubmit={saveAsset} />}

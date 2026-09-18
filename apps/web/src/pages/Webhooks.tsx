@@ -3,6 +3,9 @@ import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Webhook, WebhookEvent } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Card } from '../components/Card';
 import { formatDateTime } from '../lib/format';
 
 // Source of truth: packages/shared/src/webhooks.ts's WEBHOOK_EVENTS. Keep in
@@ -66,12 +69,7 @@ export function Webhooks() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Webhooks</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New webhook
-        </button>
+        <Button onClick={() => setShowCreate(true)}>New webhook</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Notify an external system when a ticket or message event happens — the opposite direction from the API/alert
@@ -90,7 +88,7 @@ export function Webhooks() {
       {webhooks?.length === 0 && <p className="text-sm text-slate-500">No webhooks configured yet.</p>}
 
       {webhooks && webhooks.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="divide-y divide-slate-100">
             {webhooks.map((w) => (
               <div key={w.id} className={`flex items-center justify-between px-5 py-3.5 ${!w.isActive ? 'opacity-50' : ''}`}>
@@ -129,7 +127,7 @@ export function Webhooks() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {showCreate && (
@@ -174,23 +172,22 @@ function EditWebhookModal({ webhook, onClose, onSaved }: { webhook: Webhook; onC
   return (
     <Modal title="Edit webhook" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">URL</span>
-          <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
+        <div>
+          <Input label="URL" value={url} onChange={(e) => setUrl(e.target.value)} required />
           <span className="mt-1 block text-xs text-slate-400">Must be https:// — deliveries never go to plain http.</span>
-        </label>
+        </div>
 
         <div>
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Events</span>
           <div className="flex flex-col gap-1.5">
             {ALL_EVENTS.map((event) => (
-              <label key={event} className="flex items-center gap-2 text-sm text-slate-600">
-                <input type="checkbox" checked={events.includes(event)} onChange={() => toggleEvent(event)} />
+              <label key={event} className="flex items-center gap-2 text-[13px] text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={events.includes(event)}
+                  onChange={() => toggleEvent(event)}
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                />
                 {event}
               </label>
             ))}
@@ -200,16 +197,12 @@ function EditWebhookModal({ webhook, onClose, onSaved }: { webhook: Webhook; onC
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting || events.length === 0}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting} disabled={events.length === 0}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -244,24 +237,28 @@ function CreateWebhookModal({ onClose, onCreated }: { onClose: () => void; onCre
   return (
     <Modal title="New webhook" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">URL</span>
-          <input
+        <div>
+          <Input
+            label="URL"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com/webhooks/seredina"
             required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
           />
           <span className="mt-1 block text-xs text-slate-400">Must be https:// — deliveries never go to plain http.</span>
-        </label>
+        </div>
 
         <div>
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Events</span>
           <div className="flex flex-col gap-1.5">
             {ALL_EVENTS.map((event) => (
-              <label key={event} className="flex items-center gap-2 text-sm text-slate-600">
-                <input type="checkbox" checked={events.includes(event)} onChange={() => toggleEvent(event)} />
+              <label key={event} className="flex items-center gap-2 text-[13px] text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={events.includes(event)}
+                  onChange={() => toggleEvent(event)}
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                />
                 {event}
               </label>
             ))}
@@ -271,16 +268,12 @@ function CreateWebhookModal({ onClose, onCreated }: { onClose: () => void; onCre
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting || events.length === 0}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting} disabled={events.length === 0}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

@@ -3,6 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import { apiGet, ApiError } from '../lib/api';
 import type { PublicKbArticleSummary } from '../lib/types';
 import { Logo } from '../components/Logo';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Card } from '../components/Card';
+import { SearchIcon } from '../components/icons';
 
 export function PublicKb() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
@@ -32,28 +36,35 @@ export function PublicKb() {
           <span className="text-[15px] font-bold text-slate-900">Help Center</span>
         </div>
 
-        <div className="mb-6 flex gap-2">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && load()}
-            placeholder="Search articles…"
-            className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-[14px] shadow-sm"
-          />
-          <button
-            onClick={() => load()}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-[14px] font-medium text-slate-600 shadow-sm hover:bg-slate-50"
-          >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            load();
+          }}
+          className="mb-6 flex gap-2"
+        >
+          <div className="flex-1">
+            <Input
+              hideLabel
+              aria-label="Search articles"
+              icon={<SearchIcon width={16} height={16} />}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search articles…"
+              className="!py-3"
+            />
+          </div>
+          <Button type="submit" variant="secondary" size="lg">
             Search
-          </button>
-        </div>
+          </Button>
+        </form>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
         {articles === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
         {articles?.length === 0 && <p className="text-sm text-slate-500">No articles found.</p>}
 
         {articles && articles.length > 0 && (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card className="overflow-hidden p-0">
             <div className="divide-y divide-slate-100">
               {articles.map((a) => (
                 <Link
@@ -65,7 +76,7 @@ export function PublicKb() {
                 </Link>
               ))}
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

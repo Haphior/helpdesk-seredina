@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { apiGet, ApiError } from '../lib/api';
 import type { PublicKbArticle } from '../lib/types';
 import { Logo } from '../components/Logo';
+import { Card } from '../components/Card';
 import { BackArrowIcon } from '../components/icons';
 import { formatDateTime } from '../lib/format';
 
@@ -38,11 +39,11 @@ export function PublicKbArticlePage() {
         {!article && !error && <p className="text-sm text-slate-500">Loading…</p>}
 
         {article && (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <Card className="!p-6">
             <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">{article.title}</h1>
             <p className="mb-4 text-[12.5px] text-slate-400">Updated {formatDateTime(article.updatedAt)}</p>
             <p className="whitespace-pre-wrap text-[14.5px] leading-relaxed text-slate-700">{article.body}</p>
-          </div>
+          </Card>
         )}
       </div>
     </div>

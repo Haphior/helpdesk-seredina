@@ -3,6 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import { apiGet, apiPatch, ApiError } from '../lib/api';
 import type { Problem, ProblemStatus, ProcessInstance, Ticket, UserSummary } from '../lib/types';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Select } from '../components/Select';
+import { Textarea } from '../components/Textarea';
+import { Card } from '../components/Card';
 import { BackArrowIcon } from '../components/icons';
 import { formatDateTime, PROBLEM_STATUS_TONE } from '../lib/format';
 
@@ -102,60 +106,56 @@ export function ProblemDetail() {
 
       <div className="grid grid-cols-[1fr_260px] gap-5">
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <label className="block text-xs">
-              <span className="mb-1 block font-semibold uppercase tracking-wide text-slate-400">Root cause</span>
-              <textarea
+          <Card>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Root cause</span>
+              <Textarea
+                hideLabel
+                aria-label="Root cause"
                 value={rootCause}
                 onChange={(e) => setRootCause(e.target.value)}
                 onBlur={() => rootCause !== (problem.rootCause ?? '') && patch({ rootCause: rootCause || null })}
                 rows={3}
                 placeholder="Not yet identified"
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-[13px]"
               />
             </label>
-          </div>
+          </Card>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <label className="block text-xs">
-              <span className="mb-1 block font-semibold uppercase tracking-wide text-slate-400">Workaround</span>
-              <textarea
+          <Card>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Workaround</span>
+              <Textarea
+                hideLabel
+                aria-label="Workaround"
                 value={workaround}
                 onChange={(e) => setWorkaround(e.target.value)}
                 onBlur={() => workaround !== (problem.workaround ?? '') && patch({ workaround: workaround || null })}
                 rows={3}
                 placeholder="None documented yet"
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-[13px]"
               />
             </label>
-          </div>
+          </Card>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <Card>
             <div className="mb-2.5 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Linked tickets ({problem.tickets.length})
               </span>
             </div>
-            <div className="mb-3 flex gap-2">
-              <select
-                value={ticketToLink}
-                onChange={(e) => setTicketToLink(e.target.value)}
-                className="flex-1 rounded-md border border-slate-300 px-2 py-1 text-xs"
-              >
-                <option value="">Link an existing ticket…</option>
-                {unlinkedTickets.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    #{t.number} {t.subject}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={linkTicket}
-                disabled={!ticketToLink}
-                className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
+            <div className="mb-3 flex items-end gap-2">
+              <div className="flex-1">
+                <Select hideLabel aria-label="Link an existing ticket" value={ticketToLink} onChange={(e) => setTicketToLink(e.target.value)}>
+                  <option value="">Link an existing ticket…</option>
+                  {unlinkedTickets.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      #{t.number} {t.subject}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <Button size="sm" onClick={linkTicket} disabled={!ticketToLink}>
                 Link
-              </button>
+              </Button>
             </div>
             {problem.tickets.length === 0 ? (
               <p className="text-[13px] text-slate-400">No tickets linked yet.</p>
@@ -173,55 +173,50 @@ export function ProblemDetail() {
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
-        <div className="flex flex-col gap-3.5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <label className="block text-xs">
-            <span className="mb-1 block font-semibold uppercase tracking-wide text-slate-400">Status</span>
-            <select
-              value={problem.status}
-              onChange={(e) => patch({ status: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1 text-[13px]"
-            >
+        <Card className="flex flex-col gap-3.5">
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Status</span>
+            <Select hideLabel aria-label="Status" value={problem.status} onChange={(e) => patch({ status: e.target.value })}>
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
                   {s.replace('_', ' ')}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
-          <label className="block text-xs">
-            <span className="mb-1 block font-semibold uppercase tracking-wide text-slate-400">Owner</span>
-            <select
-              value={problem.ownerId ?? ''}
-              onChange={(e) => patch({ ownerId: e.target.value || null })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1 text-[13px]"
-            >
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Owner</span>
+            <Select hideLabel aria-label="Owner" value={problem.ownerId ?? ''} onChange={(e) => patch({ ownerId: e.target.value || null })}>
               <option value="">Unowned</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
 
-          <label className="block text-xs">
-            <span className="mb-1 block font-semibold uppercase tracking-wide text-slate-400">Fixed by Change</span>
-            <select
-              value={problem.changeInstanceId ?? ''}
-              onChange={(e) => patch({ changeInstanceId: e.target.value || null })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1 text-[13px]"
-            >
-              <option value="">No linked change</option>
-              {changeInstances.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.subject}
-                </option>
-              ))}
-            </select>
+          <div>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Fixed by Change</span>
+              <Select
+                hideLabel
+                aria-label="Fixed by Change"
+                value={problem.changeInstanceId ?? ''}
+                onChange={(e) => patch({ changeInstanceId: e.target.value || null })}
+              >
+                <option value="">No linked change</option>
+                {changeInstances.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.subject}
+                  </option>
+                ))}
+              </Select>
+            </label>
             {problem.changeInstance && (
               <Link
                 to={`/processes/${problem.changeInstance.id}`}
@@ -230,8 +225,8 @@ export function ProblemDetail() {
                 View {problem.changeInstance.subject} →
               </Link>
             )}
-          </label>
-        </div>
+          </div>
+        </Card>
       </div>
     </div>
   );

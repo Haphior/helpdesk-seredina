@@ -2,6 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
 import type { ApiKeySummary } from '../lib/types';
 import { formatDateTime } from '../lib/format';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Card } from '../components/Card';
 
 export function ApiKeys() {
   const [keys, setKeys] = useState<ApiKeySummary[] | null>(null);
@@ -59,21 +62,20 @@ export function ApiKeys() {
         </div>
       )}
 
-      <form onSubmit={onSubmit} className="mb-6 flex gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Key name (e.g. widget-integration)"
-          required
-          className="w-64 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-        />
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
-        >
+      <form onSubmit={onSubmit} className="mb-6 flex items-end gap-2">
+        <div className="w-64">
+          <Input
+            hideLabel
+            aria-label="Key name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Key name (e.g. widget-integration)"
+            required
+          />
+        </div>
+        <Button type="submit" isLoading={submitting}>
           Create key
-        </button>
+        </Button>
       </form>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
@@ -81,7 +83,7 @@ export function ApiKeys() {
       {keys?.length === 0 && <p className="text-sm text-slate-500">No API keys yet.</p>}
 
       {keys && keys.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="divide-y divide-slate-100">
             {keys.map((k) => (
               <div key={k.id} className="flex items-center justify-between px-5 py-3.5">
@@ -96,7 +98,7 @@ export function ApiKeys() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

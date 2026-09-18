@@ -3,6 +3,10 @@ import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { TicketStatus, TicketStatusCategory } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Card } from '../components/Card';
 import { ChevronDownIcon, ChevronUpIcon } from '../components/icons';
 import { STATUS_CATEGORY_TONE } from '../lib/format';
 
@@ -53,12 +57,7 @@ export function TicketStatuses() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Ticket Statuses</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New status
-        </button>
+        <Button onClick={() => setShowCreate(true)}>New status</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Every status belongs to one of four categories (Open/Pending/Resolved/Closed) that drive SLA tracking and
@@ -69,26 +68,34 @@ export function TicketStatuses() {
       {statuses === null && <p className="text-sm text-slate-500">Loading…</p>}
 
       {statuses && statuses.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="divide-y divide-slate-100">
             {statuses.map((s, i) => (
               <div key={s.id} className="group flex items-center justify-between px-5 py-3.5">
                 <div className="flex items-center gap-1.5">
                   <div className="flex flex-col opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
+                    <Button
+                      iconOnly
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Move ${s.label} status up`}
                       onClick={() => move(s, -1)}
                       disabled={i === 0}
-                      className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30"
+                      className="!h-5 !w-5"
                     >
                       <ChevronUpIcon width={12} height={12} />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      iconOnly
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Move ${s.label} status down`}
                       onClick={() => move(s, 1)}
                       disabled={i === statuses.length - 1}
-                      className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-30"
+                      className="!h-5 !w-5"
                     >
                       <ChevronDownIcon width={12} height={12} />
-                    </button>
+                    </Button>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -114,7 +121,7 @@ export function TicketStatuses() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {showCreate && <StatusModal onClose={() => setShowCreate(false)} onSaved={load} />}
@@ -160,66 +167,51 @@ function StatusModal({
   return (
     <Modal title={status ? `Edit "${status.label}"` : 'New status'} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Label</span>
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Waiting on Vendor"
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Waiting on Vendor" required />
 
         {!status && (
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Key</span>
-            <input
+          <div>
+            <Input
+              label="Key"
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder="waiting_on_vendor"
               pattern="[a-z][a-z0-9_]*"
               required
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
             />
             <span className="mt-1 block text-xs text-slate-400">
               Lowercase, no spaces — the internal identifier, fixed once created.
             </span>
-          </label>
+          </div>
         )}
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Category</span>
-          <select
+        <div>
+          <Select
+            label="Category"
             value={category}
             onChange={(e) => setCategory(e.target.value as TicketStatusCategory)}
             disabled={status?.key === 'open'}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:opacity-50"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
             ))}
-          </select>
+          </Select>
           <span className="mt-1 block text-xs text-slate-400">
             Drives SLA tracking and reporting — Closed excludes a ticket from SLA-compliance and open-workload counts.
           </span>
-        </label>
+        </div>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

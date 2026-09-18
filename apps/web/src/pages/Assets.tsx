@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Asset, AssetStatus, AssetType, DiscoveryJob } from '../lib/types';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Card } from '../components/Card';
 import { AssetFormModal, type AssetFormValues } from '../components/AssetFormModal';
 import { SearchIcon } from '../components/icons';
 import { formatDateTime } from '../lib/format';
@@ -117,12 +121,7 @@ export function Assets() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Assets</h1>
-        <button
-          onClick={() => setEditingAsset('new')}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New asset
-        </button>
+        <Button onClick={() => setEditingAsset('new')}>New asset</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Discovered via agentless network scans (TCP liveness + SNMP), or added by hand. See
@@ -130,23 +129,18 @@ export function Assets() {
       </p>
 
       <form onSubmit={onSubmitScan} className="mb-5 flex items-end gap-2">
-        <label className="text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Scan a network range</span>
-          <input
+        <div className="w-64">
+          <Input
+            label="Scan a network range"
             value={cidrRange}
             onChange={(e) => setCidrRange(e.target.value)}
             placeholder="192.168.1.0/24"
             required
-            className="w-64 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
           />
-        </label>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-lg border border-slate-200 px-4 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-        >
+        </div>
+        <Button type="submit" variant="secondary" isLoading={submitting}>
           Start scan
-        </button>
+        </Button>
       </form>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
@@ -154,7 +148,7 @@ export function Assets() {
       {jobs.length > 0 && (
         <div className="mb-6">
           <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-slate-400">Recent scans</h2>
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <Card className="overflow-hidden p-0">
             <div className="divide-y divide-slate-100">
               {jobs.map((j) => (
                 <div key={j.id} className="flex items-center justify-between px-5 py-3 text-[13px]">
@@ -174,44 +168,51 @@ export function Assets() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       <div className="mb-4 flex items-center gap-2">
-        <div className="flex w-[260px] items-center gap-2 rounded-[9px] border border-slate-200 bg-white px-3 py-2">
-          <SearchIcon width={15} height={15} className="text-slate-400" />
-          <input
+        <div className="w-[260px]">
+          <Input
+            hideLabel
+            aria-label="Search assets by name, IP, or hostname"
+            icon={<SearchIcon width={15} height={15} />}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search name, IP, hostname…"
-            className="w-full bg-transparent text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none"
           />
         </div>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as AssetType | '')}
-          className="rounded-[7px] border border-slate-200 bg-white px-2 py-1.5 text-[12.5px] text-slate-600"
-        >
-          <option value="">Any type</option>
-          {ASSET_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}
-          className="rounded-[7px] border border-slate-200 bg-white px-2 py-1.5 text-[12.5px] text-slate-600"
-        >
-          <option value="">Any status</option>
-          {ASSET_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <div className="w-[140px]">
+          <Select
+            hideLabel
+            aria-label="Filter by asset type"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as AssetType | '')}
+          >
+            <option value="">Any type</option>
+            {ASSET_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="w-[140px]">
+          <Select
+            hideLabel
+            aria-label="Filter by asset status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}
+          >
+            <option value="">Any status</option>
+            {ASSET_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </Select>
+        </div>
         {assets && (
           <span className="ml-1 text-[13px] text-slate-400">
             {assets.length} of {total}
@@ -223,7 +224,7 @@ export function Assets() {
       {assets?.length === 0 && <p className="text-sm text-slate-500">No assets here. Add one or run a scan above.</p>}
 
       {assets && assets.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <Card className="overflow-hidden p-0">
           <div className="grid grid-cols-[2fr_100px_90px_110px_120px_90px_110px_60px] items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-400">
             <span>Name</span>
             <span>Type</span>
@@ -280,18 +281,14 @@ export function Assets() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {assets && assets.length < total && (
         <div className="flex justify-center pt-4">
-          <button
-            onClick={() => load(assets.length)}
-            disabled={loadingMore}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-          >
+          <Button variant="secondary" onClick={() => load(assets.length)} isLoading={loadingMore}>
             {loadingMore ? 'Loading…' : `Load more (${total - assets.length} remaining)`}
-          </button>
+          </Button>
         </div>
       )}
 

@@ -3,6 +3,11 @@ import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Macro, Team, TicketPriority, TicketStatus, UserSummary } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Textarea } from '../components/Textarea';
+import { Card } from '../components/Card';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 
@@ -58,12 +63,7 @@ export function Macros() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Macros</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New macro
-        </button>
+        <Button onClick={() => setShowCreate(true)}>New macro</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         A saved bundle of actions applied to a ticket in one click — set fields, send a canned reply, or both.
@@ -76,7 +76,7 @@ export function Macros() {
       {macros && macros.length > 0 && (
         <div className="flex flex-col gap-2.5">
           {macros.map((m) => (
-            <div key={m.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Card key={m.id} className="flex items-center justify-between">
               <div>
                 <div className="mb-1 text-[14px] font-semibold text-slate-800">{m.name}</div>
                 <div className="flex flex-wrap gap-1.5">
@@ -95,7 +95,7 @@ export function Macros() {
                   delete
                 </button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
@@ -182,75 +182,68 @@ function MacroModal({
   return (
     <Modal title={macro ? `Edit "${macro.name}"` : 'New macro'} onClose={onClose}>
       <form onSubmit={onSubmit} className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Escalate to urgent"
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Escalate to urgent" required />
 
         <div className="space-y-2 border-t border-slate-200 pt-2">
           <ActionRow label="Set status" enabled={enableStatus} onToggle={setEnableStatus}>
-            <select value={statusId} onChange={(e) => setStatusId(e.target.value)} className="rounded-md border border-slate-300 px-2 py-1 text-xs">
+            <Select hideLabel aria-label="Status to set" value={statusId} onChange={(e) => setStatusId(e.target.value)}>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </ActionRow>
 
           <ActionRow label="Set priority" enabled={enablePriority} onToggle={setEnablePriority}>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as TicketPriority)}
-              className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-            >
+            <Select hideLabel aria-label="Priority to set" value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)}>
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
               ))}
-            </select>
+            </Select>
           </ActionRow>
 
           <ActionRow label="Set team" enabled={enableTeam} onToggle={setEnableTeam}>
-            <select value={teamId} onChange={(e) => setTeamId(e.target.value)} className="rounded-md border border-slate-300 px-2 py-1 text-xs">
+            <Select hideLabel aria-label="Team to set" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
               <option value="">Unassigned</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </ActionRow>
 
           <ActionRow label="Set assignee" enabled={enableAssignee} onToggle={setEnableAssignee}>
-            <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="rounded-md border border-slate-300 px-2 py-1 text-xs">
+            <Select hideLabel aria-label="Assignee to set" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
               <option value="">Unassigned</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </ActionRow>
 
           <ActionRow label="Add reply" enabled={enableReply} onToggle={setEnableReply}>
             <div className="flex-1 space-y-1.5">
-              <textarea
+              <Textarea
+                hideLabel
+                aria-label="Reply text"
                 value={replyBody}
                 onChange={(e) => setReplyBody(e.target.value)}
                 placeholder="Reply text"
                 rows={2}
-                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
               />
               <label className="flex items-center gap-1.5 text-xs text-slate-600">
-                <input type="checkbox" checked={replyIsPrivate} onChange={(e) => setReplyIsPrivate(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={replyIsPrivate}
+                  onChange={(e) => setReplyIsPrivate(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                />
                 Internal note (not sent to customer)
               </label>
             </div>
@@ -260,16 +253,12 @@ function MacroModal({
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting || noActionsSelected}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting} disabled={noActionsSelected}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -290,7 +279,12 @@ function ActionRow({
   return (
     <div className="flex items-start gap-2 rounded-md border border-slate-200 p-2">
       <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
-        <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => onToggle(e.target.checked)}
+          className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
+        />
         {label}
       </label>
       {enabled && <div className="flex-1">{children}</div>}

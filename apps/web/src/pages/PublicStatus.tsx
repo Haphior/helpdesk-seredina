@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { apiGet, ApiError } from '../lib/api';
 import type { PublicServiceStatusLevel, PublicStatusPage } from '../lib/types';
 import { Logo } from '../components/Logo';
+import { Card } from '../components/Card';
 
 const OVERALL_COPY: Record<PublicServiceStatusLevel, string> = {
   operational: 'All systems operational',
@@ -60,7 +61,7 @@ export function PublicStatus() {
             {page.services.length === 0 ? (
               <p className="text-sm text-slate-500">No services are published on this status page yet.</p>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <Card className="overflow-hidden p-0">
                 <div className="divide-y divide-slate-100">
                   {page.services.map((s) => (
                     <div key={s.id} className="flex items-center justify-between px-5 py-4">
@@ -77,7 +78,7 @@ export function PublicStatus() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
           </>
         )}

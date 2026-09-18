@@ -3,6 +3,9 @@ import { apiDelete, apiGet, apiPut, ApiError } from '../lib/api';
 import type { SlaPolicy, TicketPriority } from '../lib/types';
 import { PRIORITY_TONE } from '../lib/format';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Card } from '../components/Card';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 
@@ -96,7 +99,7 @@ export function SlaPolicies() {
             const row = rows[priority];
             const configured = policies.some((p) => p.priority === priority);
             return (
-              <div key={priority} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <Card key={priority} className="flex items-center gap-4">
                 <span className="w-24 flex-shrink-0">
                   <Badge tone={PRIORITY_TONE[priority]} dot>
                     {priority}
@@ -105,27 +108,33 @@ export function SlaPolicies() {
 
                 <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">
                   First response
-                  <input
-                    type="number"
-                    min={1}
-                    value={row.firstResponseMinutes}
-                    onChange={(e) => updateRow(priority, { firstResponseMinutes: e.target.value })}
-                    placeholder="minutes"
-                    className="w-20 rounded-md border border-slate-300 px-2 py-1 text-xs"
-                  />
+                  <div className="w-24">
+                    <Input
+                      hideLabel
+                      aria-label={`First response minutes for ${priority} priority`}
+                      type="number"
+                      min={1}
+                      value={row.firstResponseMinutes}
+                      onChange={(e) => updateRow(priority, { firstResponseMinutes: e.target.value })}
+                      placeholder="e.g. 30"
+                    />
+                  </div>
                   min
                 </label>
 
                 <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">
                   Resolution
-                  <input
-                    type="number"
-                    min={1}
-                    value={row.resolutionMinutes}
-                    onChange={(e) => updateRow(priority, { resolutionMinutes: e.target.value })}
-                    placeholder="minutes"
-                    className="w-20 rounded-md border border-slate-300 px-2 py-1 text-xs"
-                  />
+                  <div className="w-24">
+                    <Input
+                      hideLabel
+                      aria-label={`Resolution minutes for ${priority} priority`}
+                      type="number"
+                      min={1}
+                      value={row.resolutionMinutes}
+                      onChange={(e) => updateRow(priority, { resolutionMinutes: e.target.value })}
+                      placeholder="e.g. 30"
+                    />
+                  </div>
                   min
                 </label>
 
@@ -134,6 +143,7 @@ export function SlaPolicies() {
                     type="checkbox"
                     checked={row.businessHoursOnly}
                     onChange={(e) => updateRow(priority, { businessHoursOnly: e.target.checked })}
+                    className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
                   />
                   Business hours only
                 </label>
@@ -144,15 +154,16 @@ export function SlaPolicies() {
                       remove
                     </button>
                   )}
-                  <button
+                  <Button
+                    size="sm"
                     onClick={() => save(priority)}
-                    disabled={savingPriority === priority || !row.firstResponseMinutes || !row.resolutionMinutes}
-                    className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                    isLoading={savingPriority === priority}
+                    disabled={!row.firstResponseMinutes || !row.resolutionMinutes}
                   >
                     {savingPriority === priority ? 'Saving…' : configured ? 'Update' : 'Save'}
-                  </button>
+                  </Button>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>

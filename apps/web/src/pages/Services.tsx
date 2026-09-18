@@ -2,6 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
 import type { AssetSummary, Service } from '../lib/types';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
+import { Textarea } from '../components/Textarea';
+import { Card } from '../components/Card';
 
 interface Me {
   tenantSlug: string;
@@ -68,12 +73,7 @@ export function Services() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Services</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          New service
-        </button>
+        <Button onClick={() => setShowCreate(true)}>New service</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Business-facing services — "Email," "Payroll" — and which assets actually underpin them. An open alert-channel
@@ -89,7 +89,7 @@ export function Services() {
       {services && services.length > 0 && (
         <div className="flex flex-col gap-3">
           {services.map((service) => (
-            <div key={service.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Card key={service.id}>
               <div className="mb-2.5 flex items-center justify-between">
                 <div>
                   <div className="text-[14.5px] font-semibold text-slate-800">{service.name}</div>
@@ -108,7 +108,11 @@ export function Services() {
                     className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[12px] text-slate-600"
                   >
                     {asset.name}
-                    <button onClick={() => unlinkAsset(service.id, asset.id)} className="text-slate-400 hover:text-rose-600">
+                    <button
+                      onClick={() => unlinkAsset(service.id, asset.id)}
+                      aria-label={`Unlink ${asset.name} from ${service.name}`}
+                      className="text-slate-400 hover:text-rose-600"
+                    >
                       ×
                     </button>
                   </span>
@@ -116,29 +120,28 @@ export function Services() {
               </div>
 
               <div className="flex gap-1.5">
-                <select
-                  value={assetToLink[service.id] ?? ''}
-                  onChange={(e) => setAssetToLink((v) => ({ ...v, [service.id]: e.target.value }))}
-                  className="flex-1 rounded-md border border-slate-300 px-2 py-1 text-xs"
-                >
-                  <option value="">Link an asset…</option>
-                  {allAssets
-                    .filter((a) => !service.assets.some((sa) => sa.asset.id === a.id))
-                    .map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                </select>
-                <button
-                  onClick={() => linkAsset(service.id)}
-                  disabled={!assetToLink[service.id]}
-                  className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-                >
+                <div className="flex-1">
+                  <Select
+                    hideLabel
+                    aria-label={`Link an asset to ${service.name}`}
+                    value={assetToLink[service.id] ?? ''}
+                    onChange={(e) => setAssetToLink((v) => ({ ...v, [service.id]: e.target.value }))}
+                  >
+                    <option value="">Link an asset…</option>
+                    {allAssets
+                      .filter((a) => !service.assets.some((sa) => sa.asset.id === a.id))
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                  </Select>
+                </div>
+                <Button size="sm" onClick={() => linkAsset(service.id)} disabled={!assetToLink[service.id]}>
                   Link
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
@@ -172,40 +175,19 @@ function CreateServiceModal({ onClose, onCreated }: { onClose: () => void; onCre
   return (
     <Modal title="New service" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Payroll"
-            required
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Payroll" required />
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Description (optional)</span>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </label>
+        <Textarea label="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" isLoading={submitting}>
             {submitting ? 'Saving…' : 'Save'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
