@@ -53,7 +53,13 @@ async function loadTicketThread(tenantId: string, ticketId: string) {
  * inside the same tx as the (already-closed) thread read -- this only runs
  * after the network call, and network I/O never belongs inside withTenantTx.
  */
-async function logAiUsage(tenantId: string, ticketId: string, action: string, result: CompleteResult) {
+/**
+ * Exported for modules/ai-tools/autonomousLoop.ts, which makes its own
+ * adapter.complete() calls (a multi-turn tool-use loop, not a single
+ * suggestReply/summarizeTicket call) but must never duplicate the cost-
+ * logging logic -- see docs/adr/0023-ai-cost-transparency.md.
+ */
+export async function logAiUsage(tenantId: string, ticketId: string, action: string, result: CompleteResult) {
   const estimatedCostUsd = estimateCostUsd(result.model, result.inputTokens, result.outputTokens);
   await withTenantTx(prisma, tenantId, (tx) =>
     tx.aiUsageLog.create({

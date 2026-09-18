@@ -54,8 +54,19 @@ services:
       SEREDINA_MODE: ${SEREDINA_MODE:-self_hosted}
       CORS_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
       SENTRY_DSN: ${SENTRY_DSN:-}
+      AI_PROVIDER: ${AI_PROVIDER:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      # AI_PROVIDER=ollama pointing at a host-machine Ollama install (not
+      # another compose service) needs host.docker.internal, not localhost --
+      # this container's own "localhost" is itself, not the host, on the
+      # bridge network `api` runs on (unlike `worker` below, which uses host
+      # networking for a different reason). e.g.
+      # OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
     ports:
       - '${API_PORT:-4000}:4000'
 

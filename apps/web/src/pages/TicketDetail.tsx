@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, downloadFile, ApiError } from '../lib/api';
 import type {
   AssetSummary,
+  AutonomousLoopResult,
   CustomFieldDefinition,
   Macro,
   Problem,
@@ -49,6 +50,8 @@ export function TicketDetail() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiUsage, setAiUsage] = useState<TicketAiUsage | null>(null);
   const [usedArticles, setUsedArticles] = useState<{ id: string; title: string; slug: string }[]>([]);
+  const [autonomousRunning, setAutonomousRunning] = useState(false);
+  const [autonomousResult, setAutonomousResult] = useState<AutonomousLoopResult | null>(null);
 
   function loadAiUsage() {
     if (!id) return;
@@ -240,6 +243,22 @@ export function TicketDetail() {
     }
   }
 
+  async function handleAutonomousRun() {
+    if (!id) return;
+    setAiError(null);
+    setAutonomousRunning(true);
+    try {
+      const res = await apiPost<AutonomousLoopResult>(`/tickets/${id}/ai/autonomous-run`);
+      setAutonomousResult(res);
+      loadAiUsage();
+      await loadTicket();
+    } catch (err) {
+      setAiError(err instanceof ApiError ? err.message : 'Failed to run the autonomous agent');
+    } finally {
+      setAutonomousRunning(false);
+    }
+  }
+
   async function handleApplyMacro(macroId: string) {
     if (!id || !macroId) return;
     setApplyingMacroId(macroId);
@@ -334,6 +353,15 @@ export function TicketDetail() {
                 <SparkleIcon width={12} height={12} />
                 {summarizing ? 'Summarizing…' : 'Summarize'}
               </button>
+              <button
+                onClick={handleAutonomousRun}
+                disabled={autonomousRunning}
+                title="Let the AI agent investigate and, if it's confident, act on this ticket -- mutating actions still go through Autonomy Policy approval"
+                className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <SparkleIcon width={12} height={12} />
+                {autonomousRunning ? 'Running…' : 'Let AI try'}
+              </button>
               {aiUsage && aiUsage.totalCalls > 0 && (
                 <span
                   title={`${aiUsage.totalCalls} AI call${aiUsage.totalCalls === 1 ? '' : 's'} on this ticket`}
@@ -409,6 +437,27 @@ export function TicketDetail() {
               AI summary
             </div>
             <p className="text-[13.5px] leading-relaxed text-indigo-900">{summary}</p>
+          </div>
+        )}
+
+        {autonomousResult && (
+          <div className="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3.5">
+            <div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-indigo-700">
+              <SparkleIcon width={12} height={12} />
+              Autonomous agent run
+              {autonomousResult.stoppedReason === 'max_iterations' && (
+                <span className="font-normal text-indigo-400">(stopped early -- too many steps)</span>
+              )}
+            </div>
+            <p className="mb-1.5 text-[13.5px] leading-relaxed text-indigo-900">{autonomousResult.summary}</p>
+            {autonomousResult.steps.length > 0 && (
+              <p className="text-[12px] text-indigo-600">
+                {autonomousResult.steps.flatMap((s) => s.toolCalls).map((tc) => tc.name).join(', ')} —{' '}
+                <Link to="/ai-agent-activity" className="underline">
+                  see details / approve pending actions
+                </Link>
+              </p>
+            )}
           </div>
         )}
 

@@ -61,7 +61,9 @@ describe.skipIf(!hasDb)('ai suggest-reply / summarize', () => {
     expect(result.suggestion).toBe('Thanks for the details -- please try updating your VPN client.');
 
     const [call] = adapter.getCalls();
-    const prompt = call.messages[0].content;
+    // suggestReply never uses tool-calling messages, so this is always the
+    // plain-content variant of the LlmMessage union.
+    const prompt = (call.messages[0] as { content: string }).content;
     expect(prompt).toContain('VPN keeps disconnecting');
     expect(prompt).toContain('My VPN drops every few minutes');
     expect(prompt).toContain('Could you tell me which VPN client version');
@@ -77,7 +79,7 @@ describe.skipIf(!hasDb)('ai suggest-reply / summarize', () => {
     expect(result.summary).toBe('Customer reports frequent VPN disconnects; agent is troubleshooting.');
 
     const [call] = adapter.getCalls();
-    expect(call.messages[0].content).not.toContain('INTERNAL');
+    expect((call.messages[0] as { content: string }).content).not.toContain('INTERNAL');
   });
 
   it('throws for a ticket that does not exist', async () => {

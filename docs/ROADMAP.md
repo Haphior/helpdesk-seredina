@@ -1204,16 +1204,49 @@ verified live in a browser: tool checkboxes render from the real catalog
 endpoint, and both the allow-list and the daily-cap setting persist across a
 full page reload. **Known gaps, not silently skipped**: no automated Docker
 build verification for `apps/mcp-server` (same sandbox limitation as ADR
-0031); HTTP/SSE transport not built; the daily action cap is per-tenant, not
-per-autonomous-run, since no multi-turn autonomous agent loop exists yet to
-define what a "run" is.
+0031); HTTP/SSE transport not built.
 
-- Second LLM provider adapter (OpenAI) to validate the adapter abstraction actually
-  is provider-agnostic.
-- A full autonomous copilot loop (an actual `adapter.complete()` tool-use loop
-  deciding which catalog tools to call, not just this pass's human-invoked-via-
-  MCP gate) — the `AutonomyPolicy`/`AiAgentRun` machinery above is what it will
-  plug into, not yet a second implementation of the same gate.
+**Second LLM provider (OpenAI + local Ollama) + the full autonomous
+tool-use loop ✅ (this pass)** — both landed together, at the user's explicit
+request to give a self-hosted operator a genuinely free/private local
+option alongside a second cloud one, not just prove the adapter abstraction
+works with one more vendor. `AI_PROVIDER` (`anthropic` | `openai` | `ollama`)
+picks the copilot's backing adapter; unset keeps the pre-existing
+Anthropic-if-configured default. `LlmProviderAdapter` grew provider-agnostic
+tool-use support (`ToolSpec`/`ToolCall`/`ToolResult`, a richer `LlmMessage`
+union, `CompleteResult.stopReason`) so `apps/api/src/modules/ai-tools/autonomousLoop.ts`
+can let Seredina's own LLM decide which catalog tools to call, in a loop —
+every tool call, regardless of caller, goes through the exact same
+`runTool()` executor ADR 0033 built for MCP, with `source: 'autonomous'`
+distinguishing these runs in the activity log. A per-run `MAX_ITERATIONS`
+cap (5) now exists alongside `AutonomyPolicy`'s existing per-tenant daily
+cap — the "known gap" noted above about no per-run cap existing is resolved.
+A new "Let AI try" button on `TicketDetail` triggers it. See
+`docs/adr/0034-second-llm-provider-and-autonomous-loop.md`.
+
+Verified: 19 `packages/ai-adapters` unit tests (up from 16), including one
+that runs for real against this sandbox's own already-running local Ollama
+instance (skipped automatically where none exists). Live, manual, non-mocked
+verification beyond the automated suite: a real local completion, a raw
+`curl` against Ollama's own endpoint confirming tool definitions transmit
+correctly, and the full `suggestReply` HTTP route run end-to-end with
+`AI_PROVIDER=ollama` against a real ticket — real RAG search, a real
+on-topic reply, and an `AiUsageLog` row showing `estimatedCostUsd: "0"` for
+the local model, not the unpriced `null` an unrecognized cloud model gets.
+6 new `ai-adapter-selection.test.ts` tests cover provider selection
+including backward compatibility and an unrecognized `AI_PROVIDER` value
+disabling AI rather than throwing. 6 new `ai-autonomous-loop.test.ts` tests
+(live Postgres, fully deterministic via `TestProviderAdapter`'s new scripted
+tool-call responses) cover the full loop: read-only tool results flowing
+back to the model, a non-allow-listed mutating call genuinely not executing,
+an allow-listed call auto-executing for real, a tool error reported back
+without crashing, the iteration cap cutting off a runaway model, and
+per-turn `AiUsageLog` rows. Full `apps/api` suite 190/190 green; every
+touched workspace typechecks clean. **Known gaps, disclosed not hidden**:
+tool-calling through Ollama is unreliable depending on the specific local
+model/Ollama version (confirmed directly, not assumed — see the ADR); no
+live Anthropic tool-use verification, to conserve the user's credit-limited
+key.
 
 ## Phase 4 — Multi-tenant cloud hardening + more channels
 

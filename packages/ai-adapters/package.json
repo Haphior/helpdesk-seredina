@@ -2,7 +2,7 @@
   "name": "@seredina/ai-adapters",
   "private": true,
   "version": "0.0.0",
-  "description": "LlmProviderAdapter interface + implementations (Anthropic, and a deterministic test double).",
+  "description": "LlmProviderAdapter interface + implementations (Anthropic, OpenAI, local via Ollama, and a deterministic test double).",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",
-    "@huggingface/transformers": "^4.3.0"
+    "@huggingface/transformers": "^4.3.0",
+    "openai": "^6.49.0"
   },
   "devDependencies": {
     "@seredina/config": "*",

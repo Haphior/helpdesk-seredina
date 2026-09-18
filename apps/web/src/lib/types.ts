@@ -545,6 +545,12 @@ export interface AutonomyPolicy {
 
 export type AiAgentRunStatus = 'PENDING_APPROVAL' | 'EXECUTED' | 'REJECTED' | 'FAILED';
 
+export interface AutonomousLoopResult {
+  summary: string;
+  steps: { iteration: number; toolCalls: { name: string; input: unknown; result: unknown }[] }[];
+  stoppedReason: 'completed' | 'max_iterations';
+}
+
 export interface AiAgentRun {
   id: string;
   toolName: string;

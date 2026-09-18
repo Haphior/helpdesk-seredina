@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { requirePermission } from '../rbac/permissions';
 import { getAiAdapter } from './adapter';
 import { getAiUsageSummary, getTicketAiUsage, suggestReply, summarizeTicket } from './service';
+import { runAutonomousLoop } from '../ai-tools/autonomousLoop';
 
 export default async function aiRoutes(app: FastifyInstance) {
   // Gated on tickets:write, same as sending a reply -- suggesting one is a lighter
@@ -12,7 +13,7 @@ export default async function aiRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const adapter = getAiAdapter();
       if (!adapter) {
-        return reply.code(503).send({ error: 'AI features are not configured (missing ANTHROPIC_API_KEY)' });
+        return reply.code(503).send({ error: 'AI features are not configured (set AI_PROVIDER and its matching credentials)' });
       }
       const { id } = request.params as { id: string };
       try {
@@ -30,11 +31,34 @@ export default async function aiRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const adapter = getAiAdapter();
       if (!adapter) {
-        return reply.code(503).send({ error: 'AI features are not configured (missing ANTHROPIC_API_KEY)' });
+        return reply.code(503).send({ error: 'AI features are not configured (set AI_PROVIDER and its matching credentials)' });
       }
       const { id } = request.params as { id: string };
       try {
         const result = await summarizeTicket(request.user.tenantId, id, adapter);
+        return reply.send(result);
+      } catch (err) {
+        return reply.code(404).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  // "Autonomous mode": Seredina's own LLM decides which catalog tools to call
+  // (see docs/adr/0034-second-llm-provider-and-autonomous-loop.md), not a
+  // human picking one action -- still gated tickets:write to trigger, same
+  // tier as suggest-reply/summarize, since every actual mutation the loop
+  // performs is separately gated by AutonomyPolicy inside runTool().
+  app.post(
+    '/tickets/:id/ai/autonomous-run',
+    { preHandler: [app.authenticate, requirePermission('tickets:write')] },
+    async (request, reply) => {
+      const adapter = getAiAdapter();
+      if (!adapter) {
+        return reply.code(503).send({ error: 'AI features are not configured (set AI_PROVIDER and its matching credentials)' });
+      }
+      const { id } = request.params as { id: string };
+      try {
+        const result = await runAutonomousLoop(request.user.tenantId, id, adapter);
         return reply.send(result);
       } catch (err) {
         return reply.code(404).send({ error: (err as Error).message });
