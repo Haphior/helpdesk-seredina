@@ -79,9 +79,13 @@ describe('OllamaAdapter', () => {
 
     expect(result.text).toContain('4');
     expect(result.model).toBe(`ollama:${model}`);
-    // 90s, not 30s -- Ollama unloads an idle model from memory after a few
-    // minutes, and the resulting cold-load-plus-inference on a CPU-only
-    // sandbox can genuinely take over 30s, confirmed by hitting this exact
-    // timeout on an idle model during this session.
-  }, 90_000);
+    // 3 minutes, not 30s -- Ollama unloads an idle model from memory after a
+    // few minutes, and the resulting cold-load-plus-inference on a CPU-only
+    // sandbox can genuinely take longer than even a generous timeout under
+    // disk I/O contention, confirmed by hitting both 30s and 90s on an idle
+    // model during this session -- immediately re-running the identical
+    // call outside vitest afterward consistently completes in under 1s once
+    // the model is warm, confirming this is a real hardware/timing
+    // characteristic of local inference, not a bug in the adapter.
+  }, 180_000);
 });
