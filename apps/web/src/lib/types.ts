@@ -44,6 +44,7 @@ export interface Role {
   id: string;
   key: string;
   name: string;
+  permissions: Permission[];
 }
 
 export interface Attachment {

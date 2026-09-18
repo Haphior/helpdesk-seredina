@@ -83,6 +83,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Comp
       { to: '/business-hours', label: 'Business Hours', icon: CalendarIcon, permission: 'tickets:manage_all' },
       { to: '/ai-usage', label: 'AI Usage', icon: SparkleIcon, permission: 'tickets:manage_all' },
       { to: '/ai-agent-activity', label: 'AI Agent Activity', icon: ShieldIcon, permission: 'tickets:manage_all' },
+      { to: '/ai-settings', label: 'AI Settings', icon: SparkleIcon, permission: 'tickets:manage_all' },
       { to: '/data-export', label: 'Data Export', icon: DownloadIcon, permission: 'tickets:manage_all' },
     ],
   },
@@ -90,6 +91,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Comp
     label: 'Administration',
     items: [
       { to: '/users', label: 'Users', icon: UsersIcon, permission: 'users:manage' },
+      { to: '/roles', label: 'Roles', icon: ShieldIcon, permission: 'roles:manage' },
       { to: '/api-keys', label: 'API Keys', icon: KeyIcon },
       { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' },
     ],

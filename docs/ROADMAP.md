@@ -1278,8 +1278,40 @@ key.
 
 ## Phase 4 — Multi-tenant cloud hardening + more channels
 
-- Tenant self-signup / plan-tier scaffolding.
-- Per-tenant bring-your-own AI key UI.
+**Self-hosted single-tenant enforcement + bring-your-own AI key + custom
+roles ✅ (this pass).** Scoping found the first and third smaller than their
+one-line descriptions implied: self-signup already worked identically in
+both modes (slug collision, rate limiting, validation), the actual gap was
+`SEREDINA_MODE` never being consulted at all -- a self-hosted deployment
+(architecturally single-tenant) had no enforcement against a second,
+orphaned tenant. Custom roles' schema was already fully generic and
+`login()` already derives real permissions from live `RolePermission` rows,
+never the hardcoded 3-role seed map -- only CRUD (`POST`/`PATCH`/`DELETE
+/roles`, finally enforcing the long-defined-but-never-checked
+`roles:manage` permission) was missing. **Plan-tier scaffolding is
+deliberately not built** -- real pricing tiers are the user's own business
+decision, not something to invent.
+
+Bring-your-own AI key (`TenantAiSettings`, one row per tenant, "no row =
+deployment default" shape) reuses `EmailChannel`'s exact established
+AES-256-GCM secret pattern for the key itself. A tenant with its own
+provider configured is used *exclusively* -- the deployment-wide env config
+is never consulted as a fallback for a missing tenant key, so a
+misconfigured tenant setting fails closed (AI unavailable) rather than
+silently spending the deployment's own credit. New "AI Settings" page
+(Operations) never re-displays a saved key, only whether one is set.
+
+Verified: 16 new integration tests (2 self-hosted-gating, 7 BYOK including a
+real AES-256-GCM round-trip proving the key isn't just a boolean flag, 7
+custom-roles including one that calls the real `login()` to prove a custom
+role's permission set is enforced for actual authorization, not just
+manageable in a UI) -- full `apps/api` suite 206/206 green. Frontend
+verified live in a browser end-to-end, including the strongest version of
+the custom-roles check: create a role through the UI, then confirm it
+*immediately* appears in the Users page's own role-assignment dropdown with
+zero code changes needed there, proving the loop closes for real. See
+`docs/adr/0036-phase-4-self-hosted-signup-byok-custom-roles.md`.
+
 - Widget (embeddable web chat) + WhatsApp/Telegram channels (customer-facing
   channels — a contact reaching Seredina, same shape as email/API today).
 - **Pre-built integrations (added 2026-09-16 — the concrete list behind the
@@ -1294,7 +1326,6 @@ key.
   own payload"). Each one is its own small, real feature — not a platform for
   arbitrary future ones — which is the entire point of choosing this over a
   plugin loader.
-- Custom roles beyond the fixed three.
 - Advanced reporting/CSAT/export.
 - Automated RLS fuzz tests in CI.
 - Verified stateless multi-replica `api`/`worker` + WS fanout under load.

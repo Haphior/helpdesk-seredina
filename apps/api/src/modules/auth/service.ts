@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { DEFAULT_ROLES, type Permission } from '@seredina/shared';
+import { DEFAULT_ROLES, PERMISSIONS, type Permission } from '@seredina/shared';
 import { prisma, withTenantTx } from '@seredina/db';
-import { resolveTenantIdBySlug } from '../tenants/service';
+import { countTenants, resolveTenantIdBySlug } from '../tenants/service';
 import { seedDefaultTicketStatuses } from '../tickets/service';
 import { seedDefaultTeam } from '../teams/service';
 
@@ -21,6 +21,19 @@ export interface AuthResult {
 }
 
 export async function registerTenant(input: RegisterTenantInput): Promise<AuthResult> {
+  const mode = process.env.SEREDINA_MODE === 'self_hosted' ? 'self_hosted' : 'cloud';
+
+  // Self-hosted is architecturally single-tenant (see docs/PRODUCT.md) -- this
+  // was previously unenforced: /register behaved identically in both modes,
+  // so a self-hosted operator could accidentally create a second, orphaned
+  // tenant with no UI ever pointing at it. The first registration (bootstrapping
+  // the one tenant) still works; count_tenants() is the same "no tenant context
+  // to check from yet" SECURITY DEFINER escape hatch as resolveTenantIdBySlug,
+  // used here for the same reason -- see prisma/rls/policies.sql.
+  if (mode === 'self_hosted' && (await countTenants()) > 0) {
+    throw new Error('this self-hosted instance already has a tenant -- self-hosted mode supports exactly one');
+  }
+
   const existing = await resolveTenantIdBySlug(input.tenantSlug);
   if (existing) {
     throw new Error('tenant slug already taken');
@@ -34,7 +47,7 @@ export async function registerTenant(input: RegisterTenantInput): Promise<AuthRe
 
   return withTenantTx(prisma, tenantId, async (tx) => {
     await tx.tenant.create({
-      data: { id: tenantId, slug: input.tenantSlug, name: input.tenantName, mode: 'cloud' },
+      data: { id: tenantId, slug: input.tenantSlug, name: input.tenantName, mode },
     });
 
     const allPermissions = await tx.permission.findMany();
@@ -173,11 +186,115 @@ export async function listUsers(tenantId: string) {
   return users.map(({ lockedUntil, ...u }) => ({ ...u, isLocked: !!lockedUntil && lockedUntil > now }));
 }
 
-/** The tenant's roles (fixed to admin/team_lead/agent for now -- see ROADMAP's "custom roles" backlog item). */
+/**
+ * Custom roles (Phase 4, docs/adr/0036-phase-4-self-hosted-signup-byok-custom-roles.md):
+ * the 3 seeded roles (admin/team_lead/agent) were never structurally special
+ * -- Role/Permission/RolePermission were already generic, and login() already
+ * derives a user's actual permissions from these real DB rows, never from
+ * the DEFAULT_ROLES map (that map is ONLY consulted once, at tenant
+ * registration, to seed the starting 3). So a tenant admin creating a 4th
+ * role and assigning users to it already works end-to-end the moment the
+ * row exists -- this is genuinely just the missing CRUD, not a deeper gap.
+ */
 export async function listRoles(tenantId: string) {
-  return withTenantTx(prisma, tenantId, async (tx) =>
-    tx.role.findMany({ select: { id: true, key: true, name: true }, orderBy: { key: 'asc' } }),
-  );
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const roles = await tx.role.findMany({
+      include: { permissions: { include: { permission: { select: { key: true } } } } },
+      orderBy: { key: 'asc' },
+    });
+    return roles.map((r) => ({
+      id: r.id,
+      key: r.key,
+      name: r.name,
+      permissions: r.permissions.map((rp) => rp.permission.key) as Permission[],
+    }));
+  });
+}
+
+function validatePermissionKeys(permissions: string[]): void {
+  const invalid = permissions.filter((p) => !(PERMISSIONS as readonly string[]).includes(p));
+  if (invalid.length > 0) {
+    throw new Error(`unknown permission(s): ${invalid.join(', ')}`);
+  }
+}
+
+export interface CreateRoleInput {
+  key: string;
+  name: string;
+  permissions: Permission[];
+}
+
+export async function createRole(tenantId: string, input: CreateRoleInput) {
+  validatePermissionKeys(input.permissions);
+
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.role.findUnique({ where: { tenantId_key: { tenantId, key: input.key } } });
+    if (existing) throw new Error('a role with this key already exists');
+
+    const permissionRows = await tx.permission.findMany({ where: { key: { in: input.permissions } } });
+    const role = await tx.role.create({ data: { tenantId, key: input.key, name: input.name } });
+    for (const p of permissionRows) {
+      await tx.rolePermission.create({ data: { tenantId, roleId: role.id, permissionId: p.id } });
+    }
+    return { id: role.id, key: role.key, name: role.name, permissions: permissionRows.map((p) => p.key) as Permission[] };
+  });
+}
+
+export interface UpdateRoleInput {
+  name?: string;
+  permissions?: Permission[];
+}
+
+/** `key` is immutable once created -- same convention as CustomFieldDefinition's key. */
+export async function updateRole(tenantId: string, id: string, input: UpdateRoleInput) {
+  if (input.permissions) validatePermissionKeys(input.permissions);
+
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.role.findUnique({ where: { id } });
+    if (!existing) throw new Error('role not found');
+
+    if (input.name) {
+      await tx.role.update({ where: { id }, data: { name: input.name } });
+    }
+
+    if (input.permissions) {
+      // Full delete+recreate, same pattern as ProcessTemplate's step list --
+      // simpler than reconciling an add/remove diff, and RolePermission rows
+      // carry no other state that a rebuild would lose.
+      await tx.rolePermission.deleteMany({ where: { roleId: id } });
+      const permissionRows = await tx.permission.findMany({ where: { key: { in: input.permissions } } });
+      for (const p of permissionRows) {
+        await tx.rolePermission.create({ data: { tenantId, roleId: id, permissionId: p.id } });
+      }
+    }
+
+    const updated = await tx.role.findUnique({
+      where: { id },
+      include: { permissions: { include: { permission: { select: { key: true } } } } },
+    });
+    return {
+      id: updated!.id,
+      key: updated!.key,
+      name: updated!.name,
+      permissions: updated!.permissions.map((rp) => rp.permission.key) as Permission[],
+    };
+  });
+}
+
+/** Blocks deleting 'admin' -- every tenant needs at least one role that can manage users/roles, and this is the one registration always seeds. */
+export async function deleteRole(tenantId: string, id: string) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.role.findUnique({ where: { id } });
+    if (!existing) throw new Error('role not found');
+    if (existing.key === 'admin') throw new Error('cannot delete the admin role');
+
+    const usersWithRole = await tx.user.count({ where: { roleId: id } });
+    if (usersWithRole > 0) {
+      throw new Error(`cannot delete a role with ${usersWithRole} user(s) still assigned to it -- reassign them first`);
+    }
+
+    await tx.role.delete({ where: { id } });
+  });
 }
 
 export interface CreateUserInput {

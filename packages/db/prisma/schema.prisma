@@ -76,6 +76,7 @@ model Tenant {
   attachments           Attachment[]
   autonomyPolicy        AutonomyPolicy?
   aiAgentRuns           AiAgentRun[]
+  aiSettings            TenantAiSettings?
 
   @@map("tenants")
 }
@@ -1242,4 +1243,29 @@ model AiAgentRun {
 
   @@index([tenantId, status])
   @@map("ai_agent_runs")
+}
+
+// One row per tenant (same "no row = default" shape as BusinessHours/
+// AutonomyPolicy) -- Phase 4's bring-your-own-AI-key: a tenant that never
+// configured this uses the deployment-wide AI_PROVIDER/env-var config
+// unchanged (see modules/ai/adapter.ts's getAiAdapter). apiKeyEncrypted
+// follows the exact same AES-256-GCM pattern as EmailChannel's
+// imapPasswordEncrypted/smtpPasswordEncrypted (packages/shared/src/crypto.ts,
+// ENCRYPTION_KEY) -- a tenant's own AI provider key is exactly as sensitive
+// as their mailbox credentials, never stored any other way. Nullable
+// per-field (not one big Json blob) because 'ollama' genuinely needs no key
+// at all, and this way a half-configured row (provider set, key not yet
+// saved) is representable without a workaround.
+model TenantAiSettings {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @unique @map("tenant_id") @db.Uuid
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider        String? // 'anthropic' | 'openai' | 'ollama' -- see AI_PROVIDER's own values
+  apiKeyEncrypted String?  @map("api_key_encrypted")
+  model           String? // optional override, e.g. a specific model name for the chosen provider
+  baseUrl         String?  @map("base_url") // 'ollama' only -- overrides OLLAMA_BASE_URL for this tenant
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("tenant_ai_settings")
 }

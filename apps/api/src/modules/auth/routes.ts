@@ -1,8 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
+import { PERMISSIONS } from '@seredina/shared';
 import {
+  createRole,
   createUser,
+  deleteRole,
   getMe,
   listRoles,
   listUsers,
@@ -10,6 +13,7 @@ import {
   registerTenant,
   resetUserPassword,
   unlockUser,
+  updateRole,
   updateUser,
 } from './service';
 
@@ -42,6 +46,21 @@ const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
   roleKey: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
+});
+
+const createRoleSchema = z.object({
+  key: z
+    .string()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z0-9_]+$/, 'key must be lowercase alphanumeric with underscores'),
+  name: z.string().min(1).max(100),
+  permissions: z.array(z.enum(PERMISSIONS)),
+});
+
+const updateRoleSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  permissions: z.array(z.enum(PERMISSIONS)).optional(),
 });
 
 const resetPasswordSchema = z.object({ password: z.string().min(8) });
@@ -191,4 +210,41 @@ export default async function authRoutes(app: FastifyInstance) {
       return reply.send({ roles });
     },
   );
+
+  // Custom roles (Phase 4, docs/adr/0036-phase-4-self-hosted-signup-byok-custom-roles.md)
+  // -- the first real check of roles:manage anywhere in this codebase; it was
+  // defined and assigned to admin/team_lead from day one but never actually
+  // gated anything until now.
+  app.post('/roles', { preHandler: [app.authenticate, requirePermission('roles:manage')] }, async (request, reply) => {
+    const parsed = createRoleSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    try {
+      const role = await createRole(request.user.tenantId, parsed.data);
+      return reply.code(201).send(role);
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
+
+  app.patch('/roles/:id', { preHandler: [app.authenticate, requirePermission('roles:manage')] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const parsed = updateRoleSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    try {
+      const role = await updateRole(request.user.tenantId, id, parsed.data);
+      return reply.send(role);
+    } catch (err) {
+      return reply.code(404).send({ error: (err as Error).message });
+    }
+  });
+
+  app.delete('/roles/:id', { preHandler: [app.authenticate, requirePermission('roles:manage')] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    try {
+      await deleteRole(request.user.tenantId, id);
+      return reply.code(204).send();
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
 }

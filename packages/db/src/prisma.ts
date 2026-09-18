@@ -66,6 +66,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   KbChunk: 'tenantId',
   AutonomyPolicy: 'tenantId',
   AiAgentRun: 'tenantId',
+  TenantAiSettings: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

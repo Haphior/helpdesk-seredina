@@ -19,3 +19,9 @@ export async function resolveTenantIdBySlug(slug: string): Promise<string | null
 // resolveTenantIdByApiKeyHash (same pattern, for the API channel) lives in
 // @seredina/db -- see packages/db/src/apiKeyLookup.ts -- so apps/mcp-server can
 // use the identical implementation without a cross-app import into apps/api.
+
+/** Same "no tenant context to check from" reasoning -- see registerTenant's SEREDINA_MODE=self_hosted guard. */
+export async function countTenants(): Promise<number> {
+  const rows = await prisma.$queryRaw<{ count: bigint }[]>`SELECT count_tenants() AS count`;
+  return Number(rows[0]?.count ?? 0);
+}

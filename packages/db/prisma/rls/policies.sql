@@ -33,7 +33,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   services, service_assets, kb_articles,
   on_call_schedules, on_call_shifts, escalation_tiers, escalation_runs, saved_views,
   notifications, notification_preferences, ai_usage_logs, attachments, kb_chunks,
-  autonomy_policies, ai_agent_runs
+  autonomy_policies, ai_agent_runs, tenant_ai_settings
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -65,7 +65,7 @@ BEGIN
     'services', 'service_assets', 'kb_articles',
     'on_call_schedules', 'on_call_shifts', 'escalation_tiers', 'escalation_runs', 'saved_views',
     'notifications', 'notification_preferences', 'ai_usage_logs', 'attachments', 'kb_chunks',
-    'autonomy_policies', 'ai_agent_runs'
+    'autonomy_policies', 'ai_agent_runs', 'tenant_ai_settings'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
@@ -136,3 +136,19 @@ $$;
 
 REVOKE ALL ON FUNCTION public.list_active_email_channels() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.list_active_email_channels() TO app_tenant;
+
+-- Same escape-hatch pattern, for SEREDINA_MODE=self_hosted's single-tenant
+-- enforcement (see modules/auth/service.ts's registerTenant, Phase 4):
+-- "has any tenant already registered on this instance" has no tenant context
+-- to check from either, and exposes nothing about any tenant beyond a count.
+CREATE OR REPLACE FUNCTION public.count_tenants()
+RETURNS bigint
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT count(*) FROM tenants;
+$$;
+
+REVOKE ALL ON FUNCTION public.count_tenants() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.count_tenants() TO app_tenant;

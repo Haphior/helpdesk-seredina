@@ -11,6 +11,7 @@ import { ApiKeys } from './pages/ApiKeys';
 import { Assets } from './pages/Assets';
 import { AssetDetail } from './pages/AssetDetail';
 import { Users } from './pages/Users';
+import { Roles } from './pages/Roles';
 import { EmailChannels } from './pages/EmailChannels';
 import { CustomFields } from './pages/CustomFields';
 import { EquipmentCatalog } from './pages/EquipmentCatalog';
@@ -30,6 +31,7 @@ import { OnCall } from './pages/OnCall';
 import { NotificationSettings } from './pages/NotificationSettings';
 import { AiUsage } from './pages/AiUsage';
 import { AiAgentActivity } from './pages/AiAgentActivity';
+import { AiSettings } from './pages/AiSettings';
 import { DataExport } from './pages/DataExport';
 import { TicketStatuses } from './pages/TicketStatuses';
 import { PublicKb } from './pages/PublicKb';
@@ -56,6 +58,7 @@ export function App() {
             <Route path="/assets/:id" element={<AssetDetail />} />
             <Route path="/api-keys" element={<ApiKeys />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/roles" element={<Roles />} />
             <Route path="/email-channels" element={<EmailChannels />} />
             <Route path="/custom-fields" element={<CustomFields />} />
             <Route path="/equipment-catalog" element={<EquipmentCatalog />} />
@@ -71,6 +74,7 @@ export function App() {
             <Route path="/notification-settings" element={<NotificationSettings />} />
             <Route path="/ai-usage" element={<AiUsage />} />
             <Route path="/ai-agent-activity" element={<AiAgentActivity />} />
+            <Route path="/ai-settings" element={<AiSettings />} />
             <Route path="/data-export" element={<DataExport />} />
             <Route path="/ticket-statuses" element={<TicketStatuses />} />
             <Route path="/webhooks" element={<Webhooks />} />
