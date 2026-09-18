@@ -9,3 +9,4 @@ export * from './ssrf';
 export * from './sla';
 export * from './oncall';
 export * from './notifications';
+export * from './kb';

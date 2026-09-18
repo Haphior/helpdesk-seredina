@@ -3,11 +3,13 @@ import { Queue } from 'bullmq';
 import {
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
+  EMBED_KB_ARTICLE_QUEUE_NAME,
   NOTIFICATION_EMAIL_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
+  type EmbedKbArticleJobPayload,
   type NotificationEmailJobPayload,
   type SlaBreachCheckJobPayload,
   type WebhookDeliveryJobPayload,
@@ -31,3 +33,4 @@ export const emailSendQueue = new Queue<EmailSendJobPayload>(EMAIL_SEND_QUEUE_NA
 export const webhookDeliveryQueue = new Queue<WebhookDeliveryJobPayload>(WEBHOOK_DELIVERY_QUEUE_NAME, { connection });
 export const slaBreachQueue = new Queue<SlaBreachCheckJobPayload>(SLA_BREACH_QUEUE_NAME, { connection });
 export const notificationEmailQueue = new Queue<NotificationEmailJobPayload>(NOTIFICATION_EMAIL_QUEUE_NAME, { connection });
+export const embedKbArticleQueue = new Queue<EmbedKbArticleJobPayload>(EMBED_KB_ARTICLE_QUEUE_NAME, { connection });

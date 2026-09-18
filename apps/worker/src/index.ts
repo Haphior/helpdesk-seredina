@@ -6,12 +6,14 @@ import { Worker } from 'bullmq';
 import {
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
+  EMBED_KB_ARTICLE_QUEUE_NAME,
   ESCALATION_ADVANCE_QUEUE_NAME,
   NOTIFICATION_EMAIL_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
+  type EmbedKbArticleJobPayload,
   type EscalationAdvanceJobPayload,
   type NotificationEmailJobPayload,
   type SlaBreachCheckJobPayload,
@@ -24,6 +26,7 @@ import { deliverWebhook, markWebhookDeliveryFailed } from './webhooks/deliver';
 import { checkSlaBreach } from './sla/checkBreach';
 import { advanceEscalation } from './oncall/escalate';
 import { sendNotificationEmail } from './notifications/sendEmail';
+import { embedKbArticle } from './kb/embed';
 import { captureError, initErrorTracking } from './lib/errorTracking';
 
 initErrorTracking();
@@ -90,6 +93,19 @@ const notificationEmailWorker = new Worker<NotificationEmailJobPayload>(
   { connection, concurrency: 4 },
 );
 
+// concurrency: 1 -- the local embedding model is a single in-process singleton
+// (see LocalEmbeddingAdapter); running two embed jobs at once would just
+// serialize inside the ONNX runtime anyway, so a queue-level concurrency of 1
+// keeps memory bounded instead of loading article text for jobs that can't run.
+const embedKbArticleWorker = new Worker<EmbedKbArticleJobPayload>(
+  EMBED_KB_ARTICLE_QUEUE_NAME,
+  async (job) => {
+    const { tenantId, kbArticleId } = job.data;
+    await embedKbArticle(tenantId, kbArticleId);
+  },
+  { connection, concurrency: 1 },
+);
+
 discoveryWorker.on('failed', (job, err) => {
   console.error(`[worker] discovery job ${job?.id} failed:`, err);
   captureError(err);
@@ -118,6 +134,10 @@ escalationAdvanceWorker.on('failed', (job, err) => {
 });
 notificationEmailWorker.on('failed', (job, err) => {
   console.error(`[worker] notification email ${job?.id} failed:`, err);
+  captureError(err);
+});
+embedKbArticleWorker.on('failed', (job, err) => {
+  console.error(`[worker] embed kb article ${job?.id} failed:`, err);
   captureError(err);
 });
 
@@ -151,5 +171,6 @@ console.log(
   SLA_BREACH_QUEUE_NAME,
   ESCALATION_ADVANCE_QUEUE_NAME,
   NOTIFICATION_EMAIL_QUEUE_NAME,
+  EMBED_KB_ARTICLE_QUEUE_NAME,
 );
 console.log('[worker] polling email channels every', EMAIL_POLL_INTERVAL_MS, 'ms');

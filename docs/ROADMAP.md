@@ -1122,10 +1122,48 @@ for the first time is still this feature's true validation.
 
 ## Phase 3 — AI depth: RAG + MCP + autonomous mode
 
-- pgvector `KbChunk` embeddings + a `search_knowledge_base` RAG tool, layered
-  onto the plain `KbArticle` CRUD resource added in Phase 2 above — the
-  articles need to exist and be human-maintained first; this phase makes them
-  AI-searchable, not the other way around.
+**pgvector `KbChunk` embeddings + semantic search grounding `suggestReply` ✅
+(this pass)**, layered onto the plain `KbArticle` CRUD resource added in
+Phase 2 — the articles needed to exist and be human-maintained first; this
+made them AI-searchable, not the other way around. Anthropic has no
+embeddings API, and the user is running against a credit-limited,
+semi-compromised key this session — both real constraints, not
+hypotheticals — so embeddings run **locally** (`@huggingface/transformers`,
+`Xenova/all-MiniLM-L6-v2`, zero marginal cost, no new API key) behind a new
+`EmbeddingProviderAdapter` interface deliberately designed to support other
+providers (Voyage, OpenAI) later without touching call sites, per explicit
+user direction. `KbChunk.embedding` is a Prisma `Unsupported("vector(384)")`
+column — first use of a Prisma preview feature in this codebase — so every
+read/write goes through raw SQL, with `tenant_id` filtered by hand on every
+statement as defense in depth on top of Postgres RLS (which ADR 0001's
+Prisma Client Extension can't reach for raw queries). `suggestReply` now
+searches the KB before drafting, injects matched excerpts above a 0.45
+cosine-similarity threshold, and returns `usedArticles` for a "Based on: ..."
+provenance note in the ticket UI. See `docs/adr/0032-rag-knowledge-base-search.md`.
+
+Verified: 10 unit tests (`packages/ai-adapters`, real local model, zero API
+cost) covering chunking edge cases and that a related sentence pair scores
+higher cosine similarity than an unrelated one. The `kb_chunks` table, its
+HNSW index, and its forced RLS policy were confirmed directly against the
+running dev database via `psql`, not assumed from the migration SQL. 5 new
+live-Postgres integration tests (`apps/api/test/kb-rag-search.test.ts`, real
+embeddings, real pgvector `<=>` search) prove: relevant-over-irrelevant
+ranking, cross-tenant isolation for this raw-SQL path specifically, an empty
+result for a KB-less tenant, `suggestReply` grounding actually reaching the
+system prompt (via `TestProviderAdapter`, no real Anthropic call), and
+graceful no-grounding degradation when nothing matches. Full `apps/api`
+suite 164/164 green (9 skipped, unrelated), everything typechecks clean.
+Full pipeline verified live end-to-end with the real dev stack running (no
+mocks for create→enqueue→embed): a browser session created a real KB
+article through the actual UI, and `psql` confirmed the real worker process
+embedded it into a `KbChunk` row with a genuine 384-dim vector. Only the
+final "Suggest reply" UI click had its network response mocked, deliberately
+avoiding a real Anthropic API call whose backend behavior the integration
+tests above already fully proved — that click confirmed the "Based on: VPN
+Setup Guide" note renders correctly with zero console errors. **Known gap**:
+the 0.45 similarity threshold and ~500-char chunk size are tuned against a
+handful of synthetic sentence pairs, not real tenant KB content at scale.
+
 - One shared tool catalog (`get_ticket`, `add_ticket_reply`, `set_ticket_status`,
   `assign_ticket`, `apply_macro`, `escalate_to_human`, ...) used by copilot,
   autonomous mode, and the MCP server alike — never a second implementation.

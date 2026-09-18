@@ -13,12 +13,16 @@
 // resource:action strings, not tenant data, so it carries no tenant_id and no RLS.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // Needed for the `extensions` datasource block and KbChunk's Unsupported
+  // vector column below (Phase 3 RAG, see docs/adr/0032-rag-knowledge-base-search.md).
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 model Tenant {
@@ -60,6 +64,7 @@ model Tenant {
   services              Service[]
   serviceAssets         ServiceAsset[]
   kbArticles            KbArticle[]
+  kbChunks              KbChunk[]
   onCallSchedules       OnCallSchedule[]
   onCallShifts          OnCallShift[]
   escalationTiers       EscalationTier[]
@@ -624,8 +629,36 @@ model KbArticle {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  chunks KbChunk[]
+
   @@unique([tenantId, slug])
   @@map("kb_articles")
+}
+
+// RAG substrate for the AI copilot's knowledge-base grounding (Phase 3 -- see
+// docs/adr/0032-rag-knowledge-base-search.md). One row per chunk of a
+// KbArticle's body, embedded regardless of `published` -- the copilot drawing
+// on a tenant's own agents' internal knowledge is a different trust boundary
+// than the public self-service portal (ADR 0018), which independently filters
+// on `published` at its own query layer; nothing here is ever exposed to an
+// unauthenticated caller.
+//
+// `embedding` has no first-class Prisma type -- `Unsupported(...)` means every
+// write and read of it goes through raw SQL (see modules/kb/embeddings.ts in
+// apps/worker and apps/api), never Prisma's normal query API.
+model KbChunk {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kbArticleId String    @map("kb_article_id") @db.Uuid
+  kbArticle   KbArticle @relation(fields: [kbArticleId], references: [id], onDelete: Cascade)
+  content     String
+  // 384 dimensions -- Xenova/all-MiniLM-L6-v2 (packages/ai-adapters' LocalEmbeddingAdapter).
+  // Changing embedding models/dimensions later means a migration, not just a config flag.
+  embedding   Unsupported("vector(384)")?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("kb_chunks")
 }
 
 enum DiscoveryJobStatus {

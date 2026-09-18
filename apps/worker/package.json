@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@sentry/node": "^10.74.0",
+    "@seredina/ai-adapters": "*",
     "@seredina/db": "*",
     "@seredina/shared": "*",
     "bullmq": "^6.3.6",

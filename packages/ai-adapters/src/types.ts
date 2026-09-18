@@ -29,3 +29,17 @@ export interface CompleteResult {
 export interface LlmProviderAdapter {
   complete(input: CompleteInput): Promise<CompleteResult>;
 }
+
+/**
+ * Same provider-agnostic-seam pattern as LlmProviderAdapter, for embeddings
+ * (RAG substrate -- see docs/adr/0032-rag-knowledge-base-search.md). `dimensions`
+ * is a property, not a magic number scattered across call sites, because the
+ * vector column width (`KbChunk.embedding vector(384)` in schema.prisma) is
+ * pinned to whichever adapter actually wrote the data -- swapping to a
+ * higher-dimension provider later means a migration, and this property is what
+ * a future migration script would assert against before running.
+ */
+export interface EmbeddingProviderAdapter {
+  embed(texts: string[]): Promise<number[][]>;
+  readonly dimensions: number;
+}

@@ -32,7 +32,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   sla_policies, business_hours, dashboard_widgets, problems, service_catalog_items,
   services, service_assets, kb_articles,
   on_call_schedules, on_call_shifts, escalation_tiers, escalation_runs, saved_views,
-  notifications, notification_preferences, ai_usage_logs, attachments
+  notifications, notification_preferences, ai_usage_logs, attachments, kb_chunks
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -63,7 +63,7 @@ BEGIN
     'sla_policies', 'business_hours', 'dashboard_widgets', 'problems', 'service_catalog_items',
     'services', 'service_assets', 'kb_articles',
     'on_call_schedules', 'on_call_shifts', 'escalation_tiers', 'escalation_runs', 'saved_views',
-    'notifications', 'notification_preferences', 'ai_usage_logs', 'attachments'
+    'notifications', 'notification_preferences', 'ai_usage_logs', 'attachments', 'kb_chunks'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);

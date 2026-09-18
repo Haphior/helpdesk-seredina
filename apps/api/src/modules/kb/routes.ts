@@ -11,6 +11,7 @@ import {
   listPublishedKbArticles,
   updateKbArticle,
 } from './service';
+import { searchKnowledgeBase } from './embeddings';
 
 const createArticleSchema = z.object({
   title: z.string().min(1).max(200),
@@ -30,6 +31,11 @@ const searchQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
+const semanticSearchQuerySchema = z.object({
+  q: z.string().min(1).max(500),
+  limit: z.coerce.number().int().min(1).max(20).optional(),
+});
+
 export default async function kbRoutes(app: FastifyInstance) {
   // Internal browsing -- tickets:read, same tier as custom field definitions:
   // any agent can read (and, below, write) the knowledge base; nothing here is
@@ -39,6 +45,20 @@ export default async function kbRoutes(app: FastifyInstance) {
     const { articles, total } = await listKbArticles(request.user.tenantId, q, limit, offset);
     return reply.send({ articles, total });
   });
+
+  // Standalone semantic-search endpoint, separate from the copilot's own
+  // internal use of searchKnowledgeBase() (see modules/ai/service.ts's
+  // suggestReply) -- exists so the RAG search quality can be tested/tuned
+  // directly, without going through a full suggestReply call every time.
+  app.get(
+    '/kb-articles/search-semantic',
+    { preHandler: [app.authenticate, requirePermission('tickets:read')] },
+    async (request, reply) => {
+      const { q, limit } = semanticSearchQuerySchema.parse(request.query);
+      const results = await searchKnowledgeBase(request.user.tenantId, q, limit);
+      return reply.send({ results });
+    },
+  );
 
   app.get(
     '/kb-articles/:id',

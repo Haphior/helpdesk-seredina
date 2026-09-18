@@ -1,4 +1,5 @@
 import { prisma, withTenantTx, type Prisma } from '@seredina/db';
+import { embedKbArticleQueue } from '../../lib/queue';
 
 function slugify(title: string): string {
   const base = title
@@ -71,7 +72,7 @@ export interface CreateKbArticleInput {
 }
 
 export async function createKbArticle(tenantId: string, input: CreateKbArticleInput) {
-  return withTenantTx(prisma, tenantId, async (tx) => {
+  const article = await withTenantTx(prisma, tenantId, async (tx) => {
     const slug = await uniqueSlug(tx, tenantId, input.title);
     return tx.kbArticle.create({
       data: {
@@ -85,6 +86,10 @@ export async function createKbArticle(tenantId: string, input: CreateKbArticleIn
       include: { author: { select: { id: true, name: true } } },
     });
   });
+  // Outside the transaction -- enqueueing is network I/O against Redis, never
+  // called while a tenant transaction holds a pooled connection open.
+  await embedKbArticleQueue.add('embed', { tenantId, kbArticleId: article.id });
+  return article;
 }
 
 export interface UpdateKbArticleInput {
@@ -95,15 +100,25 @@ export interface UpdateKbArticleInput {
 
 /** Title can change freely -- the slug, once assigned at creation, never does (see schema comment). */
 export async function updateKbArticle(tenantId: string, id: string, input: UpdateKbArticleInput) {
-  return withTenantTx(prisma, tenantId, async (tx) => {
+  const { article, bodyChanged } = await withTenantTx(prisma, tenantId, async (tx) => {
     const existing = await tx.kbArticle.findUnique({ where: { id } });
     if (!existing) throw new Error('article not found');
-    return tx.kbArticle.update({
+    const updated = await tx.kbArticle.update({
       where: { id },
       data: { title: input.title, body: input.body, published: input.published },
       include: { author: { select: { id: true, name: true } } },
     });
+    // Title feeds into the embedded text alongside the body (see embed.ts), so
+    // a title-only rename also needs re-embedding, not just a body edit.
+    const changed =
+      (input.body !== undefined && input.body !== existing.body) ||
+      (input.title !== undefined && input.title !== existing.title);
+    return { article: updated, bodyChanged: changed };
   });
+  if (bodyChanged) {
+    await embedKbArticleQueue.add('embed', { tenantId, kbArticleId: article.id });
+  }
+  return article;
 }
 
 export async function deleteKbArticle(tenantId: string, id: string) {

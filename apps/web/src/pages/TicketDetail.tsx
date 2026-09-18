@@ -48,6 +48,7 @@ export function TicketDetail() {
   const [suggesting, setSuggesting] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiUsage, setAiUsage] = useState<TicketAiUsage | null>(null);
+  const [usedArticles, setUsedArticles] = useState<{ id: string; title: string; slug: string }[]>([]);
 
   function loadAiUsage() {
     if (!id) return;
@@ -182,6 +183,7 @@ export function TicketDetail() {
       }
       setReply('');
       setPendingFiles([]);
+      setUsedArticles([]);
       await loadTicket();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to send message');
@@ -225,8 +227,11 @@ export function TicketDetail() {
     setAiError(null);
     setSuggesting(true);
     try {
-      const res = await apiPost<{ suggestion: string }>(`/tickets/${id}/ai/suggest-reply`);
+      const res = await apiPost<{ suggestion: string; usedArticles: { id: string; title: string; slug: string }[] }>(
+        `/tickets/${id}/ai/suggest-reply`,
+      );
       setReply(res.suggestion);
+      setUsedArticles(res.usedArticles ?? []);
       loadAiUsage();
     } catch (err) {
       setAiError(err instanceof ApiError ? err.message : 'Failed to suggest a reply');
@@ -463,6 +468,17 @@ export function TicketDetail() {
             rows={3}
             className="w-full resize-none rounded-lg border-0 px-2.5 py-2 text-[13.5px] focus:outline-none"
           />
+          {usedArticles.length > 0 && (
+            <p className="mb-1.5 px-1.5 text-[12px] text-slate-400">
+              Based on:{' '}
+              {usedArticles.map((a, i) => (
+                <span key={a.id}>
+                  {i > 0 && ', '}
+                  <span className="font-medium text-slate-500">{a.title}</span>
+                </span>
+              ))}
+            </p>
+          )}
           {pendingFiles.length > 0 && (
             <div className="mb-1.5 flex flex-wrap gap-1.5 px-1.5">
               {pendingFiles.map((f, i) => (
