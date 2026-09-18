@@ -1350,7 +1350,25 @@ sandbox (no local Actions runner); every step was verified by running its
 real command locally instead. See
 `docs/adr/0037-rls-fuzz-tests-and-ci.md`.
 
-- Verified stateless multi-replica `api`/`worker` + WS fanout under load.
+**Multi-replica audit ✅ (this pass, partial) — "WS fanout" corrected as
+stale.** "WS fanout" traced back to the *original* pre-ADR-0019 plan; ADR
+0019 (collision detection) explicitly chose a short-poll heartbeat instead
+of WebSockets, confirmed by grep -- no `@fastify/websocket`, no websocket
+plugin anywhere. There was never anything real to verify there; corrected
+rather than left implying unaddressed risk. A systematic in-memory-state
+audit found presence (already Redis-backed) and SLA/webhook scheduling
+(already BullMQ-delay-backed, not `setTimeout`) were already multi-replica-
+safe, and fixed the one real gap: `@fastify/rate-limit` defaulted to an
+in-process store, silently multiplying every configured limit (including
+`/auth/login`'s brute-force throttle) by however many replicas happen to be
+running. Now backed by a dedicated `ioredis` connection -- verified live by
+hitting `/auth/login` against the real dev API and confirming the counter
+and TTL actually appear in Redis, not just in one process's memory. Full
+`apps/api` suite 207/207 green. **Not done**: email-poll double-polling
+under multiple worker replicas remains a known, disclosed limitation (ADR
+0004) this pass didn't fix; no actual multi-replica load test was run (this
+sandbox can't orchestrate multiple replicas behind a load balancer). See
+`docs/adr/0038-multi-replica-hardening.md`.
 
 ## Phase 5 — Endpoint agents (Windows/Linux/macOS)
 

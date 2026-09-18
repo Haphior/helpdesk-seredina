@@ -8,6 +8,7 @@ import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import { MAX_ATTACHMENT_SIZE_BYTES } from './modules/attachments/service';
 import { attachErrorTracking, initErrorTracking } from './lib/errorTracking';
+import { rateLimitRedis } from './lib/rateLimitRedis';
 import jwtPlugin from './plugins/jwt';
 import apiKeyAuthPlugin from './plugins/apiKeyAuth';
 import authRoutes from './modules/auth/routes';
@@ -46,7 +47,11 @@ export function buildApp() {
   attachErrorTracking(app);
 
   app.register(helmet);
-  app.register(rateLimit, { max: 300, timeWindow: '1 minute' });
+  // redis, not the plugin's default in-process store -- see
+  // lib/rateLimitRedis.ts and docs/adr/0038-multi-replica-hardening.md for
+  // why a shared store is required the moment `api` runs as more than one
+  // replica.
+  app.register(rateLimit, { max: 300, timeWindow: '1 minute', redis: rateLimitRedis });
 
   // Auth here is a Bearer token (JWT or ApiKey), never a cookie, so there's no CSRF
   // exposure to reflecting the origin -- CORS_ORIGIN lets an operator lock this down
