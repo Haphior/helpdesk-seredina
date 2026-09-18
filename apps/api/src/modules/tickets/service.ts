@@ -29,9 +29,12 @@ export interface CreateTicketFromApiInput {
   priority?: TicketPriority;
   // Defaults to 'api' -- the Service Catalog (docs/adr/0016-service-catalog.md)
   // reuses this same function with channel: 'catalog' rather than duplicating
-  // ticket-creation logic for a second internal channel.
+  // ticket-creation logic for a second internal channel; the widget channel
+  // (docs/adr/0040-embeddable-widget.md) does the same with channel: 'widget'.
   channel?: string;
   customFields?: Record<string, unknown>;
+  // Set only by the widget channel -- see modules/widget/service.ts.
+  widgetToken?: string;
 }
 
 /** The API channel: POST /v1/tickets, authenticated by ApiKey -- see plugins/apiKeyAuth.ts. */
@@ -64,6 +67,7 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
         statusId: openStatus.id,
         contactId: contact.id,
         channel: input.channel ?? 'api',
+        widgetToken: input.widgetToken,
         customFields: input.customFields as Prisma.InputJsonValue | undefined,
         createdAt,
         firstResponseDueAt: dueAts.firstResponseDueAt,
@@ -405,8 +409,15 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
     });
 
     // The SLA "first response" milestone is the first public (non-internal-note)
-    // reply an agent posts -- stamped once, never overwritten by later replies.
-    if (!input.isPrivateNote && !ticket.firstRespondedAt) {
+    // reply an AGENT or AI posts -- stamped once, never overwritten by later
+    // replies. authorType !== 'CONTACT' matters now that addMessage is a real
+    // code path for a contact's own follow-up messages too (the widget
+    // channel's conversation-continuation -- see docs/adr/0040-embeddable-
+    // widget.md): before that, every CONTACT-authored message was the
+    // ticket's own opening message, created via a direct tx.message.create in
+    // createTicketFromApi/ingestAlert, never through this function, so this
+    // check was never exercised by a contact message before now.
+    if (!input.isPrivateNote && authorType !== 'CONTACT' && !ticket.firstRespondedAt) {
       await tx.ticket.update({ where: { id: ticketId }, data: { firstRespondedAt: new Date() } });
     }
 

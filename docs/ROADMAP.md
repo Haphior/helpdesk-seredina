@@ -1312,8 +1312,56 @@ the custom-roles check: create a role through the UI, then confirm it
 zero code changes needed there, proving the loop closes for real. See
 `docs/adr/0036-phase-4-self-hosted-signup-byok-custom-roles.md`.
 
-- Widget (embeddable web chat) + WhatsApp/Telegram channels (customer-facing
-  channels — a contact reaching Seredina, same shape as email/API today).
+**Embeddable web chat widget ✅ (this pass) — the first of the "widget +
+WhatsApp/Telegram" customer-facing channels.** One `<script>` tag
+(`GET /widget.js`, `data-tenant="<slug>"`) drops a floating chat bubble on
+any third-party website; a visitor's message becomes a real ticket
+(`channel: "widget"`, reusing `createTicketFromApi`/`addMessage` like every
+other channel). No login, no `ApiKey` — a random `widgetToken`
+(`Ticket.widgetToken`, unique-indexed) held in the visitor's own
+`localStorage` proves conversation continuity instead, scoped to its
+tenant the same way every other RLS-backed lookup is. Caught and fixed a
+real latent bug in `addMessage` while building this: `firstRespondedAt` was
+stamped for any non-private message regardless of author, which would have
+let a customer's own follow-up count as its own first response — never
+exercised before, since a CONTACT message previously only ever existed as
+a ticket's opening message, not a follow-up through `addMessage`.
+
+The actual hard part was CORS: this channel needs permissive, any-origin
+access on three specific routes while every other route in this API stays
+locked to the operator's own `CORS_ORIGIN`. `@fastify/cors` is
+`fastify-plugin`-wrapped, which breaks Fastify's encapsulation, so a second
+scoped `cors` registration doesn't actually stay scoped. Fixed instead with
+the plugin's own documented `config: { cors: false }` per-route opt-out
+plus explicit `OPTIONS` handlers (needed because `@fastify/cors`'s own
+preflight wildcard route would otherwise still answer first) and a plain,
+correctly-encapsulated `onSend` hook that sets the real headers only for
+widget routes. A second, independent, browser-only blocker
+(`@fastify/helmet`'s global `Cross-Origin-Resource-Policy: same-origin`,
+which blocks cross-origin loading regardless of CORS) was only caught by
+testing in a real Playwright-driven browser, not `curl` — the same
+`onSend` hook overrides it for these routes too. See
+`docs/adr/0040-embeddable-widget.md`.
+
+The widget script itself is hand-written vanilla JS served as a real `.js`
+response (no bundler on a third-party page), using Shadow DOM for style
+isolation rather than an iframe. No agent-facing UI change was needed —
+`TicketDetail.tsx` already renders `<Badge>{ticket.channel}</Badge>`
+generically, so `widget` tickets display correctly for free.
+
+Verified: 7 new integration tests (start/follow-up/read, the
+`firstRespondedAt` fix proven both ways, unknown-token rejection,
+cross-tenant token isolation) — full `apps/api` suite 220/220 green, every
+workspace typechecks clean. Verified live against the real dev stack,
+`curl` first (preflight + real requests carry the right headers, full
+happy path, wrong-token/wrong-tenant/cross-tenant all 404 identically,
+`firstRespondedAt` genuinely stays null) and then, specifically because
+this feature is cross-origin in a way nothing else in the app is, in a
+real Chromium browser via Playwright serving the test host page from a
+different origin/port than the API: bubble → pre-chat form → conversation
+start → follow-up → page-reload resumption from `localStorage` → an agent
+reply posted through the real ticket API appearing in the widget within
+one poll cycle. Zero console errors. WhatsApp/Telegram remain unbuilt.
 - **Slack and Microsoft Teams notifications** (a new ticket/an SLA breach
   posts to a channel an agent already has open, one-click "Connect Slack"
   using the existing `Webhook` delivery mechanism under the hood, OAuth

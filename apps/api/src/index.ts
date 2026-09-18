@@ -38,6 +38,7 @@ import exportRoutes from './modules/export/routes';
 import attachmentRoutes from './modules/attachments/routes';
 import aiToolsRoutes from './modules/ai-tools/routes';
 import integrationsRoutes from './modules/integrations/routes';
+import widgetRoutes from './modules/widget/routes';
 
 initErrorTracking();
 
@@ -103,6 +104,7 @@ export function buildApp() {
   app.register(attachmentRoutes);
   app.register(aiToolsRoutes);
   app.register(integrationsRoutes);
+  app.register(widgetRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

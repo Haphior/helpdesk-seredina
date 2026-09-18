@@ -243,7 +243,7 @@ model Ticket {
   assignee   User?          @relation("TicketAssignee", fields: [assigneeId], references: [id])
   contactId  String         @map("contact_id") @db.Uuid
   contact    Contact        @relation(fields: [contactId], references: [id])
-  channel    String         @default("api") // 'api' | 'alert' | 'email' | 'widget' | 'catalog' | 'agent' (widget not shipped yet)
+  channel    String         @default("api") // 'api' | 'alert' | 'email' | 'widget' | 'catalog' | 'agent'
   // Set only for channel='alert' -- the monitoring/security tool's own id for this
   // problem (e.g. a Zabbix event id, a Wazuh alert id), used to fold a re-fired
   // alert into the same ticket instead of spawning a duplicate. Not unique-
@@ -251,6 +251,14 @@ model Ticket {
   // constraint, since "same externalId" is only a duplicate while the earlier
   // ticket is still open -- a closed one legitimately gets a fresh ticket.
   externalId String?        @map("external_id")
+  // Set only for channel='widget' -- a random bearer token an anonymous
+  // website visitor's browser holds (in localStorage, see
+  // docs/adr/0040-embeddable-widget.md) to prove it's the same visitor
+  // continuing the same conversation, since there's no login for a widget
+  // visitor. Unlike externalId this IS unique-constrained: it's a real
+  // credential (a guess = read someone else's conversation), not a
+  // dedup key where "not unique yet" is a normal, temporary state.
+  widgetToken String?       @unique @map("widget_token")
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
   resolvedAt DateTime?      @map("resolved_at")

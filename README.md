@@ -114,6 +114,23 @@ wait there for a human to approve or reject, and every call — auto-executed
 or not — is logged to the same audit trail. See
 `docs/adr/0033-ai-tool-catalog-and-autonomy.md`.
 
+## Embeddable chat widget
+
+Drop this on any page of your own website — no login, no API key, works
+from any domain:
+
+```html
+<script src="https://<your-seredina-instance>/widget.js" data-tenant="<your-tenant-slug>"></script>
+```
+
+A visitor gets a floating chat bubble; the conversation lands in Seredina
+as a normal ticket (`channel: "widget"`) that agents reply to like any
+other. Continuity across page loads/visits is via a random token the
+visitor's browser holds in `localStorage`, not a login — see
+`docs/adr/0040-embeddable-widget.md` for how that's scoped safely and how
+its cross-origin CORS is handled without weakening this API's normal CORS
+lockdown.
+
 ## Development
 
 Requires Docker (for Postgres + Redis) and Node.js 20+ (Fastify 5 / `@fastify/jwt` 10
