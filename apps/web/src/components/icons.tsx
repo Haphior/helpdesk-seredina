@@ -298,3 +298,12 @@ export function PaperclipIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function ShieldIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M10 2.5 16 4.7v4.6c0 4-2.6 6.9-6 8.2-3.4-1.3-6-4.2-6-8.2V4.7L10 2.5Z" />
+      <path d="M7.3 10 9.2 11.9 12.9 8.2" />
+    </Icon>
+  );
+}

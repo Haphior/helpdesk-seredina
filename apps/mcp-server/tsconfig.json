@@ -1,0 +1,23 @@
+{
+  "extends": "@seredina/config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    // Overrides the shared base's classic "node" resolution -- the MCP SDK's
+    // deep subpath exports (@modelcontextprotocol/sdk/server/mcp.js) exist only
+    // via its package.json "exports" map, not as literal files, which classic
+    // resolution can't see at all. "node16" understands "exports" and still
+    // emits CommonJS (matching apps/api/apps/worker's own build output) for a
+    // package with no "type": "module", so this is a resolution-only change,
+    // not a switch to ESM output.
+    "module": "node16",
+    "moduleResolution": "node16"
+  },
+  // No need to list ../api/src/modules/ai-tools explicitly -- TypeScript always
+  // pulls in a file's actual imports regardless of "include", and index.ts only
+  // ever imports catalog.ts/executor.ts (which in turn import policy.ts and
+  // agentRuns.ts) from that directory, never routes.ts. Listing the whole
+  // directory here would drag routes.ts into this program too, and it depends
+  // on Fastify request/reply type augmentations this app has no reason to know
+  // about.
+  "include": ["src"]
+}

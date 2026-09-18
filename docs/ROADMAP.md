@@ -1164,17 +1164,56 @@ Setup Guide" note renders correctly with zero console errors. **Known gap**:
 the 0.45 similarity threshold and ~500-char chunk size are tuned against a
 handful of synthetic sentence pairs, not real tenant KB content at scale.
 
-- One shared tool catalog (`get_ticket`, `add_ticket_reply`, `set_ticket_status`,
-  `assign_ticket`, `apply_macro`, `escalate_to_human`, ...) used by copilot,
-  autonomous mode, and the MCP server alike — never a second implementation.
-- `AutonomyPolicy` engine: per-tenant allow-list of tools that may auto-execute vs.
-  require human approval, action caps, token/cost caps. Default = everything requires
-  approval. Full `AiAgentRun` audit trail.
-- `apps/mcp-server`: stdio + HTTP/SSE, per-tenant `ApiKey` auth resolved once into an
-  `AsyncLocalStorage` session context — `tenantId` is never a tool input argument, so
-  a connected external agent cannot escape its own tenant scope.
+**Shared AI tool catalog + `AutonomyPolicy` + `AiAgentRun` audit trail +
+`apps/mcp-server` (stdio) ✅ (this pass).** Six tools (`get_ticket`,
+`add_ticket_reply`, `set_ticket_status`, `assign_ticket`, `apply_macro`,
+`escalate_to_human`) in `apps/api/src/modules/ai-tools/catalog.ts`, each a
+thin wrapper over the exact service-layer function a human agent's own UI
+action already calls — webhook dispatch, SLA stamping, notification emails
+all happen for free, never a second implementation. A single executor
+(`runTool`) is the one gate every AI actor goes through: read-only tools run
+immediately with no audit row; a mutating tool either auto-executes (on a
+per-tenant `AutonomyPolicy` allow-list, under a daily action cap) or is
+recorded `PENDING_APPROVAL` in `AiAgentRun` without running, waiting for a
+human to approve or reject from the new "AI Agent Activity" page (Operations
+group). Default policy for a tenant that never configured one = nothing
+auto-executes, the safest possible default per the original plan.
+`apps/mcp-server` exposes the identical catalog over MCP's stdio transport —
+`tenantId` resolved once from a `SEREDINA_API_KEY` at process start, never a
+tool input argument — so a customer's own Claude Desktop/n8n/custom agent
+operates under the same guardrails as Seredina's built-in copilot. HTTP/SSE
+transport is explicitly deferred (see `docs/adr/0033-ai-tool-catalog-and-autonomy.md`
+for why); this is the "open framework" requirement's first real slice, not
+the whole of it yet.
+
+Verified: 14 new integration tests (live Postgres) covering the full
+gate — default-deny, read-only bypass, pending-then-approved, pending-then-
+rejected, allow-listed auto-execute, the daily cap forcing a fallback to
+pending, policy validation rejecting unknown/non-mutating tool names,
+`set_ticket_status`'s key-based lookup, `escalate_to_human`'s note+unassign,
+`apply_macro` running AI-authored, and the approve/reject guard rails against
+already-resolved or nonexistent runs. Full `apps/api` suite 178/178 green.
+The MCP wire protocol itself was verified with a real client and a real
+spawned server process (the MCP SDK's own `Client`/`StdioClientTransport`),
+not mocked: `tools/list`, a real `get_ticket` call, a real `add_ticket_reply`
+call correctly deferred to pending approval, and clean protocol-level
+rejections for an unknown tool name and invalid arguments — then the pending
+run was approved through the real REST API and the reply's actual posting
+was confirmed on the ticket, `authorType: "AI"`. The new frontend page was
+verified live in a browser: tool checkboxes render from the real catalog
+endpoint, and both the allow-list and the daily-cap setting persist across a
+full page reload. **Known gaps, not silently skipped**: no automated Docker
+build verification for `apps/mcp-server` (same sandbox limitation as ADR
+0031); HTTP/SSE transport not built; the daily action cap is per-tenant, not
+per-autonomous-run, since no multi-turn autonomous agent loop exists yet to
+define what a "run" is.
+
 - Second LLM provider adapter (OpenAI) to validate the adapter abstraction actually
   is provider-agnostic.
+- A full autonomous copilot loop (an actual `adapter.complete()` tool-use loop
+  deciding which catalog tools to call, not just this pass's human-invoked-via-
+  MCP gate) — the `AutonomyPolicy`/`AiAgentRun` machinery above is what it will
+  plug into, not yet a second implementation of the same gate.
 
 ## Phase 4 — Multi-tenant cloud hardening + more channels
 

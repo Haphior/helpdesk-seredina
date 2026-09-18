@@ -29,6 +29,7 @@ import { KnowledgeBase } from './pages/KnowledgeBase';
 import { OnCall } from './pages/OnCall';
 import { NotificationSettings } from './pages/NotificationSettings';
 import { AiUsage } from './pages/AiUsage';
+import { AiAgentActivity } from './pages/AiAgentActivity';
 import { DataExport } from './pages/DataExport';
 import { TicketStatuses } from './pages/TicketStatuses';
 import { PublicKb } from './pages/PublicKb';
@@ -69,6 +70,7 @@ export function App() {
             <Route path="/on-call" element={<OnCall />} />
             <Route path="/notification-settings" element={<NotificationSettings />} />
             <Route path="/ai-usage" element={<AiUsage />} />
+            <Route path="/ai-agent-activity" element={<AiAgentActivity />} />
             <Route path="/data-export" element={<DataExport />} />
             <Route path="/ticket-statuses" element={<TicketStatuses />} />
             <Route path="/webhooks" element={<Webhooks />} />

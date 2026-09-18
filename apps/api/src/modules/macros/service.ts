@@ -1,4 +1,4 @@
-import { prisma, withTenantTx, type Prisma, type TicketPriority } from '@seredina/db';
+import { prisma, withTenantTx, type MessageAuthorType, type Prisma, type TicketPriority } from '@seredina/db';
 import { addMessage, updateTicket } from '../tickets/service';
 
 /**
@@ -85,7 +85,19 @@ export async function updateMacro(tenantId: string, id: string, input: UpdateMac
  * everything else those functions already do, for free, and can never drift
  * from what a human clicking through the UI one field at a time would get.
  */
-export async function applyMacro(tenantId: string, ticketId: string, macroId: string, authorUserId: string) {
+/**
+ * `authorUserId` is required unless `authorType` is 'AI' -- see AddMessageInput
+ * in modules/tickets/service.ts. The AI tool catalog's apply_macro tool
+ * (modules/ai-tools/catalog.ts) calls this with authorType: 'AI' and no
+ * authorUserId, same as its own add_ticket_reply tool.
+ */
+export async function applyMacro(
+  tenantId: string,
+  ticketId: string,
+  macroId: string,
+  authorUserId?: string,
+  authorType: MessageAuthorType = 'AGENT',
+) {
   const macro = await withTenantTx(prisma, tenantId, (tx) => tx.macro.findUnique({ where: { id: macroId } }));
   if (!macro) throw new Error('macro not found');
 
@@ -109,6 +121,7 @@ export async function applyMacro(tenantId: string, ticketId: string, macroId: st
   if (actions.addReply) {
     await addMessage(tenantId, ticketId, {
       authorUserId,
+      authorType,
       body: actions.addReply.body,
       isPrivateNote: actions.addReply.isPrivateNote,
     });

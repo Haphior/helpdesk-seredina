@@ -531,3 +531,30 @@ export interface AiUsageSummary {
   byAction: { action: string; calls: number; costUsd: number }[];
   recent: (AiUsageLog & { ticket: { id: string; number: number; subject: string } | null })[];
 }
+
+export interface AiToolDefinitionSummary {
+  name: string;
+  description: string;
+  mutating: boolean;
+}
+
+export interface AutonomyPolicy {
+  autoExecuteTools: string[];
+  maxActionsPerDay: number;
+}
+
+export type AiAgentRunStatus = 'PENDING_APPROVAL' | 'EXECUTED' | 'REJECTED' | 'FAILED';
+
+export interface AiAgentRun {
+  id: string;
+  toolName: string;
+  args: unknown;
+  result: unknown;
+  status: AiAgentRunStatus;
+  source: string;
+  errorMessage: string | null;
+  ticket: { id: string; number: number; subject: string } | null;
+  reviewedByUser: { id: string; name: string } | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}

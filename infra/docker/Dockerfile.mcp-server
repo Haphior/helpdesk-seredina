@@ -1,0 +1,35 @@
+FROM node:20-bookworm-slim AS build
+WORKDIR /repo
+COPY package.json package-lock.json ./
+COPY apps/mcp-server/package.json apps/mcp-server/package.json
+COPY apps/api/package.json apps/api/package.json
+COPY packages/shared/package.json packages/shared/package.json
+COPY packages/db/package.json packages/db/package.json
+COPY packages/config/package.json packages/config/package.json
+RUN npm ci
+COPY packages/config packages/config
+COPY packages/shared packages/shared
+COPY packages/db packages/db
+# The full apps/api source, not just modules/ai-tools -- that module imports
+# tickets/service.ts, macros/service.ts, rbac/permissions.ts, and several
+# apps/api/src/lib files transitively (see docs/adr/0033-ai-tool-catalog-and-
+# autonomy.md on why this cross-app import exists at all: apps/mcp-server is
+# deliberately "a thin wrapper over api's service layer," not a second
+# implementation).
+COPY apps/api apps/api
+COPY apps/mcp-server apps/mcp-server
+RUN npm run build --workspace=@seredina/shared \
+ && npm run prisma:generate --workspace=@seredina/db \
+ && npm run build --workspace=@seredina/db \
+ && npm run build --workspace=@seredina/mcp-server
+
+FROM node:20-bookworm-slim AS runtime
+WORKDIR /repo
+ENV NODE_ENV=production
+COPY --from=build /repo/node_modules node_modules
+COPY --from=build /repo/package.json package.json
+COPY --from=build /repo/apps/mcp-server/dist apps/mcp-server/dist
+COPY --from=build /repo/apps/mcp-server/package.json apps/mcp-server/package.json
+COPY --from=build /repo/packages packages
+WORKDIR /repo/apps/mcp-server
+CMD ["node", "dist/mcp-server/src/index.js"]

@@ -1,4 +1,16 @@
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+
+/**
+ * Exact-match hash for high-entropy tokens (ApiKey.hashedKey) -- never for
+ * passwords (those are bcrypt, one-way and salted, see auth/service.ts).
+ * Lives in @seredina/shared rather than apps/api so any consumer that needs
+ * to hash/verify an ApiKey -- apps/api's own auth plugin, and later
+ * apps/mcp-server resolving a session's tenant from its own ApiKey -- uses
+ * the identical implementation, never a second one.
+ */
+export function sha256Hex(input: string): string {
+  return createHash('sha256').update(input).digest('hex');
+}
 
 // Email channel credentials (IMAP/SMTP passwords) have to be genuinely recoverable
 // -- the worker needs the real password to authenticate to a mail server, so unlike

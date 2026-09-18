@@ -16,10 +16,6 @@ export async function resolveTenantIdBySlug(slug: string): Promise<string | null
   return rows[0]?.id ?? null;
 }
 
-/** Same pattern, for the API channel -- see modules/apikeys and prisma/rls/policies.sql. */
-export async function resolveTenantIdByApiKeyHash(hashedKey: string): Promise<string | null> {
-  const rows = await prisma.$queryRaw<{ id: string | null }[]>`
-    SELECT resolve_tenant_id_by_api_key_hash(${hashedKey}) AS id
-  `;
-  return rows[0]?.id ?? null;
-}
+// resolveTenantIdByApiKeyHash (same pattern, for the API channel) lives in
+// @seredina/db -- see packages/db/src/apiKeyLookup.ts -- so apps/mcp-server can
+// use the identical implementation without a cross-app import into apps/api.

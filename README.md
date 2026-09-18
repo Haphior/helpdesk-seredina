@@ -83,6 +83,25 @@ infra/docker-compose.yml logs api` (or `worker`) is the first place to look —
 report everything missing/malformed in one message, rather than crashing on
 the first one and forcing a fix-restart-discover-the-next-one loop.
 
+## MCP server (connect your own AI agent)
+
+`apps/mcp-server` exposes the same tool catalog the AI copilot uses (get/reply/
+status/assign/macro/escalate on tickets) to *your own* MCP-compatible agent
+(Claude Desktop, an n8n workflow, a custom script) over stdio. It's a
+separate process from `api`/`worker` — not part of `docker compose up` — a
+client spawns it per-session and owns its stdin/stdout directly, the same way
+Claude Desktop spawns any other local MCP server.
+
+1. Create an API key from Settings → API Keys in the web app.
+2. Build the image: `docker build -f infra/docker/Dockerfile.mcp-server -t seredina-mcp-server .`
+3. Point your MCP client at `docker run -i --rm -e SEREDINA_API_KEY=<your key> -e DATABASE_URL=... -e ENCRYPTION_KEY=... seredina-mcp-server` (or run `apps/mcp-server` directly with `tsx`/`node` in development — see `apps/mcp-server/package.json`'s `dev` script).
+
+Every mutating tool call is gated by that tenant's Autonomy Policy (Operations
+→ AI Agent Activity in the web app): tools not on the auto-execute allow-list
+wait there for a human to approve or reject, and every call — auto-executed
+or not — is logged to the same audit trail. See
+`docs/adr/0033-ai-tool-catalog-and-autonomy.md`.
+
 ## Development
 
 Requires Docker (for Postgres + Redis) and Node.js 20+ (Fastify 5 / `@fastify/jwt` 10

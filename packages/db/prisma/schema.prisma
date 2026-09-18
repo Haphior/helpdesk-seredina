@@ -74,6 +74,8 @@ model Tenant {
   notificationPreferences NotificationPreference[]
   aiUsageLogs           AiUsageLog[]
   attachments           Attachment[]
+  autonomyPolicy        AutonomyPolicy?
+  aiAgentRuns           AiAgentRun[]
 
   @@map("tenants")
 }
@@ -152,6 +154,7 @@ model User {
   notifications        Notification[]
   notificationPreferences NotificationPreference[]
   ownedProblems        Problem[]             @relation("ProblemOwner")
+  reviewedAiAgentRuns  AiAgentRun[]
 
   @@unique([tenantId, email])
   @@map("users")
@@ -289,6 +292,7 @@ model Ticket {
   escalationRuns  EscalationRun[]
   notifications   Notification[]
   aiUsageLogs     AiUsageLog[]
+  aiAgentRuns     AiAgentRun[]
 
   @@unique([tenantId, number])
   @@index([tenantId, channel, externalId])
@@ -1164,4 +1168,78 @@ model AiUsageLog {
   createdAt        DateTime @default(now()) @map("created_at")
 
   @@map("ai_usage_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3: shared AI tool catalog + autonomy policy + audit trail -- see
+// docs/adr/0033-ai-tool-catalog-and-autonomy.md. The tool catalog itself
+// (apps/api/src/modules/ai-tools/catalog.ts) is plain code, not schema; these
+// two models are what let a mutating tool call be either auto-executed or
+// held for human approval, and audited either way.
+// ---------------------------------------------------------------------------
+
+// One row per tenant (like BusinessHours) -- the tenant-wide configuration of
+// which tools an AI agent (the MCP server today; a future autonomous copilot
+// loop later) may run without a human clicking approve. A tenant with no row
+// gets the safest default: nothing auto-executes (see getAutonomyPolicy() in
+// modules/ai-tools/policy.ts) -- "no row = default" is the same shape already
+// used for escalation tiers and custom-field sort order.
+model AutonomyPolicy {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @unique @map("tenant_id") @db.Uuid
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Tool names (catalog.ts's ToolDefinition.name) allowed to auto-execute --
+  // everything else in the catalog still runs, but lands as a
+  // PENDING_APPROVAL AiAgentRun instead of executing immediately.
+  autoExecuteTools String[] @map("auto_execute_tools")
+  maxActionsPerDay Int      @default(20) @map("max_actions_per_day")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("autonomy_policies")
+}
+
+enum AiAgentRunStatus {
+  PENDING_APPROVAL
+  EXECUTED
+  REJECTED
+  // The tool ran (or was approved to run) but its underlying service call
+  // threw -- kept distinct from PENDING_APPROVAL/REJECTED so an approval
+  // queue can tell "nobody's looked at this yet" apart from "somebody
+  // approved it and it broke."
+  FAILED
+}
+
+// One row per tool-catalog invocation by any AI actor -- the audit trail the
+// roadmap calls for, and (via status) the approval queue for anything the
+// AutonomyPolicy didn't allow to auto-execute. `args`/`result` are the exact
+// JSON the tool received/returned -- deliberately not redacted, since every
+// tool in the catalog is itself just a thin wrapper over the same
+// service-layer functions a human agent's own actions already flow through
+// (no tool exposes a secret column a normal API response wouldn't).
+model AiAgentRun {
+  id       String           @id @default(uuid()) @db.Uuid
+  tenantId String           @map("tenant_id") @db.Uuid
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ticketId String?          @map("ticket_id") @db.Uuid
+  ticket   Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  toolName String           @map("tool_name")
+  args     Json
+  result   Json?
+  status   AiAgentRunStatus @default(PENDING_APPROVAL)
+  // Which caller invoked the tool catalog -- 'mcp' today (apps/mcp-server);
+  // a future autonomous copilot loop would add its own value here, reusing
+  // this same table rather than a second one, same reasoning as AiUsageLog's
+  // `action` column above.
+  source     String
+  errorMessage String? @map("error_message")
+
+  reviewedByUserId String?   @map("reviewed_by_user_id") @db.Uuid
+  reviewedByUser   User?     @relation(fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewedAt       DateTime? @map("reviewed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, status])
+  @@map("ai_agent_runs")
 }

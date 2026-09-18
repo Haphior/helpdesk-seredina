@@ -1,4 +1,4 @@
-import { prisma, withTenantTx, type Prisma, type TicketPriority, type TicketStatusCategory } from '@seredina/db';
+import { prisma, withTenantTx, type MessageAuthorType, type Prisma, type TicketPriority, type TicketStatusCategory } from '@seredina/db';
 import { emailSendQueue } from '../../lib/queue';
 import { dispatchWebhookEvent } from '../../lib/webhookDispatch';
 import { computeSlaDueAts, scheduleSlaBreachChecks } from '../sla/service';
@@ -368,12 +368,23 @@ export async function getTicket(tenantId: string, ticketId: string) {
 }
 
 export interface AddMessageInput {
-  authorUserId: string;
+  // Required when authorType is 'AGENT' (the default) -- a human agent's reply
+  // always has one. Omitted for authorType: 'AI' (see modules/ai-tools/catalog.ts's
+  // add_ticket_reply): an AI-authored message speaks for the tenant's AI agent
+  // as a whole, not any one human, the same reason MessageAuthorType.AI exists
+  // as its own value rather than reusing AGENT with a null author.
+  authorUserId?: string;
+  authorType?: MessageAuthorType;
   body: string;
   isPrivateNote: boolean;
 }
 
 export async function addMessage(tenantId: string, ticketId: string, input: AddMessageInput) {
+  const authorType = input.authorType ?? 'AGENT';
+  if (authorType === 'AGENT' && !input.authorUserId) {
+    throw new Error('authorUserId is required for an AGENT-authored message');
+  }
+
   // The DB write happens inside withTenantTx as usual; the Redis enqueue is
   // deliberately outside it (network I/O doesn't belong inside a tenant transaction
   // -- see docs/adr/0001-multi-tenancy-rls.md), so the transaction closes first and
@@ -386,7 +397,7 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
       data: {
         tenantId,
         ticketId,
-        authorType: 'AGENT',
+        authorType,
         authorUserId: input.authorUserId,
         body: input.body,
         isPrivateNote: input.isPrivateNote,

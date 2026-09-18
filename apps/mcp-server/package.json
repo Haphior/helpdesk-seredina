@@ -2,5 +2,27 @@
   "name": "@seredina/mcp-server",
   "private": true,
   "version": "0.0.0",
-  "description": "MCP server exposing the shared AI tool catalog over stdio + HTTP/SSE, per-tenant API-key auth. Placeholder -- built out in Phase 3 (see docs/ROADMAP.md)."
+  "description": "MCP server exposing the shared AI tool catalog (apps/api/src/modules/ai-tools) over stdio -- see docs/adr/0033-ai-tool-catalog-and-autonomy.md.",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/mcp-server/src/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/mcp-server/src/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@seredina/db": "*",
+    "@seredina/shared": "*",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@seredina/config": "*",
+    "@types/node": "^20.16.10",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
 }

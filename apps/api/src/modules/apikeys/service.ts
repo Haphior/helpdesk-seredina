@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { prisma, withTenantTx } from '@seredina/db';
-import { sha256Hex } from '../../lib/hash';
+import { sha256Hex } from '@seredina/shared';
 
 const KEY_PREFIX = 'sk_';
 

@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { sha256Hex } from '../lib/hash';
-import { resolveTenantIdByApiKeyHash } from '../modules/tenants/service';
+import { sha256Hex } from '@seredina/shared';
+import { resolveTenantIdByApiKeyHash } from '@seredina/db';
 
 declare module 'fastify' {
   interface FastifyRequest {
