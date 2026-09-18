@@ -1204,7 +1204,35 @@ verified live in a browser: tool checkboxes render from the real catalog
 endpoint, and both the allow-list and the daily-cap setting persist across a
 full page reload. **Known gaps, not silently skipped**: no automated Docker
 build verification for `apps/mcp-server` (same sandbox limitation as ADR
-0031); HTTP/SSE transport not built.
+0031). HTTP/SSE transport — since resolved, see below.
+
+**`apps/mcp-server` Streamable HTTP transport ✅ (this pass)** — the stdio
+transport's one remaining named gap. `MCP_TRANSPORT=http` runs a genuine
+always-on Streamable HTTP service instead of a client-spawned stdio process;
+deliberately **stateless** (a fresh `McpServer` per request, tenant
+resolved fresh from that request's own API key every time) rather than
+session-sticky, matching this codebase's existing "never cache tenant scope
+across requests" posture (RLS/the Prisma extension both re-check on every
+query) and its Phase 4 goal of stateless, replica-safe services. Tool
+registration was extracted into one shared `createMcpServer(tenantId)` used
+by both transports — no second implementation of the catalog wiring.
+Profile-gated `mcp-server-http` service added to `docker-compose.yml`
+(`docker compose --profile mcp up`), since — unlike stdio — an always-on
+HTTP service is something compose can actually represent. See
+`docs/adr/0035-mcp-http-transport.md`.
+
+Verified real and live, not mocked: the actual server process, started
+against the real dev stack, was driven by the MCP SDK's own real `Client` +
+`StreamableHTTPClientTransport` — `tools/list`, a real `get_ticket` call,
+and critically, a **second, fully independent client connection** making
+its own `get_ticket` call with no shared state from the first, proving the
+stateless design claim for real rather than just by design intent. An
+invalid API key was cleanly rejected, never silently falling back to a
+default tenant. `docker-compose.yml` re-verified as valid YAML. **Known
+gap**: no automated test suite for either MCP transport (stdio or http) —
+consistent with ADR 0033's own precedent of relying on real, documented
+manual verification for this app rather than standing up new
+cross-app test infrastructure for it.
 
 **Second LLM provider (OpenAI + local Ollama) + the full autonomous
 tool-use loop ✅ (this pass)** — both landed together, at the user's explicit

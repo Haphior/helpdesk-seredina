@@ -87,14 +87,26 @@ the first one and forcing a fix-restart-discover-the-next-one loop.
 
 `apps/mcp-server` exposes the same tool catalog the AI copilot uses (get/reply/
 status/assign/macro/escalate on tickets) to *your own* MCP-compatible agent
-(Claude Desktop, an n8n workflow, a custom script) over stdio. It's a
-separate process from `api`/`worker` — not part of `docker compose up` — a
-client spawns it per-session and owns its stdin/stdout directly, the same way
-Claude Desktop spawns any other local MCP server.
+(Claude Desktop, an n8n workflow, a custom script). Two transports, picked
+with `MCP_TRANSPORT` (default `stdio`):
+
+**stdio** — a separate process from `api`/`worker`, not part of a plain
+`docker compose up`. A client spawns it per-session and owns its
+stdin/stdout directly, the same way Claude Desktop spawns any other local
+MCP server. The tenant is resolved once at startup from `SEREDINA_API_KEY`.
 
 1. Create an API key from Settings → API Keys in the web app.
 2. Build the image: `docker build -f infra/docker/Dockerfile.mcp-server -t seredina-mcp-server .`
 3. Point your MCP client at `docker run -i --rm -e SEREDINA_API_KEY=<your key> -e DATABASE_URL=... -e ENCRYPTION_KEY=... seredina-mcp-server` (or run `apps/mcp-server` directly with `tsx`/`node` in development — see `apps/mcp-server/package.json`'s `dev` script).
+
+**http** — a genuine always-on network service (Streamable HTTP,
+deliberately stateless — see `docs/adr/0035-mcp-http-transport.md`), for a
+remote or long-running agent instead of a locally-spawned one. Each request
+carries its own `Authorization: Bearer <ApiKey>` header; the tenant is
+resolved fresh per request, never cached server-side. Run it with
+`docker compose --profile mcp up mcp-server-http` (profile-gated — a plain
+`docker compose up` never starts it), or set `MCP_TRANSPORT=http` when
+running `apps/mcp-server` directly.
 
 Every mutating tool call is gated by that tenant's Autonomy Policy (Operations
 → AI Agent Activity in the web app): tools not on the auto-execute allow-list

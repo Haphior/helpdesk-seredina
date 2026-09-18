@@ -110,5 +110,32 @@ services:
     ports:
       - '${WEB_PORT:-8080}:80'
 
+  # Optional, profile-gated: the MCP server's Streamable HTTP transport (see
+  # docs/adr/0035-mcp-http-transport.md). Unlike the stdio transport (meant to
+  # be spawned on demand by an MCP client that owns its stdin/stdout, e.g.
+  # `docker run -i` from Claude Desktop's own config -- see README's "MCP
+  # server" section), HTTP is a genuine always-on network service, so it fits
+  # this file. Not started by a plain `docker compose up`; run with
+  # `docker compose --profile mcp up` once an operator actually wants to
+  # expose it to their own agents.
+  mcp-server-http:
+    profiles: ['mcp']
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.mcp-server
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    environment:
+      MCP_TRANSPORT: http
+      MCP_HTTP_PORT: 3100
+      DATABASE_URL: postgresql://app_tenant:${APP_TENANT_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-seredina}
+      REDIS_URL: redis://redis:6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+    ports:
+      - '${MCP_HTTP_PORT:-3100}:3100'
+
 volumes:
   postgres_data:
