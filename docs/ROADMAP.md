@@ -1314,18 +1314,44 @@ zero code changes needed there, proving the loop closes for real. See
 
 - Widget (embeddable web chat) + WhatsApp/Telegram channels (customer-facing
   channels — a contact reaching Seredina, same shape as email/API today).
-- **Pre-built integrations (added 2026-09-16 — the concrete list behind the
-  "integrations, not a plugin platform" decision above): Slack and Microsoft
-  Teams notifications** (a new ticket/an SLA breach posts to a channel an
-  agent already has open, one-click "Connect Slack" using the existing
-  `Webhook` delivery mechanism under the hood, OAuth instead of a tenant
-  hand-rolling their own receiver), **plus one or two of the monitoring tools
-  already implicitly supported through `POST /v1/alerts`** (a real, named
-  Zabbix or Grafana integration with its own setup UI, instead of leaving
-  every NOC/SOC tool integration as "here's the generic endpoint, map your
-  own payload"). Each one is its own small, real feature — not a platform for
-  arbitrary future ones — which is the entire point of choosing this over a
-  plugin loader.
+- **Slack and Microsoft Teams notifications** (a new ticket/an SLA breach
+  posts to a channel an agent already has open, one-click "Connect Slack"
+  using the existing `Webhook` delivery mechanism under the hood, OAuth
+  instead of a tenant hand-rolling their own receiver) — needs a real
+  Slack/Microsoft OAuth app registration, not started.
+
+**Grafana Alerting integration ✅ (this pass) — one of the "one or two
+monitoring tools" named integrations.** `POST /v1/alerts/grafana`
+(`apps/api/src/modules/integrations/grafana.ts`) maps Grafana's own,
+unmodified default webhook payload onto the existing generic
+`/v1/alerts`/`ingestAlert()` mechanism (ADR 0003) — no per-tenant Grafana-
+side templating required, same `ApiKey` auth as every other API channel.
+One ticket per Grafana webhook call (matching Grafana's own alert
+grouping); `groupKey` drives the existing re-fire/dedup logic so repeated
+firing and resolved notifications for the same alert group fold into one
+ticket while it's open, without auto-closing it — a human still decides
+when "Grafana says this cleared" means the ticket is actually done. A
+`severity` label (Grafana's own informal convention) maps onto the
+existing 5-value scale; no label defaults to Normal priority, never a
+guess. New "Monitoring Integrations" setup page (Administration) shows the
+webhook URL with one-click copy and the exact steps, reusing the existing
+API Keys page rather than duplicating key management. Zabbix is not built
+in this pass -- its integration model (a tenant-authored JS payload script)
+is a different shape of problem than Grafana's, deferred rather than
+rushed. See `docs/adr/0039-monitoring-integrations.md`.
+
+Verified: 6 new integration tests (Grafana's own title/message used when
+present, a synthesized fallback when it sends its default unmodified
+payload, severity-label mapping, no-label default, re-fire dedup, and a
+resolved notification recorded as a message rather than silently dropped).
+Full `apps/api` suite 213/213 green. Verified live end-to-end against the
+real running dev stack, not mocked: a real `curl`-POSTed Grafana-shaped
+payload produced a real ticket with the right priority/contact, a second
+resolved notification for the same group correctly folded into the same
+ticket instead of creating a new one, and an invalid API key was cleanly
+rejected. Frontend verified live in a browser (clipboard permissions
+explicitly granted so the copy button's real behavior — not headless
+Chromium's default no-op — was actually exercised).
 - Advanced reporting/CSAT/export.
 
 **First CI pipeline + automated RLS fuzz tests ✅ (this pass).** This repo

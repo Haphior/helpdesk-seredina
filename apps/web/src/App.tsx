@@ -32,6 +32,7 @@ import { NotificationSettings } from './pages/NotificationSettings';
 import { AiUsage } from './pages/AiUsage';
 import { AiAgentActivity } from './pages/AiAgentActivity';
 import { AiSettings } from './pages/AiSettings';
+import { MonitoringIntegrations } from './pages/MonitoringIntegrations';
 import { DataExport } from './pages/DataExport';
 import { TicketStatuses } from './pages/TicketStatuses';
 import { PublicKb } from './pages/PublicKb';
@@ -75,6 +76,7 @@ export function App() {
             <Route path="/ai-usage" element={<AiUsage />} />
             <Route path="/ai-agent-activity" element={<AiAgentActivity />} />
             <Route path="/ai-settings" element={<AiSettings />} />
+            <Route path="/monitoring-integrations" element={<MonitoringIntegrations />} />
             <Route path="/data-export" element={<DataExport />} />
             <Route path="/ticket-statuses" element={<TicketStatuses />} />
             <Route path="/webhooks" element={<Webhooks />} />

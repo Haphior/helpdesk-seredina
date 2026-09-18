@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+// Exported so pages that need to *display* the API's own base URL (e.g. the
+// Monitoring Integrations setup page's webhook URL for a tenant to paste
+// into Grafana) don't hardcode a second copy of this fallback.
+export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 const TOKEN_KEY = 'seredina_token';
 
 export class ApiError extends Error {

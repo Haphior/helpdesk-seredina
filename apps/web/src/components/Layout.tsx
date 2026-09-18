@@ -94,6 +94,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Comp
       { to: '/roles', label: 'Roles', icon: ShieldIcon, permission: 'roles:manage' },
       { to: '/api-keys', label: 'API Keys', icon: KeyIcon },
       { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' },
+      { to: '/monitoring-integrations', label: 'Monitoring Integrations', icon: WarningIcon, permission: 'channels:manage' },
     ],
   },
 ];
