@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Mirrors infra/docker/migrate-entrypoint.sh's real bootstrap sequence
+# (prisma migrate deploy -> create/alter app_tenant -> apply RLS policies ->
+# seed permissions) rather than reinventing it, so CI can never silently
+# drift from what a real deploy actually runs. Every credential here is a
+# fixed, throwaway value that only ever touches this job's own disposable
+# Postgres container -- never a GitHub secret, since there is nothing real
+# to protect.
+env:
+  DATABASE_URL: postgresql://app_migrator:ci_migrator_password@localhost:5432/seredina?schema=public
+  APP_TENANT_DB_PASSWORD: ci_tenant_password
+  APP_TENANT_DATABASE_URL: postgresql://app_tenant:ci_tenant_password@localhost:5432/seredina?schema=public
+  REDIS_URL: redis://localhost:6379
+  JWT_SECRET: ci-test-jwt-secret-not-for-production-0000000000000000
+  ENCRYPTION_KEY: e9abda8d1436f23aee152512e7706d28f3eb3fd60634bc755097dab6cf83431d
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: app_migrator
+          POSTGRES_PASSWORD: ci_migrator_password
+          POSTGRES_DB: seredina
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app_migrator"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install postgresql-client (for migrate-entrypoint.sh's psql calls)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Install dependencies
+        run: npm ci
+
+      # LocalEmbeddingAdapter (packages/ai-adapters) downloads a real ~90MB
+      # ONNX model from HuggingFace on first use (see docs/adr/0032-rag-
+      # knowledge-base-search.md) -- cached here so every CI run after the
+      # first doesn't re-download it. Default cache location per the
+      # library's own docs: `.cache` relative to its installed path.
+      - name: Cache the local embedding model
+        uses: actions/cache@v4
+        with:
+          path: node_modules/@huggingface/transformers/.cache
+          key: huggingface-minilm-l6-v2
+
+      - name: Build shared workspace packages
+        run: |
+          npm run build --workspace=packages/shared
+          npm run prisma:generate --workspace=packages/db
+          npm run build --workspace=packages/db
+          npm run build --workspace=packages/ai-adapters
+
+      - name: Migrate + apply RLS policies + seed permissions
+        working-directory: packages/db
+        run: bash ../../infra/docker/migrate-entrypoint.sh
+
+      - name: Typecheck every workspace
+        run: |
+          npx tsc -p apps/api/tsconfig.test.json --noEmit
+          npx tsc -p apps/web/tsconfig.json --noEmit
+          npx tsc -p apps/worker/tsconfig.json --noEmit
+          npx tsc -p apps/mcp-server/tsconfig.json --noEmit
+          npx tsc -p packages/ai-adapters/tsconfig.json --noEmit
+
+      - name: apps/api test suite (includes RLS isolation + fuzz tests)
+        working-directory: apps/api
+        run: npx vitest run
+        env:
+          DATABASE_URL: ${{ env.APP_TENANT_DATABASE_URL }}
+
+      - name: packages/ai-adapters test suite
+        working-directory: packages/ai-adapters
+        run: npx vitest run
