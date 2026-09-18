@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { getDashboardPrefs, upsertDashboardPref, WIDGET_TYPES } from './service';
+import { getDashboardPrefs, getOnboardingChecklist, upsertDashboardPref, WIDGET_TYPES } from './service';
 
 const upsertSchema = z.object({
   widgetType: z.enum(WIDGET_TYPES),
@@ -14,6 +14,14 @@ export default async function dashboardRoutes(app: FastifyInstance) {
   app.get('/dashboard-widgets', { preHandler: [app.authenticate, requirePermission('tickets:read')] }, async (request, reply) => {
     return reply.send({ widgets: await getDashboardPrefs(request.user.tenantId, request.user.sub) });
   });
+
+  app.get(
+    '/onboarding-checklist',
+    { preHandler: [app.authenticate, requirePermission('tickets:read')] },
+    async (request, reply) => {
+      return reply.send(await getOnboardingChecklist(request.user.tenantId));
+    },
+  );
 
   app.put('/dashboard-widgets', { preHandler: [app.authenticate, requirePermission('tickets:read')] }, async (request, reply) => {
     const parsed = upsertSchema.safeParse(request.body);

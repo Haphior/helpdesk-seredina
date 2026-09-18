@@ -4,16 +4,18 @@ import { apiGet, apiPut, ApiError } from '../lib/api';
 import type {
   AgentWorkloadReport,
   DashboardPref,
+  OnboardingChecklist,
   SlaComplianceReport,
   Ticket,
   TicketVolumePoint,
   WidgetType,
 } from '../lib/types';
 import { Badge } from '../components/Badge';
-import { ChevronDownIcon, ChevronUpIcon, EyeIcon, EyeOffIcon } from '../components/icons';
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime } from '../lib/format';
 
 const WIDGET_LABEL: Record<WidgetType, string> = {
+  onboarding_checklist: 'Get started',
   ticket_volume: 'Ticket volume',
   priority_breakdown: 'Open tickets by priority',
   sla_compliance: 'SLA compliance',
@@ -22,6 +24,7 @@ const WIDGET_LABEL: Record<WidgetType, string> = {
 };
 
 interface DashboardData {
+  onboarding: OnboardingChecklist;
   volume: TicketVolumePoint[];
   priority: Record<string, number>;
   sla: SlaComplianceReport;
@@ -38,15 +41,16 @@ export function Dashboard() {
     setError(null);
     Promise.all([
       apiGet<{ widgets: DashboardPref[] }>('/dashboard-widgets'),
+      apiGet<OnboardingChecklist>('/onboarding-checklist'),
       apiGet<{ volume: TicketVolumePoint[] }>('/reporting/ticket-volume?days=14'),
       apiGet<{ breakdown: Record<string, number> }>('/reporting/priority-breakdown'),
       apiGet<SlaComplianceReport>('/reporting/sla-compliance'),
       apiGet<AgentWorkloadReport>('/reporting/agent-workload'),
       apiGet<{ tickets: Ticket[] }>('/reporting/recent-activity'),
     ])
-      .then(([p, v, pr, s, w, r]) => {
+      .then(([p, ob, v, pr, s, w, r]) => {
         setPrefs(p.widgets);
-        setData({ volume: v.volume, priority: pr.breakdown, sla: s, workload: w, recent: r.tickets });
+        setData({ onboarding: ob, volume: v.volume, priority: pr.breakdown, sla: s, workload: w, recent: r.tickets });
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load dashboard'));
   }
@@ -158,6 +162,8 @@ function WidgetCard({
 
 function renderWidget(type: WidgetType, data: DashboardData) {
   switch (type) {
+    case 'onboarding_checklist':
+      return <OnboardingChecklistWidget checklist={data.onboarding} />;
     case 'ticket_volume':
       return <TicketVolumeWidget points={data.volume} />;
     case 'priority_breakdown':
@@ -275,6 +281,39 @@ function AgentWorkloadWidget({ report }: { report: AgentWorkloadReport }) {
         </div>
       )}
       {report.agents.length === 0 && report.unassigned === 0 && <p className="text-xs text-slate-400">No open tickets.</p>}
+    </div>
+  );
+}
+
+function OnboardingChecklistWidget({ checklist }: { checklist: OnboardingChecklist }) {
+  if (checklist.allDone) {
+    return (
+      <div className="flex items-center gap-2 text-[13px] text-slate-500">
+        <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <CheckIcon width={12} height={12} />
+        </span>
+        All set up — hide this widget any time with the eye icon above.
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {checklist.items.map((item) => (
+        <Link
+          key={item.key}
+          to={item.href}
+          className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 text-[13px] hover:bg-slate-50"
+        >
+          <span
+            className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${
+              item.done ? 'bg-emerald-100 text-emerald-600' : 'border border-slate-300 text-transparent'
+            }`}
+          >
+            <CheckIcon width={12} height={12} />
+          </span>
+          <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.label}</span>
+        </Link>
+      ))}
     </div>
   );
 }

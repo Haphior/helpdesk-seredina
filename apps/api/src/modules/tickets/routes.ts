@@ -4,18 +4,37 @@ import { requirePermission } from '../rbac/permissions';
 import {
   addMessage,
   createTicketFromApi,
+  createTicketStatus,
+  deleteTicketStatus,
   getTicket,
   ingestAlert,
   listTickets,
   listTicketStatuses,
   mergeTicket,
   updateTicket,
+  updateTicketStatus,
 } from './service';
 import { linkAssetToTicket, unlinkAssetFromTicket } from '../assets/service';
 import { listPresence, markPresence } from '../../lib/presence';
 
 const PRIORITY = z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']);
 const STATUS_CATEGORY = z.enum(['OPEN', 'PENDING', 'RESOLVED', 'CLOSED']);
+
+const createTicketStatusSchema = z.object({
+  key: z
+    .string()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z][a-z0-9_]*$/, 'key must be lowercase alphanumeric/underscore, starting with a letter'),
+  label: z.string().min(1).max(100),
+  category: STATUS_CATEGORY,
+});
+
+const updateTicketStatusSchema = z.object({
+  label: z.string().min(1).max(100).optional(),
+  category: STATUS_CATEGORY.optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
 
 const createFromApiSchema = z.object({
   subject: z.string().min(1).max(200),
@@ -83,6 +102,53 @@ export default async function ticketRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const statuses = await listTicketStatuses(request.user.tenantId);
       return reply.send({ statuses });
+    },
+  );
+
+  // Defining/reordering/deleting a status is tenant-wide configuration --
+  // tickets:manage_all, same tier as every other Configuration resource.
+  app.post(
+    '/ticket-statuses',
+    { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] },
+    async (request, reply) => {
+      const parsed = createTicketStatusSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const status = await createTicketStatus(request.user.tenantId, parsed.data);
+        return reply.code(201).send(status);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.patch(
+    '/ticket-statuses/:id',
+    { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = updateTicketStatusSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const status = await updateTicketStatus(request.user.tenantId, id, parsed.data);
+        return reply.send(status);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.delete(
+    '/ticket-statuses/:id',
+    { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      try {
+        await deleteTicketStatus(request.user.tenantId, id);
+        return reply.code(204).send();
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
     },
   );
 

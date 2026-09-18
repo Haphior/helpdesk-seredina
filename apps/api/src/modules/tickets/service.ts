@@ -196,6 +196,68 @@ export async function listTicketStatuses(tenantId: string) {
   return withTenantTx(prisma, tenantId, async (tx) => tx.ticketStatus.findMany({ orderBy: { sortOrder: 'asc' } }));
 }
 
+export interface CreateTicketStatusInput {
+  key: string;
+  label: string;
+  category: TicketStatusCategory;
+}
+
+export async function createTicketStatus(tenantId: string, input: CreateTicketStatusInput) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.ticketStatus.findUnique({ where: { tenantId_key: { tenantId, key: input.key } } });
+    if (existing) throw new Error('a status with this key already exists');
+    const count = await tx.ticketStatus.count();
+    return tx.ticketStatus.create({ data: { tenantId, ...input, sortOrder: count } });
+  });
+}
+
+export interface UpdateTicketStatusInput {
+  label?: string;
+  category?: TicketStatusCategory;
+  sortOrder?: number;
+}
+
+/**
+ * `key` is deliberately never editable: createTicketFromApi/ingestAlert both
+ * look up the tenant's initial status by the literal key 'open' (not by
+ * category) when creating a new ticket -- renaming it out from under them
+ * would break ticket creation for the whole tenant. See the matching
+ * protection in deleteTicketStatus below.
+ */
+export async function updateTicketStatus(tenantId: string, id: string, input: UpdateTicketStatusInput) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.ticketStatus.findUnique({ where: { id } });
+    if (!existing) throw new Error('status not found');
+    // Same "open" protection as deleteTicketStatus, checked server-side rather
+    // than trusting the frontend's disabled dropdown alone: every new ticket
+    // lands in this exact row, so recategorizing it away from OPEN would make
+    // brand-new tickets immediately count as pending/resolved/closed in every
+    // report and SLA calculation.
+    if (existing.key === 'open' && input.category && input.category !== 'OPEN') {
+      throw new Error('the "open" status must stay in the OPEN category');
+    }
+    return tx.ticketStatus.update({
+      where: { id },
+      data: { label: input.label, category: input.category, sortOrder: input.sortOrder },
+    });
+  });
+}
+
+export async function deleteTicketStatus(tenantId: string, id: string) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.ticketStatus.findUnique({ where: { id } });
+    if (!existing) throw new Error('status not found');
+    if (existing.key === 'open') {
+      throw new Error('the "open" status can\'t be deleted -- new tickets are created in it');
+    }
+    const ticketsInStatus = await tx.ticket.count({ where: { statusId: id } });
+    if (ticketsInStatus > 0) {
+      throw new Error(`${ticketsInStatus} ticket${ticketsInStatus === 1 ? ' is' : 's are'} currently in this status -- move them first`);
+    }
+    await tx.ticketStatus.delete({ where: { id } });
+  });
+}
+
 export interface ListTicketsFilter {
   statusCategory?: TicketStatusCategory;
   // A real user id, or the literal 'unassigned' meaning assigneeId IS NULL --

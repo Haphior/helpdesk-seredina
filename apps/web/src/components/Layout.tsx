@@ -12,6 +12,7 @@ import {
   BookIcon,
   CalendarIcon,
   CatalogIcon,
+  CheckIcon,
   ChecklistIcon,
   ClockIcon,
   DashboardIcon,
@@ -39,8 +40,10 @@ interface Me {
 
 // Grouped, not one flat list -- past ~8 items a sidebar needs chunking to stay
 // scannable. Groups follow how an agent actually thinks about the app: daily
-// work, the CMDB, then the two flavors of admin-only configuration (how
-// tickets/processes behave, vs. tenant/account-level setup).
+// work, the CMDB, then the three flavors of admin-only configuration (how
+// tickets/processes/catalog items behave, vs. integrations/scheduling/
+// insight-ops, vs. tenant/account-level setup). Configuration itself split
+// into two groups once Ticket Statuses pushed it to 11 flat items.
 const navGroups: { label: string; items: { to: string; label: string; icon: ComponentType<SVGProps<SVGSVGElement>>; permission?: Permission }[] }[] = [
   {
     label: 'Work',
@@ -63,12 +66,18 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Comp
   {
     label: 'Configuration',
     items: [
+      { to: '/ticket-statuses', label: 'Ticket Statuses', icon: CheckIcon, permission: 'tickets:manage_all' },
       { to: '/custom-fields', label: 'Custom Fields', icon: SlidersIcon, permission: 'tickets:manage_all' },
       { to: '/service-catalog', label: 'Service Catalog', icon: CatalogIcon, permission: 'tickets:manage_all' },
       { to: '/process-templates', label: 'Process Templates', icon: ChecklistIcon, permission: 'tickets:manage_all' },
       { to: '/macros', label: 'Macros', icon: BoltIcon, permission: 'tickets:manage_all' },
-      { to: '/webhooks', label: 'Webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' },
       { to: '/sla-policies', label: 'SLA Policies', icon: ClockIcon, permission: 'tickets:manage_all' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { to: '/webhooks', label: 'Webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' },
       { to: '/on-call', label: 'On-Call & Escalation', icon: BellIcon, permission: 'tickets:manage_all' },
       { to: '/business-hours', label: 'Business Hours', icon: CalendarIcon, permission: 'tickets:manage_all' },
       { to: '/ai-usage', label: 'AI Usage', icon: SparkleIcon, permission: 'tickets:manage_all' },

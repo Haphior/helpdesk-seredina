@@ -30,6 +30,7 @@ import { OnCall } from './pages/OnCall';
 import { NotificationSettings } from './pages/NotificationSettings';
 import { AiUsage } from './pages/AiUsage';
 import { DataExport } from './pages/DataExport';
+import { TicketStatuses } from './pages/TicketStatuses';
 import { PublicKb } from './pages/PublicKb';
 import { PublicKbArticlePage } from './pages/PublicKbArticle';
 import { PublicStatus } from './pages/PublicStatus';
@@ -69,6 +70,7 @@ export function App() {
             <Route path="/notification-settings" element={<NotificationSettings />} />
             <Route path="/ai-usage" element={<AiUsage />} />
             <Route path="/data-export" element={<DataExport />} />
+            <Route path="/ticket-statuses" element={<TicketStatuses />} />
             <Route path="/webhooks" element={<Webhooks />} />
             <Route path="/macros" element={<Macros />} />
             <Route path="/sla-policies" element={<SlaPolicies />} />

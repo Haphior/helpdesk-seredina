@@ -5,15 +5,27 @@ import { prisma, withTenantTx } from '@seredina/db';
  * layer references this array), not a DB enum, same posture as everywhere
  * else a fixed string set is checked in this codebase.
  */
-export const WIDGET_TYPES = ['ticket_volume', 'priority_breakdown', 'sla_compliance', 'agent_workload', 'recent_activity'] as const;
+export const WIDGET_TYPES = [
+  'onboarding_checklist',
+  'ticket_volume',
+  'priority_breakdown',
+  'sla_compliance',
+  'agent_workload',
+  'recent_activity',
+] as const;
 export type WidgetType = (typeof WIDGET_TYPES)[number];
 
+// onboarding_checklist first -- "the first widget you see is literally the
+// tour's checklist" (docs/ROADMAP.md). Dismissible for free: it's a widget
+// like any other, so the existing hide toggle already covers "I'm done with
+// this," no separate dismiss mechanism needed.
 const DEFAULT_ORDER: Record<WidgetType, number> = {
-  ticket_volume: 0,
-  priority_breakdown: 1,
-  sla_compliance: 2,
-  agent_workload: 3,
-  recent_activity: 4,
+  onboarding_checklist: 0,
+  ticket_volume: 1,
+  priority_breakdown: 2,
+  sla_compliance: 3,
+  agent_workload: 4,
+  recent_activity: 5,
 };
 
 export interface DashboardPref {
@@ -40,6 +52,49 @@ export async function getDashboardPrefs(tenantId: string, userId: string): Promi
       sortOrder: row?.sortOrder ?? DEFAULT_ORDER[widgetType],
     };
   }).sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+const SEEDED_STATUS_KEYS = new Set(['open', 'pending', 'resolved', 'closed']);
+
+export interface OnboardingChecklistItem {
+  key: string;
+  label: string;
+  done: boolean;
+  href: string;
+}
+
+/**
+ * The tour ROADMAP.md asked for, expressed as real tenant-data checks
+ * rather than a one-time "did you click through" flag -- an established
+ * tenant that already has an SLA policy, a macro, a customized status, and
+ * more than one user has genuinely finished onboarding, whether or not
+ * anyone ever saw this exact widget. The four line up with the roadmap's
+ * own suggested examples (custom status, macro, SLA policy) plus the one
+ * near-universal SaaS-onboarding step it didn't mention: inviting a teammate.
+ */
+export async function getOnboardingChecklist(tenantId: string): Promise<{ items: OnboardingChecklistItem[]; allDone: boolean }> {
+  const [statuses, slaPolicyCount, macroCount, userCount] = await withTenantTx(prisma, tenantId, (tx) =>
+    Promise.all([
+      tx.ticketStatus.findMany({ select: { key: true } }),
+      tx.slaPolicy.count(),
+      tx.macro.count(),
+      tx.user.count(),
+    ]),
+  );
+
+  const items: OnboardingChecklistItem[] = [
+    {
+      key: 'customize_status',
+      label: 'Customize your ticket statuses',
+      done: statuses.some((s) => !SEEDED_STATUS_KEYS.has(s.key)),
+      href: '/ticket-statuses',
+    },
+    { key: 'set_sla_policy', label: 'Set an SLA policy', done: slaPolicyCount > 0, href: '/sla-policies' },
+    { key: 'create_macro', label: 'Create a macro', done: macroCount > 0, href: '/macros' },
+    { key: 'invite_teammate', label: 'Invite a teammate', done: userCount > 1, href: '/users' },
+  ];
+
+  return { items, allDone: items.every((i) => i.done) };
 }
 
 export interface UpsertDashboardPrefInput {

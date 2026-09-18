@@ -314,7 +314,25 @@ export interface ProcessInstance {
   changeInstance?: { id: string; subject: string } | null;
 }
 
-export type WidgetType = 'ticket_volume' | 'priority_breakdown' | 'sla_compliance' | 'agent_workload' | 'recent_activity';
+export type WidgetType =
+  | 'onboarding_checklist'
+  | 'ticket_volume'
+  | 'priority_breakdown'
+  | 'sla_compliance'
+  | 'agent_workload'
+  | 'recent_activity';
+
+export interface OnboardingChecklistItem {
+  key: string;
+  label: string;
+  done: boolean;
+  href: string;
+}
+
+export interface OnboardingChecklist {
+  items: OnboardingChecklistItem[];
+  allDone: boolean;
+}
 
 export interface DashboardPref {
   widgetType: WidgetType;

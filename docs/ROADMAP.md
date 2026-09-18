@@ -1033,13 +1033,56 @@ self-hosted install and a cloud signup need it:**
   save the secrets, create the first tenant/admin, verify the DB/Redis
   connection with a visible pass/fail instead of a silent hang — not a README
   telling someone to export nine environment variables correctly by hand.
-- **A first-run product tour after signup/first login.** A short, dismissible
-  walkthrough (create your first custom status, try a macro, set an SLA
-  policy) rather than dropping a new tenant into an empty ticket queue with
-  twelve sidebar items and no hint which ones matter first. Cheap relative to
-  everything else on this list — mostly frontend, no new backend concept —
-  but real first-impression value, and pairs naturally with the dashboard
-  above as "the first widget you see is literally the tour's checklist."
+**A first-run product tour after signup/first login ✅ (this pass).** Landed
+as a Dashboard widget (`onboarding_checklist`, shown first, dismissible for
+free via the existing per-user widget hide toggle) rather than a separate
+flow — matches the roadmap's own framing that "the first widget you see is
+literally the tour's checklist." Four items, derived from real tenant data
+on every load rather than a one-time flag: customize your ticket statuses,
+set an SLA policy, create a macro, invite a teammate. All four done renders
+a completed state instead of a stale checklist. See
+`docs/adr/0030-ticket-statuses-and-onboarding-tour.md`.
+
+Building this surfaced a real, separate gap: **there was no way to create,
+edit, reorder, or delete a ticket status anywhere in the app** — the schema
+supported it, `seedDefaultTicketStatuses` was the only caller of
+`ticketStatus.create`. Fixed first, as its own Configuration page (Ticket
+Statuses), since the tour's own first item depended on it existing. The
+status whose key is `open` is specially protected (can't be deleted, can't
+be recategorized out of `OPEN`) because ticket creation looks it up by that
+literal key, not by category — every other status is fully editable.
+
+Verified: 12 new integration tests against real Postgres (status CRUD:
+create/duplicate-key rejection/edit-with-key-immutable/open-status
+protection-both-ways/delete-blocked-while-occupied/reorder; onboarding
+checklist: starts fully undone, each item flips independently only when
+the tenant does the real thing, ends fully done), full suite 155/155 green,
+both `apps/api`/`apps/web` typecheck clean. Browser-verified end to end:
+registered a tenant, confirmed the checklist widget renders first and
+fully unchecked, exercised the full Ticket Status CRUD (create/edit/
+reorder/delete, confirmed "open" has no delete control), then genuinely
+set an SLA policy, created a macro, and invited a teammate through their
+real pages and watched the checklist widget flip to its completed state on
+reload. Zero console errors. Along the way, the Configuration nav group
+hit 11 flat items and was split into **Configuration** and **Operations** —
+this app's own ~8-item grouping threshold, already documented in
+`Layout.tsx`, would otherwise have been violated by the same change that
+triggered it.
+
+**A real setup wizard for self-hosted Docker installs — not done this
+pass.** This session's own repeated friction restarting the dev API server
+(wrong `DATABASE_URL`, regenerated `JWT_SECRET`/`ENCRYPTION_KEY` by hand, a
+masked error that turned out to be a stale port) is a preview of exactly
+what a first-time self-hoster would hit blind, with nobody to ask. Deferred
+deliberately, not for lack of time: the API process already hard-requires
+`JWT_SECRET`/`ENCRYPTION_KEY` as env vars at boot (see
+`apps/api/src/modules/webhooks/service.ts` and others throwing at import
+time if unset), so a *web* setup wizard has a chicken-and-egg problem — the
+server needs the secrets to start serving the wizard that's supposed to
+generate them. Solving this needs a real design pass (a minimal
+secrets-optional boot mode? a pre-flight generator script instead of a web
+UI? a DB-backed config table the process reloads from?), not a quick
+follow-on to the onboarding tour.
 
 ## Phase 3 — AI depth: RAG + MCP + autonomous mode
 
