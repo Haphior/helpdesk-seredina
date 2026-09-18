@@ -1069,20 +1069,56 @@ this app's own ~8-item grouping threshold, already documented in
 `Layout.tsx`, would otherwise have been violated by the same change that
 triggered it.
 
-**A real setup wizard for self-hosted Docker installs — not done this
-pass.** This session's own repeated friction restarting the dev API server
-(wrong `DATABASE_URL`, regenerated `JWT_SECRET`/`ENCRYPTION_KEY` by hand, a
-masked error that turned out to be a stale port) is a preview of exactly
-what a first-time self-hoster would hit blind, with nobody to ask. Deferred
-deliberately, not for lack of time: the API process already hard-requires
-`JWT_SECRET`/`ENCRYPTION_KEY` as env vars at boot (see
-`apps/api/src/modules/webhooks/service.ts` and others throwing at import
-time if unset), so a *web* setup wizard has a chicken-and-egg problem — the
-server needs the secrets to start serving the wizard that's supposed to
-generate them. Solving this needs a real design pass (a minimal
-secrets-optional boot mode? a pre-flight generator script instead of a web
-UI? a DB-backed config table the process reloads from?), not a quick
-follow-on to the onboarding tour.
+**A real setup wizard for self-hosted Docker installs ✅ (this pass, scoped
+down from the original framing).** The design pass ADR 0030 deferred this
+for found the actual gap much smaller than "a web wizard": creating the
+first tenant/admin was already fully solved by the existing `/register`
+flow (identical in self-hosted and cloud mode). What was missing reduced to
+three concrete, non-UI pieces —
+
+- `./scripts/setup.sh`: generates and writes `.env` with fresh
+  `POSTGRES_PASSWORD`/`APP_TENANT_DB_PASSWORD`/`JWT_SECRET`/`ENCRYPTION_KEY`
+  (idempotent — never touches an existing `.env`), replacing "copy
+  `.env.example` and fill in nine variables by hand." This is the piece
+  that structurally can't be a web wizard: the API process hard-requires
+  `JWT_SECRET`/`ENCRYPTION_KEY` as env vars before it can boot at all, so
+  the server that would serve a web wizard can't start without them first.
+- A real Redis healthcheck in `docker-compose.yml`, with `api`/`worker`'s
+  `depends_on` moved from `service_started` to `service_healthy` — matching
+  the treatment Postgres already had. Before this, a slow or misconfigured
+  Redis was invisible until something further downstream failed more
+  confusingly.
+- One aggregate env-var validation per app (`apps/api`/`apps/worker`'s new
+  `lib/startupCheck.ts`, deliberately the first import in each `index.ts`),
+  reporting every missing/malformed required var in one message instead of
+  the previous one-at-a-time discovery loop (several modules already threw
+  their own single-variable error at import; this runs before any of them
+  can, by being first in `require()` evaluation order) — including
+  validating `ENCRYPTION_KEY`'s exact-64-hex-characters format up front
+  rather than failing confusingly later inside an actual encrypt/decrypt
+  call.
+
+See `docs/adr/0031-self-hosted-startup-checks.md`.
+
+Verified: 4 new unit tests for the aggregate check (passes with everything
+valid; lists every missing var, not just the first; rejects a wrong-length
+or non-hex `ENCRYPTION_KEY` with the specific problem named), full suite
+159/159 green, both `apps/api`/`apps/web` typecheck clean.
+`scripts/setup.sh` verified directly: generated secrets are the exact
+required lengths, re-running it against an already-populated `.env` is a
+no-op (confirmed byte-for-byte unchanged), and `docker-compose.yml` still
+parses as valid YAML. The startup check was verified against the real
+application entry points via `tsx` directly (not a mock): invoking
+`apps/api`/`apps/worker`'s actual `index.ts` with no env vars produced the
+complete missing-vars list for each app; a deliberately-too-short
+`ENCRYPTION_KEY` reported its actual character count; with everything
+valid, `apps/api` proceeded all the way to Fastify attempting to bind its
+port. **Not verified**: an actual `docker compose up` of the full stack —
+this sandboxed environment has neither the `docker compose` plugin nor the
+standalone binary (a known environment quirk this session already
+diagnosed once before), so the real multi-container orchestration path
+remains unverified end-to-end; a real self-hosted operator running this
+for the first time is still this feature's true validation.
 
 ## Phase 3 — AI depth: RAG + MCP + autonomous mode
 

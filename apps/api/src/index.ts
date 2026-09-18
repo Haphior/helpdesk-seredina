@@ -1,3 +1,6 @@
+// Deliberately the first import in this file -- see the file's own comment
+// for why source order here is load-bearing, not stylistic.
+import './lib/startupCheck';
 import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';

@@ -19,6 +19,11 @@ services:
     image: redis:7-alpine
     ports:
       - '${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   migrate:
     build:
@@ -39,7 +44,7 @@ services:
       migrate:
         condition: service_completed_successfully
       redis:
-        condition: service_started
+        condition: service_healthy
     environment:
       PORT: 4000
       DATABASE_URL: postgresql://app_tenant:${APP_TENANT_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-seredina}
@@ -62,7 +67,7 @@ services:
       migrate:
         condition: service_completed_successfully
       redis:
-        condition: service_started
+        condition: service_healthy
     environment:
       # network_mode: host below means this container shares the HOST's network
       # namespace, not the compose bridge network -- postgres/redis's service-name

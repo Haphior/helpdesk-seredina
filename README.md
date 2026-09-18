@@ -56,6 +56,33 @@ infra/          Dockerfiles, docker-compose.yml
 docs/           Roadmap, architecture decision records
 ```
 
+## Self-hosted deployment
+
+Requires Docker.
+
+```bash
+./scripts/setup.sh                              # generates .env with fresh secrets
+docker compose -f infra/docker-compose.yml up -d
+```
+
+That's the whole install — `migrate` applies the schema/RLS policies and exits,
+then `api`/`worker`/`web` start. Visit the web app (`http://localhost:8080` by
+default, `WEB_PORT` in `.env`) and register your organization at `/register` —
+there's no separate CLI bootstrap step, the same registration flow works
+identically in self-hosted and cloud mode.
+
+`./scripts/setup.sh` won't touch an existing `.env` — delete it first if you
+want to regenerate secrets from scratch (this invalidates any already-stored
+email channel passwords, encrypted with the old `ENCRYPTION_KEY`). See
+`.env.example` for what every variable does and which ones are optional
+(`ANTHROPIC_API_KEY` for the AI copilot, `SENTRY_DSN` for error tracking).
+
+If a container fails to become healthy, `docker compose -f
+infra/docker-compose.yml logs api` (or `worker`) is the first place to look —
+`apps/api`/`apps/worker` both validate every required env var at startup and
+report everything missing/malformed in one message, rather than crashing on
+the first one and forcing a fix-restart-discover-the-next-one loop.
+
 ## Development
 
 Requires Docker (for Postgres + Redis) and Node.js 20+ (Fastify 5 / `@fastify/jwt` 10
