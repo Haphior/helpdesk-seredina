@@ -29,3 +29,11 @@ export async function listApiKeys(tenantId: string) {
     }),
   );
 }
+
+export async function deleteApiKey(tenantId: string, id: string) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.apiKey.findUnique({ where: { id } });
+    if (!existing) throw new Error('API key not found');
+    await tx.apiKey.delete({ where: { id } });
+  });
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { apiGet, apiPost, ApiError } from '../lib/api';
+import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
 import type { ApiKeySummary } from '../lib/types';
 import { formatDateTime } from '../lib/format';
 
@@ -34,12 +34,22 @@ export function ApiKeys() {
     }
   }
 
+  async function revoke(key: ApiKeySummary) {
+    if (!confirm(`Revoke "${key.name}"? Anything using this key stops working immediately.`)) return;
+    try {
+      await apiDelete(`/api-keys/${key.id}`);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to revoke API key');
+    }
+  }
+
   return (
-    <div className="p-6">
-      <h1 className="mb-1 text-2xl font-semibold text-slate-900">API Keys</h1>
-      <p className="mb-4 text-sm text-slate-500">
-        Authenticates the API channel (<code className="rounded bg-slate-100 px-1">POST /v1/tickets</code>), the way
-        an external integration creates tickets in Seredina.
+    <div className="px-8 py-7">
+      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">API Keys</h1>
+      <p className="mb-5 text-[13.5px] text-slate-500">
+        Authenticates the API channel (<code className="rounded bg-slate-100 px-1">POST /v1/tickets</code>), the way an
+        external integration creates tickets in Seredina.
       </p>
 
       {newKey && (
@@ -60,35 +70,33 @@ export function ApiKeys() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
         >
           Create key
         </button>
       </form>
 
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
+      {keys === null && <p className="text-sm text-slate-500">Loading…</p>}
+      {keys?.length === 0 && <p className="text-sm text-slate-500">No API keys yet.</p>}
 
-      {keys && (
-        <table className="w-full max-w-2xl text-left text-sm">
-          <thead className="text-slate-500">
-            <tr>
-              <th className="border-b border-slate-200 py-2 font-medium">Name</th>
-              <th className="border-b border-slate-200 py-2 font-medium">Created</th>
-              <th className="border-b border-slate-200 py-2 font-medium">Last used</th>
-            </tr>
-          </thead>
-          <tbody>
+      {keys && keys.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="divide-y divide-slate-100">
             {keys.map((k) => (
-              <tr key={k.id}>
-                <td className="border-b border-slate-100 py-2">{k.name}</td>
-                <td className="border-b border-slate-100 py-2 text-slate-500">{formatDateTime(k.createdAt)}</td>
-                <td className="border-b border-slate-100 py-2 text-slate-500">
-                  {k.lastUsedAt ? formatDateTime(k.lastUsedAt) : 'Never'}
-                </td>
-              </tr>
+              <div key={k.id} className="flex items-center justify-between px-5 py-3.5">
+                <span className="text-[14px] font-semibold text-slate-800">{k.name}</span>
+                <div className="flex items-center gap-4 text-[12.5px] text-slate-400">
+                  <span>Created {formatDateTime(k.createdAt)}</span>
+                  <span>{k.lastUsedAt ? `Last used ${formatDateTime(k.lastUsedAt)}` : 'Never used'}</span>
+                  <button onClick={() => revoke(k)} className="text-xs text-slate-400 hover:text-rose-600">
+                    revoke
+                  </button>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -36,6 +36,8 @@ export interface UserSummary {
   name: string;
   email: string;
   role: { key: string } | null;
+  isActive: boolean;
+  isLocked: boolean;
 }
 
 export interface Role {

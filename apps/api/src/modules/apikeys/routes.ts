@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { createApiKey, listApiKeys } from './service';
+import { createApiKey, deleteApiKey, listApiKeys } from './service';
 
 const createSchema = z.object({ name: z.string().min(1).max(100) });
 
@@ -25,6 +25,20 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const keys = await listApiKeys(request.user.tenantId);
       return reply.send({ apiKeys: keys });
+    },
+  );
+
+  app.delete(
+    '/api-keys/:id',
+    { preHandler: [app.authenticate, requirePermission('users:manage')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      try {
+        await deleteApiKey(request.user.tenantId, id);
+        return reply.code(204).send();
+      } catch {
+        return reply.code(404).send({ error: 'API key not found' });
+      }
     },
   );
 }

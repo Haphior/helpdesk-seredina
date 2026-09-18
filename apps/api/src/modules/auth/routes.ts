@@ -1,7 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { createUser, getMe, listRoles, listUsers, login, registerTenant, updateUser } from './service';
+import {
+  createUser,
+  getMe,
+  listRoles,
+  listUsers,
+  login,
+  registerTenant,
+  resetUserPassword,
+  unlockUser,
+  updateUser,
+} from './service';
 
 const registerSchema = z.object({
   tenantSlug: z
@@ -31,7 +41,10 @@ const createUserSchema = z.object({
 const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
   roleKey: z.string().min(1).optional(),
+  isActive: z.boolean().optional(),
 });
+
+const resetPasswordSchema = z.object({ password: z.string().min(8) });
 
 export default async function authRoutes(app: FastifyInstance) {
   // Tighter than the global default (see index.ts) -- these are the two routes an
@@ -128,8 +141,40 @@ export default async function authRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: parsed.error.flatten() });
       }
       try {
-        const user = await updateUser(request.user.tenantId, id, parsed.data);
+        const user = await updateUser(request.user.tenantId, id, parsed.data, request.user.sub);
         return reply.send(user);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.post(
+    '/users/:id/unlock',
+    { preHandler: [app.authenticate, requirePermission('users:manage')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      try {
+        await unlockUser(request.user.tenantId, id);
+        return reply.code(204).send();
+      } catch (err) {
+        return reply.code(404).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.post(
+    '/users/:id/reset-password',
+    { preHandler: [app.authenticate, requirePermission('users:manage')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = resetPasswordSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.flatten() });
+      }
+      try {
+        await resetUserPassword(request.user.tenantId, id, parsed.data.password);
+        return reply.code(204).send();
       } catch (err) {
         return reply.code(404).send({ error: (err as Error).message });
       }

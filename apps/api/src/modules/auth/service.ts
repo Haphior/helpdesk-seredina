@@ -96,6 +96,8 @@ export async function login(input: LoginInput): Promise<AuthResult> {
 
     if (!user) return null;
 
+    if (!user.isActive) return null;
+
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       return null;
     }
@@ -145,14 +147,30 @@ export async function getMe(tenantId: string, userId: string) {
   });
 }
 
-/** Agents/admins in the tenant -- used by the web app's assignee picker. */
+/**
+ * Agents/admins in the tenant -- used by the web app's assignee picker AND the
+ * Users admin page, so it deliberately includes deactivated/locked users too
+ * (an admin reactivating someone needs to see them). `isLocked` is derived
+ * here rather than exposing lockedUntil's raw timestamp -- "is this account
+ * currently locked" is the only thing the UI needs to decide whether to show
+ * an unlock button.
+ */
 export async function listUsers(tenantId: string) {
-  return withTenantTx(prisma, tenantId, async (tx) =>
+  const users = await withTenantTx(prisma, tenantId, async (tx) =>
     tx.user.findMany({
-      select: { id: true, name: true, email: true, role: { select: { key: true } } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: { select: { key: true } },
+        isActive: true,
+        lockedUntil: true,
+      },
       orderBy: { name: 'asc' },
     }),
   );
+  const now = new Date();
+  return users.map(({ lockedUntil, ...u }) => ({ ...u, isLocked: !!lockedUntil && lockedUntil > now }));
 }
 
 /** The tenant's roles (fixed to admin/team_lead/agent for now -- see ROADMAP's "custom roles" backlog item). */
@@ -191,9 +209,21 @@ export async function createUser(tenantId: string, input: CreateUserInput) {
 export interface UpdateUserInput {
   name?: string;
   roleKey?: string;
+  isActive?: boolean;
 }
 
-export async function updateUser(tenantId: string, userId: string, input: UpdateUserInput) {
+/**
+ * `callerId`, when passed, blocks a self-deactivation -- a lone admin
+ * deactivating their own account with nobody else able to log in and
+ * reactivate them would be a real footgun. Optional because not every caller
+ * of updateUser is a self-service admin action (there is none today, but a
+ * future system-initiated update -- e.g. a bulk offboarding job -- shouldn't
+ * be forced to invent a caller id it doesn't have).
+ */
+export async function updateUser(tenantId: string, userId: string, input: UpdateUserInput, callerId?: string) {
+  if (input.isActive === false && userId === callerId) {
+    throw new Error('you cannot deactivate your own account');
+  }
   return withTenantTx(prisma, tenantId, async (tx) => {
     const existing = await tx.user.findUnique({ where: { id: userId } });
     if (!existing) throw new Error('user not found');
@@ -207,8 +237,34 @@ export async function updateUser(tenantId: string, userId: string, input: Update
 
     return tx.user.update({
       where: { id: userId },
-      data: { name: input.name, roleId },
-      select: { id: true, name: true, email: true, role: { select: { key: true } } },
+      data: { name: input.name, roleId, isActive: input.isActive },
+      select: { id: true, name: true, email: true, role: { select: { key: true } }, isActive: true },
     });
+  });
+}
+
+/** Clears a lockout early -- an admin's escape hatch for the 15-minute wait in login(). */
+export async function unlockUser(tenantId: string, userId: string) {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.user.findUnique({ where: { id: userId } });
+    if (!existing) throw new Error('user not found');
+    await tx.user.update({ where: { id: userId }, data: { failedLoginAttempts: 0, lockedUntil: null } });
+  });
+}
+
+/**
+ * Same mechanism as createUser's initial password -- an admin sets it directly
+ * and shares it out of band, since there's no email/invite flow yet (see
+ * createUser's comment). Not exposed as a field on the generic updateUser PATCH:
+ * a password change is sensitive enough to be its own explicit action, same
+ * reasoning as webhook secret rotation (modules/webhooks/service.ts).
+ */
+export async function resetUserPassword(tenantId: string, userId: string, newPassword: string) {
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const existing = await tx.user.findUnique({ where: { id: userId } });
+    if (!existing) throw new Error('user not found');
+    // A reset password shouldn't inherit a stale lockout from before the reset.
+    await tx.user.update({ where: { id: userId }, data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null } });
   });
 }

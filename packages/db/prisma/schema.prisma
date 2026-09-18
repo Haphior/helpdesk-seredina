@@ -125,6 +125,16 @@ model User {
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until")
 
+  // Soft-deactivation for offboarding -- deliberately not a delete: Ticket.assignee
+  // and Message.authorUser have no onDelete action (a hard delete would be blocked
+  // by Postgres the moment either table has a row referencing this user), and
+  // OnCallShift/EscalationTier cascade-delete on User, which would silently erase
+  // on-call configuration nobody asked to remove. login() rejects a deactivated
+  // user with the same generic 'invalid credentials' error as a locked-out or
+  // wrong-password attempt -- same anti-enumeration posture as everywhere else in
+  // that function.
+  isActive Boolean @default(true) @map("is_active")
+
   assignedTickets      Ticket[]              @relation("TicketAssignee")
   authoredMessages     Message[]             @relation("MessageAuthorUser")
   processStepAssignments ProcessStepInstance[]
