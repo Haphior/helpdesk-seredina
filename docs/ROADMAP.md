@@ -1327,7 +1327,29 @@ zero code changes needed there, proving the loop closes for real. See
   arbitrary future ones — which is the entire point of choosing this over a
   plugin loader.
 - Advanced reporting/CSAT/export.
-- Automated RLS fuzz tests in CI.
+
+**First CI pipeline + automated RLS fuzz tests ✅ (this pass).** This repo
+had no CI at all before this -- `.github/workflows/ci.yml` runs the exact
+`infra/docker/migrate-entrypoint.sh` bootstrap (migrate deploy → RLS
+policies → seed) against disposable Postgres/Redis service containers,
+verified locally first against a genuinely fresh database (never done
+before this pass -- every prior migration was applied incrementally onto
+an already-migrated dev database) before ever being pushed: all 30
+migrations applied cleanly from nothing, full `apps/api` suite 207/207
+green against it. `apps/api/test/rls-fuzz.test.ts` (`fast-check`, a new
+dependency) randomly exercises 18 tenant-scoped models -- every one simple
+enough to build a fixture for with no FK beyond `tenantId` -- across 40
+runs, confirming no cross-tenant leak on any of them; this complements
+rather than replaces the existing 3 hand-written isolation suites, which
+already prove RLS itself (not just the Prisma extension) blocks a leak
+generically for every table via one shared policy loop -- what the fuzz
+test adds is breadth against the real risk of a *new* table's
+`TENANT_SCOPE_FIELD`/`policies.sql` wiring drifting or being forgotten.
+**Known gap**: the actual GitHub Actions run couldn't be observed from this
+sandbox (no local Actions runner); every step was verified by running its
+real command locally instead. See
+`docs/adr/0037-rls-fuzz-tests-and-ci.md`.
+
 - Verified stateless multi-replica `api`/`worker` + WS fanout under load.
 
 ## Phase 5 — Endpoint agents (Windows/Linux/macOS)
