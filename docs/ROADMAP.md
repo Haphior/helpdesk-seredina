@@ -1410,6 +1410,18 @@ in this pass -- its integration model (a tenant-authored JS payload script)
 is a different shape of problem than Grafana's, deferred rather than
 rushed. See `docs/adr/0039-monitoring-integrations.md`.
 
+**Zabbix integration ✅ (this pass) -- the deferral above resolved.** Unlike
+Grafana, Zabbix's webhook always runs a tenant-provided script with no fixed
+default payload, so the mapping lives entirely in a ready-made script (macros,
+severity scale, and script structure confirmed against Zabbix's live docs, not
+guessed) that already targets the existing generic `/v1/alerts` endpoint --
+zero new backend code. A second card on the same "Monitoring Integrations" page
+shows the setup steps and the copyable script. Restricting to Problem events
+(via a Zabbix Action condition, not an in-script status check) is a deliberate,
+disclosed scope cut: which macro cleanly carries problem-vs-resolved into a
+webhook's parameters isn't consistently documented, so this avoids guessing at
+it. See `docs/adr/0046-zabbix-integration.md`.
+
 Verified: 6 new integration tests (Grafana's own title/message used when
 present, a synthesized fallback when it sends its default unmodified
 payload, severity-label mapping, no-label default, re-fire dedup, and a
