@@ -107,6 +107,33 @@ export async function getChannelBreakdown(tenantId: string, days = 30) {
   return counts;
 }
 
+/**
+ * Only responded surveys count -- a requested-but-unanswered CsatResponse row
+ * (the common case; most customers never click the link) has rating: null
+ * and must not drag the average down or inflate the response count. Bounded
+ * to a rolling window like every other widget here, by respondedAt (when the
+ * signal actually happened), not requestedAt.
+ */
+export async function getCsatSummary(tenantId: string, days = 90) {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const responses = await withTenantTx(prisma, tenantId, (tx) =>
+    tx.csatResponse.findMany({ where: { respondedAt: { not: null, gte: since } }, select: { rating: true } }),
+  );
+
+  const total = responses.length;
+  const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let sum = 0;
+  for (const r of responses) {
+    if (r.rating) {
+      distribution[r.rating] = (distribution[r.rating] ?? 0) + 1;
+      sum += r.rating;
+    }
+  }
+  return { total, average: total === 0 ? null : Math.round((sum / total) * 10) / 10, distribution };
+}
+
 export async function getRecentActivity(tenantId: string, limit = 6) {
   return withTenantTx(prisma, tenantId, (tx) =>
     tx.ticket.findMany({

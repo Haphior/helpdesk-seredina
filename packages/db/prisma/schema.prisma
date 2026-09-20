@@ -80,6 +80,7 @@ model Tenant {
   aiSettings            TenantAiSettings?
   uiSettings            TenantUiSettings?
   telegramChannel       TelegramChannel?
+  csatResponses         CsatResponse[]
 
   @@map("tenants")
 }
@@ -308,6 +309,7 @@ model Ticket {
   notifications   Notification[]
   aiUsageLogs     AiUsageLog[]
   aiAgentRuns     AiAgentRun[]
+  csatResponse    CsatResponse?
 
   @@unique([tenantId, number])
   @@index([tenantId, channel, externalId])
@@ -488,6 +490,25 @@ model TelegramChannel {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("telegram_channels")
+}
+
+// One row per ticket, created once (the first time a ticket is resolved --
+// see docs/adr/0045-csat-surveys.md) and updated in place when the contact
+// answers, never recreated on a re-resolve. `token` is a public, unauthenticated
+// survey-link credential -- same shape and same reasoning as Ticket.widgetToken.
+model CsatResponse {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ticketId    String    @unique @map("ticket_id") @db.Uuid
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  token       String    @unique
+  rating      Int? // 1-5, null until the contact responds
+  comment     String?
+  requestedAt DateTime  @default(now()) @map("requested_at")
+  respondedAt DateTime? @map("responded_at")
+
+  @@map("csat_responses")
 }
 
 // ---------------------------------------------------------------------------

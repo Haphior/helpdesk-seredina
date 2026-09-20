@@ -350,3 +350,11 @@ export function PaperPlaneIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function StarIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M10 2.5 12.35 7.4l5.4.79-3.9 3.8.92 5.36L10 14.77l-4.77 2.5.92-5.36-3.9-3.8 5.4-.79Z" strokeLinejoin="round" />
+    </Icon>
+  );
+}

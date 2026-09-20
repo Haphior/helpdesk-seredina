@@ -41,6 +41,7 @@ import { TicketStatuses } from './pages/TicketStatuses';
 import { PublicKb } from './pages/PublicKb';
 import { PublicKbArticlePage } from './pages/PublicKbArticle';
 import { PublicStatus } from './pages/PublicStatus';
+import { PublicCsat } from './pages/PublicCsat';
 
 export function App() {
   return (
@@ -51,6 +52,7 @@ export function App() {
         <Route path="/kb/:tenantSlug" element={<PublicKb />} />
         <Route path="/kb/:tenantSlug/:slug" element={<PublicKbArticlePage />} />
         <Route path="/status/:tenantSlug" element={<PublicStatus />} />
+        <Route path="/csat/:tenantSlug/:token" element={<PublicCsat />} />
 
         <Route element={<RequireAuth />}>
           <Route element={<Layout />}>

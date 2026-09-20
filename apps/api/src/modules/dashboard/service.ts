@@ -10,6 +10,7 @@ export const WIDGET_TYPES = [
   'ticket_volume',
   'priority_breakdown',
   'sla_compliance',
+  'csat_score',
   'agent_workload',
   'recent_activity',
 ] as const;
@@ -24,8 +25,9 @@ const DEFAULT_ORDER: Record<WidgetType, number> = {
   ticket_volume: 1,
   priority_breakdown: 2,
   sla_compliance: 3,
-  agent_workload: 4,
-  recent_activity: 5,
+  csat_score: 4,
+  agent_workload: 5,
+  recent_activity: 6,
 };
 
 export interface DashboardPref {

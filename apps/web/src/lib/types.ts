@@ -320,6 +320,7 @@ export type WidgetType =
   | 'ticket_volume'
   | 'priority_breakdown'
   | 'sla_compliance'
+  | 'csat_score'
   | 'agent_workload'
   | 'recent_activity';
 
@@ -356,6 +357,20 @@ export interface SlaComplianceReport {
 export interface AgentWorkloadReport {
   agents: { userId: string; name: string; count: number }[];
   unassigned: number;
+}
+
+export interface CsatSummary {
+  total: number;
+  average: number | null;
+  distribution: Record<number, number>;
+}
+
+export interface CsatSurvey {
+  ticketNumber: number;
+  ticketSubject: string;
+  rating: number | null;
+  comment: string | null;
+  respondedAt: string | null;
 }
 
 export type ProblemStatus = 'UNDER_INVESTIGATION' | 'KNOWN_ERROR' | 'RESOLVED' | 'CLOSED';

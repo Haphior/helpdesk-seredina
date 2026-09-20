@@ -42,6 +42,7 @@ import widgetRoutes from './modules/widget/routes';
 import uiSettingsRoutes from './modules/uisettings/routes';
 import brandingRoutes from './modules/branding/routes';
 import telegramRoutes from './modules/telegram/routes';
+import csatRoutes from './modules/csat/routes';
 
 initErrorTracking();
 
@@ -111,6 +112,7 @@ export function buildApp() {
   app.register(uiSettingsRoutes);
   app.register(brandingRoutes);
   app.register(telegramRoutes);
+  app.register(csatRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

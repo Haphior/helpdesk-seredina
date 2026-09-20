@@ -53,6 +53,10 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
       SEREDINA_MODE: ${SEREDINA_MODE:-self_hosted}
       CORS_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      # Same value as CORS_ORIGIN above, but read directly (not just as CORS policy)
+      # to build the web app's own public links -- e.g. a CSAT survey link, see
+      # docs/adr/0045-csat-surveys.md.
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
       SENTRY_DSN: ${SENTRY_DSN:-}
       AI_PROVIDER: ${AI_PROVIDER:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
@@ -67,6 +71,10 @@ services:
       # OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+      # Only required to connect a Telegram bot (docs/adr/0044-telegram-
+      # channel.md) -- must be the real, internet-reachable HTTPS address this
+      # container is reachable at, e.g. https://api.yourcompany.com.
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-}
     ports:
       - '${API_PORT:-4000}:4000'
 

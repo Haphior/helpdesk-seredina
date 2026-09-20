@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { apiGet, apiPut, ApiError } from '../lib/api';
 import type {
   AgentWorkloadReport,
+  CsatSummary,
   DashboardPref,
   OnboardingChecklist,
   SlaComplianceReport,
@@ -21,6 +22,7 @@ const WIDGET_LABEL: Record<WidgetType, string> = {
   ticket_volume: 'Ticket volume',
   priority_breakdown: 'Open tickets by priority',
   sla_compliance: 'SLA compliance',
+  csat_score: 'Customer satisfaction',
   agent_workload: 'Agent workload',
   recent_activity: 'Recent activity',
 };
@@ -30,6 +32,7 @@ interface DashboardData {
   volume: TicketVolumePoint[];
   priority: Record<string, number>;
   sla: SlaComplianceReport;
+  csat: CsatSummary;
   workload: AgentWorkloadReport;
   recent: Ticket[];
 }
@@ -47,12 +50,13 @@ export function Dashboard() {
       apiGet<{ volume: TicketVolumePoint[] }>('/reporting/ticket-volume?days=14'),
       apiGet<{ breakdown: Record<string, number> }>('/reporting/priority-breakdown'),
       apiGet<SlaComplianceReport>('/reporting/sla-compliance'),
+      apiGet<CsatSummary>('/reporting/csat-summary'),
       apiGet<AgentWorkloadReport>('/reporting/agent-workload'),
       apiGet<{ tickets: Ticket[] }>('/reporting/recent-activity'),
     ])
-      .then(([p, ob, v, pr, s, w, r]) => {
+      .then(([p, ob, v, pr, s, c, w, r]) => {
         setPrefs(p.widgets);
-        setData({ onboarding: ob, volume: v.volume, priority: pr.breakdown, sla: s, workload: w, recent: r.tickets });
+        setData({ onboarding: ob, volume: v.volume, priority: pr.breakdown, sla: s, csat: c, workload: w, recent: r.tickets });
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load dashboard'));
   }
@@ -193,6 +197,8 @@ function renderWidget(type: WidgetType, data: DashboardData) {
       return <PriorityBreakdownWidget counts={data.priority} />;
     case 'sla_compliance':
       return <SlaComplianceWidget report={data.sla} />;
+    case 'csat_score':
+      return <CsatScoreWidget summary={data.csat} />;
     case 'agent_workload':
       return <AgentWorkloadWidget report={data.workload} />;
     case 'recent_activity':
@@ -288,6 +294,30 @@ function SlaComplianceWidget({ report }: { report: SlaComplianceReport }) {
       <div className="mt-1.5 flex justify-between text-[11px] text-slate-400">
         <span>{report.met} met</span>
         <span>{report.breached} breached</span>
+      </div>
+    </div>
+  );
+}
+
+function CsatScoreWidget({ summary }: { summary: CsatSummary }) {
+  if (summary.total === 0) {
+    return <p className="text-xs text-slate-400">No survey responses in the last 90 days.</p>;
+  }
+  const max = Math.max(1, ...Object.values(summary.distribution));
+  return (
+    <div>
+      <div className="mb-2 flex items-baseline gap-2">
+        <span className="text-3xl font-bold text-slate-900">{summary.average}</span>
+        <span className="text-xs text-slate-400">avg. out of 5 ({summary.total} responses, last 90 days)</span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {[5, 4, 3, 2, 1].map((star) => (
+          <div key={star} className="flex items-center gap-2.5">
+            <span className="w-6 text-right text-[12px] text-slate-500">{star}★</span>
+            <ProgressBar value={summary.distribution[star] ?? 0} max={max} colorClassName="bg-amber-400" />
+            <span className="w-5 text-[12px] text-slate-400">{summary.distribution[star] ?? 0}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

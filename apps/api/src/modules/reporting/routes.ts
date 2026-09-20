@@ -3,6 +3,7 @@ import { requirePermission } from '../rbac/permissions';
 import {
   getAgentWorkload,
   getChannelBreakdown,
+  getCsatSummary,
   getPriorityBreakdown,
   getRecentActivity,
   getSlaCompliance,
@@ -35,5 +36,10 @@ export default async function reportingRoutes(app: FastifyInstance) {
 
   app.get('/reporting/recent-activity', { preHandler: [app.authenticate, requirePermission('tickets:read')] }, async (request, reply) => {
     return reply.send({ tickets: await getRecentActivity(request.user.tenantId) });
+  });
+
+  app.get('/reporting/csat-summary', { preHandler: [app.authenticate, requirePermission('tickets:read')] }, async (request, reply) => {
+    const days = Number((request.query as { days?: string }).days ?? 90);
+    return reply.send(await getCsatSummary(request.user.tenantId, days));
   });
 }

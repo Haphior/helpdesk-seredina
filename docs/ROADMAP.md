@@ -1422,7 +1422,19 @@ ticket instead of creating a new one, and an invalid API key was cleanly
 rejected. Frontend verified live in a browser (clipboard permissions
 explicitly granted so the copy button's real behavior — not headless
 Chromium's default no-op — was actually exercised).
-- Advanced reporting/CSAT/export.
+- Advanced reporting/export (full data portability already shipped, Phase 2).
+
+**Customer satisfaction (CSAT) surveys ✅ (this pass).** A ticket's first-ever
+resolution posts a survey link as a `SYSTEM` message via the existing `addMessage` --
+which is also what makes it reach the customer for free through whichever outbound
+mechanism the ticket's channel already has (email/Telegram's `shouldEmail`/
+`shouldTelegram`, or the widget's own polled conversation view), no new distribution
+mechanism built. Public survey page at `/csat/:tenantSlug/:token`; a new
+`getCsatSummary` reporting aggregate and `csat_score` dashboard widget slot into the
+existing catalogs. Found and fixed a real correctness bug along the way: `addMessage`'s
+SLA `firstRespondedAt` stamping used to block-list `CONTACT` rather than allow-list
+`AGENT`/`AI`, which would have let this exact SYSTEM message get credited as a real
+agent response. See `docs/adr/0045-csat-surveys.md`.
 
 **First CI pipeline + automated RLS fuzz tests ✅ (this pass).** This repo
 had no CI at all before this -- `.github/workflows/ci.yml` runs the exact

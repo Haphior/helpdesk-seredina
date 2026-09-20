@@ -188,6 +188,9 @@ Flat by default. A single `shadow-sm` is the only elevation token, applied to to
 ### Channel Glyph (`components/ChannelGlyph.tsx`)
 - The logo's 3-circle motif, made functional: highlights which channel-group a ticket arrived through (email / api·catalog·widget / alert), dimmed uniformly for agent-logged tickets. Renders only under the default theme ("Meet in the Middle") — hidden under "Refined" via `theme !== 'refined'` at each call site (`TicketsQueue.tsx`, `TicketDetail.tsx`).
 
+### CSAT Survey (`pages/PublicCsat.tsx`)
+- Public, unauthenticated page at `/csat/:tenantSlug/:token`. Uses `PortalBrand` like the other 2 public pages. A 5-star `StarPicker` (amber fill on select/hover) plus an optional comment field; submitting shows a read-only filled-star summary and a thank-you, and reloading the same link shows that same state rather than the form again (the answer is idempotent).
+
 ### Appearance (`pages/ThemeSettings.tsx`)
 - Two selectable cards (one per `UI_THEMES` entry), each with a small static swatch preview and name/description. Selecting one applies instantly (`ThemeContext`'s `applyTheme`) and persists via `PATCH /ui-settings`, reverting the DOM/context on a failed save.
 

@@ -4,6 +4,7 @@ import { dispatchWebhookEvent } from '../../lib/webhookDispatch';
 import { computeSlaDueAts, scheduleSlaBreachChecks } from '../sla/service';
 import { getActiveEscalationForTicket } from '../oncall/service';
 import { notifyUser } from '../notifications/service';
+import { createCsatSurveyLink } from '../csat/service';
 
 const DEFAULT_TICKET_STATUSES: { key: string; label: string; category: TicketStatusCategory; sortOrder: number }[] = [
   { key: 'open', label: 'Open', category: 'OPEN', sortOrder: 0 },
@@ -416,14 +417,13 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
 
     // The SLA "first response" milestone is the first public (non-internal-note)
     // reply an AGENT or AI posts -- stamped once, never overwritten by later
-    // replies. authorType !== 'CONTACT' matters now that addMessage is a real
-    // code path for a contact's own follow-up messages too (the widget
-    // channel's conversation-continuation -- see docs/adr/0040-embeddable-
-    // widget.md): before that, every CONTACT-authored message was the
-    // ticket's own opening message, created via a direct tx.message.create in
-    // createTicketFromApi/ingestAlert, never through this function, so this
-    // check was never exercised by a contact message before now.
-    if (!input.isPrivateNote && authorType !== 'CONTACT' && !ticket.firstRespondedAt) {
+    // replies. Explicit allow-list, not "!== CONTACT": addMessage is also the
+    // path for a contact's own follow-up (CONTACT, correctly excluded already)
+    // AND a SYSTEM message like the CSAT survey link (docs/adr/0045-csat-
+    // surveys.md), which must NOT count as a real response -- a ticket an
+    // agent resolved without ever typing a reply would otherwise have its SLA
+    // "first response" incorrectly credited to an automated survey link.
+    if (!input.isPrivateNote && (authorType === 'AGENT' || authorType === 'AI') && !ticket.firstRespondedAt) {
       await tx.ticket.update({ where: { id: ticketId }, data: { firstRespondedAt: new Date() } });
     }
 
@@ -477,6 +477,7 @@ export interface UpdateTicketInput {
 export async function updateTicket(tenantId: string, ticketId: string, input: UpdateTicketInput) {
   let priorityChanged = false;
   let newAssigneeId: string | null = null;
+  let justResolved = false;
 
   const updated = await withTenantTx(prisma, tenantId, async (tx) => {
     const ticket = await tx.ticket.findUnique({ where: { id: ticketId } });
@@ -517,12 +518,19 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
       if (!newStatus) throw new Error('ticket status not found');
 
       data.status = { connect: { id: input.statusId } };
+      // justResolved (acted on after the transaction, below) covers both ways
+      // a ticket first counts as "done": landing on RESOLVED, or skipping
+      // straight to CLOSED without ever passing through RESOLVED.
       if (newStatus.category === 'RESOLVED' && !ticket.resolvedAt) {
         data.resolvedAt = new Date();
+        justResolved = true;
       }
       if (newStatus.category === 'CLOSED') {
         data.closedAt = new Date();
-        if (!ticket.resolvedAt) data.resolvedAt = new Date();
+        if (!ticket.resolvedAt) {
+          data.resolvedAt = new Date();
+          justResolved = true;
+        }
       }
     }
 
@@ -545,6 +553,22 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
       body: `You were assigned to #${updated.number}: ${updated.subject}`,
       subject: `[#${updated.number}] Assigned to you: ${updated.subject}`,
     });
+  }
+  if (justResolved) {
+    // A SYSTEM message, not a direct tx.message.create like every other
+    // SYSTEM message in this codebase so far -- going through addMessage is
+    // what makes the survey link actually reach the customer for free,
+    // through whichever outbound mechanism the ticket's own channel already
+    // has (shouldEmail/shouldTelegram) or the widget's polled conversation
+    // view. See docs/adr/0045-csat-surveys.md.
+    const link = await createCsatSurveyLink(tenantId, updated.id);
+    if (link) {
+      await addMessage(tenantId, updated.id, {
+        authorType: 'SYSTEM',
+        isPrivateNote: false,
+        body: `How did we do? Rate your experience: ${link}`,
+      });
+    }
   }
   return updated;
 }
