@@ -331,3 +331,13 @@ export function PaletteIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function BrandIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="2.5" y="3.5" width="15" height="13" rx="2" />
+      <circle cx="7" cy="8" r="1.4" />
+      <path d="M3 14.5 7.5 10l3 3 2.5-2.5 4 4" />
+    </Icon>
+  );
+}

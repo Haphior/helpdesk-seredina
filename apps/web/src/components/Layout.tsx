@@ -24,6 +24,7 @@ import {
   MailIcon,
   SlidersIcon,
   ServiceMapIcon,
+  BrandIcon,
   PaletteIcon,
   ShieldIcon,
   SparkleIcon,
@@ -98,6 +99,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Comp
       { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' },
       { to: '/monitoring-integrations', label: 'Monitoring Integrations', icon: WarningIcon, permission: 'channels:manage' },
       { to: '/appearance', label: 'Appearance', icon: PaletteIcon, permission: 'tickets:manage_all' },
+      { to: '/branding', label: 'Branding', icon: BrandIcon, permission: 'tickets:manage_all' },
     ],
   },
 ];

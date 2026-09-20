@@ -414,6 +414,11 @@ export interface KbArticle {
   updatedAt: string;
 }
 
+export interface TenantBranding {
+  logoUrl: string | null;
+  accentColor: string | null;
+}
+
 export interface PublicKbArticleSummary {
   id: string;
   title: string;

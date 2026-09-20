@@ -645,11 +645,18 @@ true in practice — tenant-defined statuses, custom fields, macros, SLA
 policies, and (once built) the Service Catalog and dashboard above all let a
 tenant shape its own instance without filing a ticket against Seredina
 itself. Naming what's still missing to make that a *complete* story:
-- **Tenant branding / white-label.** A tenant's own logo and accent color on
-  their login screen and portal — real weight for a multi-tenant cloud
-  product where every tenant currently sees Seredina's own brand regardless
-  of who they are. A `Tenant.branding` jsonb blob (logo URL, one or two accent
-  colors) is enough for v1; no theming engine needed for that scope.
+**Tenant branding / white-label ✅ (this pass, v1 scope: portal + status page, not
+login/register).** A `Tenant.branding` jsonb blob (`logoUrl`, `accentColor`) —
+`GET`/`PATCH /tenant-branding` (authenticated) plus an unauthenticated
+`GET /public/:tenantSlug/branding` for the 3 public pages, which now render a
+shared `PortalBrand` component instead of Seredina's hardcoded logo/wordmark.
+`Login`/`Register` deliberately excluded from v1 — they have no `tenantSlug` in
+the URL to key a live-branding fetch off until the user starts typing it, unlike
+the public pages (`/kb/:tenantSlug`, `/status/:tenantSlug`); a real fix needs a
+URL-based login scheme, a routing change out of scope here. The internal admin
+console stays Seredina-branded on purpose (ADR 0042's One Accent Rule) — this is
+about what a tenant's *own customers* see, not the agent's own tool. See
+`docs/adr/0043-tenant-branding.md`.
 - **Editable outbound email templates.** Every outbound email the
   `EmailChannel` sends today (Phase 1 ✅ — a reply on an email-sourced ticket)
   uses one fixed, hardcoded format. A tenant should be able to edit the

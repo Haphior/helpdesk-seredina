@@ -32,6 +32,7 @@ model Tenant {
   mode             String   @default("cloud") // 'self_hosted' | 'cloud'
   lastTicketNumber Int      @default(0) @map("last_ticket_number")
   lastProblemNumber Int     @default(0) @map("last_problem_number")
+  branding         Json? // { logoUrl?: string, accentColor?: string } -- see modules/branding; null = no white-label set, Seredina's own look applies
   createdAt        DateTime @default(now()) @map("created_at")
 
   users           User[]

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiGet, ApiError } from '../lib/api';
 import type { PublicServiceStatusLevel, PublicStatusPage } from '../lib/types';
-import { Logo } from '../components/Logo';
+import { PortalBrand } from '../components/PortalBrand';
 import { Card } from '../components/Card';
 
 const OVERALL_COPY: Record<PublicServiceStatusLevel, string> = {
@@ -44,10 +44,7 @@ export function PublicStatus() {
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10">
       <div className="mx-auto max-w-2xl">
-        <div className="mb-8 flex items-center gap-2.5">
-          <Logo size={28} />
-          <span className="text-[15px] font-bold text-slate-900">System Status</span>
-        </div>
+        <PortalBrand tenantSlug={tenantSlug} title="System Status" />
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
         {page === null && !error && <p className="text-sm text-slate-500">Loading…</p>}

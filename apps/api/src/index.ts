@@ -40,6 +40,7 @@ import aiToolsRoutes from './modules/ai-tools/routes';
 import integrationsRoutes from './modules/integrations/routes';
 import widgetRoutes from './modules/widget/routes';
 import uiSettingsRoutes from './modules/uisettings/routes';
+import brandingRoutes from './modules/branding/routes';
 
 initErrorTracking();
 
@@ -107,6 +108,7 @@ export function buildApp() {
   app.register(integrationsRoutes);
   app.register(widgetRoutes);
   app.register(uiSettingsRoutes);
+  app.register(brandingRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

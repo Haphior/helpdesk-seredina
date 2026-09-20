@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiGet, ApiError } from '../lib/api';
 import type { PublicKbArticleSummary } from '../lib/types';
-import { Logo } from '../components/Logo';
+import { PortalBrand } from '../components/PortalBrand';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
@@ -31,10 +31,7 @@ export function PublicKb() {
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10">
       <div className="mx-auto max-w-2xl">
-        <div className="mb-8 flex items-center gap-2.5">
-          <Logo size={28} />
-          <span className="text-[15px] font-bold text-slate-900">Help Center</span>
-        </div>
+        <PortalBrand tenantSlug={tenantSlug} title="Help Center" />
 
         <form
           onSubmit={(e) => {

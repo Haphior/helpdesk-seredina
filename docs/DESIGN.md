@@ -191,6 +191,9 @@ Flat by default. A single `shadow-sm` is the only elevation token, applied to to
 ### Appearance (`pages/ThemeSettings.tsx`)
 - Two selectable cards (one per `UI_THEMES` entry), each with a small static swatch preview and name/description. Selecting one applies instantly (`ThemeContext`'s `applyTheme`) and persists via `PATCH /ui-settings`, reverting the DOM/context on a failed save.
 
+### Portal Brand (`components/PortalBrand.tsx`) and Branding (`pages/BrandingSettings.tsx`)
+- Shared header for the 3 public pages (`PublicKb`, `PublicKbArticle`, `PublicStatus`): a tenant's own logo (falling back to the Seredina `Logo` on a missing/broken URL) and an `accentColor`-tinted wordmark. `BrandingSettings.tsx` (`/branding`, Administration) edits both fields and renders the identical header markup as a live preview. Scoped to the customer-facing portal only — the internal admin console always stays Seredina-branded (see the One Accent Rule).
+
 ## Do's and Don'ts
 
 ### Do:
