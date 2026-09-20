@@ -1,3 +1,46 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Tenant theme system (docs/adr/0042-tenant-theme-system.md). tailwind.config.js
+ * remaps the app's `slate` color family to these variables, so every existing
+ * slate-* class in the app already resolves through whichever block below is
+ * active -- no component file needed to change for this to work.
+ *
+ * The accent (indigo/violet) is NOT themed here -- it's the actual brand
+ * identity (docs/BRAND.md), shared by both themes on purpose.
+ */
+
+:root {
+  /* Default theme: "Meet in the Middle" -- a warm-stone neutral scale. */
+  --n-50: #f7f5f1;
+  --n-100: #efebe4;
+  --n-200: #e4ded2;
+  --n-300: #d1c8b8;
+  --n-400: #a89c89;
+  --n-500: #857a68;
+  --n-600: #675d4e;
+  --n-700: #4d453a;
+  --n-800: #34302a;
+  --n-900: #26221d;
+  --n-950: #181512;
+}
+
+[data-theme='refined'] {
+  /* "Refined" -- the original look, reproduced exactly: these are Tailwind's
+     own real default `slate` hex values (from tailwindcss/colors), not an
+     approximation, so switching to this theme is pixel-identical to what
+     shipped before the theme system existed. */
+  --n-50: #f8fafc;
+  --n-100: #f1f5f9;
+  --n-200: #e2e8f0;
+  --n-300: #cbd5e1;
+  --n-400: #94a3b8;
+  --n-500: #64748b;
+  --n-600: #475569;
+  --n-700: #334155;
+  --n-800: #1e293b;
+  --n-900: #0f172a;
+  --n-950: #020617;
+}

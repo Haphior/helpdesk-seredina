@@ -17,8 +17,10 @@ import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
+import { ChannelGlyph } from '../components/ChannelGlyph';
 import { ClockIcon, SearchIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime, isTicketOverdue } from '../lib/format';
+import { useTheme } from '../theme/ThemeContext';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 
@@ -38,6 +40,7 @@ const PAGE_SIZE = 50;
 
 export function TicketsQueue() {
   const { hasPermission, payload } = useAuth();
+  const { theme } = useTheme();
   const canBulkEdit = hasPermission('tickets:write');
   const [tab, setTab] = useState<TicketStatusCategory | 'ALL'>('ALL');
   const [assigneeFilter, setAssigneeFilter] = useState(''); // '' | 'unassigned' | a user id
@@ -373,7 +376,8 @@ export function TicketsQueue() {
                     ) : (
                       <span className="text-[12.5px] text-slate-400">Unassigned</span>
                     )}
-                    <span className="w-fit">
+                    <span className="flex w-fit items-center gap-1.5">
+                      {theme !== 'refined' && <ChannelGlyph channel={ticket.channel} />}
                       <Badge tone={CHANNEL_TONE[ticket.channel] ?? 'slate'}>{ticket.channel}</Badge>
                     </span>
                     <span className="text-right text-[12px] text-slate-400">{formatDateTime(ticket.updatedAt)}</span>

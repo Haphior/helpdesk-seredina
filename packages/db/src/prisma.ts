@@ -67,6 +67,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   AutonomyPolicy: 'tenantId',
   AiAgentRun: 'tenantId',
   TenantAiSettings: 'tenantId',
+  TenantUiSettings: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

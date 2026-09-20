@@ -33,7 +33,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   services, service_assets, kb_articles,
   on_call_schedules, on_call_shifts, escalation_tiers, escalation_runs, saved_views,
   notifications, notification_preferences, ai_usage_logs, attachments, kb_chunks,
-  autonomy_policies, ai_agent_runs, tenant_ai_settings
+  autonomy_policies, ai_agent_runs, tenant_ai_settings, tenant_ui_settings
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -65,7 +65,7 @@ BEGIN
     'services', 'service_assets', 'kb_articles',
     'on_call_schedules', 'on_call_shifts', 'escalation_tiers', 'escalation_runs', 'saved_views',
     'notifications', 'notification_preferences', 'ai_usage_logs', 'attachments', 'kb_chunks',
-    'autonomy_policies', 'ai_agent_runs', 'tenant_ai_settings'
+    'autonomy_policies', 'ai_agent_runs', 'tenant_ai_settings', 'tenant_ui_settings'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);

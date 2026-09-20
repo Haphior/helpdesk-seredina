@@ -31,6 +31,28 @@ Base neutral: **slate** (`slate-50` background, `slate-200`/`slate-100` borders,
 text/headings). This was already the app's neutral before the redesign — kept, not
 replaced.
 
+**The `slate` scale is theme-variable, not literal** (ADR 0042). `tailwind.config.js`
+remaps `theme.extend.colors.slate.{50..950}` to `var(--n-50)` … `var(--n-950)`;
+`apps/web/src/index.css` defines two value sets for those variables, switched by a
+`data-theme` attribute on `<html>`:
+
+| Theme | `data-theme` | `--n-50` | `--n-950` | Notes |
+| --- | --- | --- | --- | --- |
+| Meet in the Middle (default) | *(absent)* | `#f7f5f1` | `#181512` | Warm stone. Ships with the channel glyph (below). |
+| Refined | `refined` | `#f8fafc` | `#020617` | Tailwind's own real default slate hex — the originally-shipped look, reproduced exactly. |
+
+Because every page already used plain `slate-*` classes (confirmed: the only
+neutral family in use anywhere, ~700 occurrences across 49 files), this makes the
+whole app theme-aware with no changes to page code — a page should keep writing
+`bg-slate-50`/`text-slate-500`/etc. as normal; it inherits whichever theme is
+active. Never hardcode a literal slate hex or `rgb()` value in a component — that
+bypasses the variable and breaks under "Refined" or any future theme.
+
+Tenants choose their theme in Settings → Appearance (`ThemeSettings.tsx`,
+`GET`/`PATCH /ui-settings`); stored per-tenant, default when unset. See ADR 0042 for
+the full mechanism, the `ChannelGlyph` channel-to-circle mapping, and a React
+state-sync bug worth knowing about if you touch `ThemeContext.tsx`.
+
 Brand accent: **indigo → violet**, used for the logo mark's three overlapping
 circles (indigo-400/indigo-500/violet-500, see `docs/BRAND.md`), primary buttons
 (`bg-indigo-600`, hover `indigo-700`), active nav state (`bg-indigo-50

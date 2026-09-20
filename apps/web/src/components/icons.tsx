@@ -320,3 +320,14 @@ export function SpinnerIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function PaletteIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M10 2.5a7.5 7.5 0 1 0 0 15c.9 0 1.5-.7 1.5-1.5 0-.4-.15-.75-.4-1.02-.24-.26-.4-.6-.4-.98 0-.8.65-1.5 1.5-1.5H14a3.5 3.5 0 0 0 3.5-3.5c0-3.6-3.36-6.5-7.5-6.5Z" />
+      <circle cx="6.3" cy="9" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="8.6" cy="5.8" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="12.2" cy="5.8" r="1.1" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}

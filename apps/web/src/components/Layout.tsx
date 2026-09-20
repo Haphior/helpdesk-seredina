@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { apiGet } from '../lib/api';
 import type { Permission } from '../lib/types';
+import { ThemeProvider } from '../theme/ThemeContext';
 import { Avatar } from './Avatar';
 import { NotificationBell } from './NotificationBell';
 import {
@@ -23,6 +24,7 @@ import {
   MailIcon,
   SlidersIcon,
   ServiceMapIcon,
+  PaletteIcon,
   ShieldIcon,
   SparkleIcon,
   TicketIcon,
@@ -95,6 +97,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Comp
       { to: '/api-keys', label: 'API Keys', icon: KeyIcon },
       { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' },
       { to: '/monitoring-integrations', label: 'Monitoring Integrations', icon: WarningIcon, permission: 'channels:manage' },
+      { to: '/appearance', label: 'Appearance', icon: PaletteIcon, permission: 'tickets:manage_all' },
     ],
   },
 ];
@@ -110,6 +113,7 @@ export function Layout() {
   }, []);
 
   return (
+    <ThemeProvider>
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
       <aside className="flex w-[248px] flex-col border-r border-slate-200 bg-white">
         <div className="flex flex-col gap-0.5 border-b border-slate-100 px-5 py-4">
@@ -168,5 +172,6 @@ export function Layout() {
         <Outlet />
       </main>
     </div>
+    </ThemeProvider>
   );
 }

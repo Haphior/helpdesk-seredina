@@ -4,9 +4,9 @@ description: Multi-tenant helpdesk/ITSM admin console — modern, restrained Saa
 colors:
   brand-indigo: "#4f46e5"
   brand-violet: "#8b5cf6"
-  neutral-bg: "#f8fafc"
-  neutral-text: "#0f172a"
-  neutral-border: "#e2e8f0"
+  neutral-bg: "#f7f5f1"
+  neutral-text: "#26221d"
+  neutral-border: "#e4ded2"
   status-open: "#0ea5e9"
   status-pending: "#f59e0b"
   status-resolved: "#10b981"
@@ -96,10 +96,15 @@ stays meaningful (this ticket is Urgent) rather than decorative.
 - **Brand Violet** (`#8b5cf6`, Tailwind `violet-500`): only in the indigo→violet gradient (logo mark, auth screens' brand panel) — never used as a flat fill on its own.
 
 ### Neutral
-- **Slate 50** (`#f8fafc`): app background.
-- **Slate 200 / 100**: borders — 200 for a standard divider, 100 for a lighter hairline between table rows.
+The `slate-*` scale is theme-variable (ADR 0042: `tailwind.config.js` remaps it to
+`var(--n-50)`…`var(--n-950)`, defined per-theme in `apps/web/src/index.css`), so
+values below are the **default theme's** resolved values, not fixed constants —
+never hardcode them as literals in a component.
+
+- **Slate 50** (default theme "Meet in the Middle": `#f7f5f1`; "Refined": `#f8fafc`): app background.
+- **Slate 200 / 100** (default: `#e4ded2` / `#efebe4`; "Refined": `#e2e8f0` / `#f1f5f9`): borders — 200 for a standard divider, 100 for a lighter hairline between table rows.
 - **Slate 400 / 500 / 600**: secondary text, in increasing emphasis order.
-- **Slate 900** (`#0f172a`): primary text and headings.
+- **Slate 900** (default: `#26221d`; "Refined": `#0f172a`): primary text and headings.
 
 ### Status tones (semantic, defined once in `apps/web/src/lib/format.ts`'s `STATUS_CATEGORY_TONE`)
 - **Sky** — Open. **Amber** — Pending. **Emerald** — Resolved. **Slate** — Closed.
@@ -109,6 +114,8 @@ stays meaningful (this ticket is Urgent) rather than decorative.
 
 ### Named Rules
 **The One Accent Rule.** The brand accent is indigo/violet only — extend its shades for new needs, never introduce a third hue as a second "brand" color.
+
+**The Theme Variable Rule** (ADR 0042). Never write a literal slate hex/`rgb()` value in a component — always use the `slate-*` Tailwind classes so the value resolves through the active theme's CSS variables. A literal value renders correctly under the default theme and silently wrong under "Refined" (or any theme added later).
 
 **The Tone-Table Rule.** A status/priority badge's color always comes from `STATUS_CATEGORY_TONE`/`PRIORITY_TONE` → `Badge`'s `TONES` map. A one-off inline color on a status badge is always wrong, not a style choice.
 
@@ -177,6 +184,12 @@ Flat by default. A single `shadow-sm` is the only elevation token, applied to to
 
 ### Modal (`components/Modal.tsx`)
 - Centered dialog over a `black/30` backdrop, `rounded-lg`, `shadow-lg`. Traps focus while open and restores it to the trigger on close.
+
+### Channel Glyph (`components/ChannelGlyph.tsx`)
+- The logo's 3-circle motif, made functional: highlights which channel-group a ticket arrived through (email / api·catalog·widget / alert), dimmed uniformly for agent-logged tickets. Renders only under the default theme ("Meet in the Middle") — hidden under "Refined" via `theme !== 'refined'` at each call site (`TicketsQueue.tsx`, `TicketDetail.tsx`).
+
+### Appearance (`pages/ThemeSettings.tsx`)
+- Two selectable cards (one per `UI_THEMES` entry), each with a small static swatch preview and name/description. Selecting one applies instantly (`ThemeContext`'s `applyTheme`) and persists via `PATCH /ui-settings`, reverting the DOM/context on a failed save.
 
 ## Do's and Don'ts
 

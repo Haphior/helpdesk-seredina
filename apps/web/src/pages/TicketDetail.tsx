@@ -18,12 +18,15 @@ import type {
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { Modal } from '../components/Modal';
+import { ChannelGlyph } from '../components/ChannelGlyph';
 import { BackArrowIcon, BoltIcon, ChevronDownIcon, ClockIcon, EyeIcon, LockIcon, PaperclipIcon, SparkleIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime, isFirstResponseOverdue, isResolutionOverdue } from '../lib/format';
+import { useTheme } from '../theme/ThemeContext';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 
 export function TicketDetail() {
+  const { theme } = useTheme();
   const { id } = useParams<{ id: string }>();
   const [ticket, setTicket] = useState<TicketDetailType | null>(null);
   const [statuses, setStatuses] = useState<TicketStatus[]>([]);
@@ -294,7 +297,10 @@ export function TicketDetail() {
             <Badge tone={PRIORITY_TONE[ticket.priority]} dot>
               {ticket.priority} priority
             </Badge>
-            <Badge tone={ticket.channel === 'alert' ? 'rose' : 'slate'}>{ticket.channel}</Badge>
+            <span className="flex items-center gap-1.5">
+              {theme !== 'refined' && <ChannelGlyph channel={ticket.channel} />}
+              <Badge tone={ticket.channel === 'alert' ? 'rose' : 'slate'}>{ticket.channel}</Badge>
+            </span>
             {ticket.externalId && <span className="text-xs text-slate-400">ref: {ticket.externalId}</span>}
             {isFirstResponseOverdue(ticket) && (
               <Badge tone="rose">
