@@ -9,11 +9,19 @@ echo "[migrate] applying Prisma migrations..."
 npx prisma migrate deploy
 
 echo "[migrate] creating/updating the app_tenant role..."
+# Prisma's own connection-string dialect accepts a `?schema=` query parameter
+# (used throughout this repo's DATABASE_URL, including .env.example and CI) --
+# `npx prisma migrate deploy` above understands it, but plain psql's URI parser
+# does not ("invalid URI query parameter: schema") and exits non-zero. Strip
+# the query string for the two raw-psql calls below; the schema always
+# defaults to `public` anyway, which is the only schema this project uses.
+PSQL_DATABASE_URL="${DATABASE_URL%%\?*}"
+
 # Plain shell substitution, not psql's `:'var'` -- see prisma/rls/policies.sql for why
 # that form can't be used here (it doesn't reach inside a dollar-quoted DO body).
 # Escape embedded single quotes so the password can't break out of the SQL literal.
 ESCAPED_PASSWORD="${APP_TENANT_DB_PASSWORD//\'/\'\'}"
-psql "$DATABASE_URL" <<EOF
+psql "$PSQL_DATABASE_URL" <<EOF
 DO \$do\$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_tenant') THEN
@@ -26,7 +34,7 @@ END
 EOF
 
 echo "[migrate] applying RLS policies..."
-psql "$DATABASE_URL" -f prisma/rls/policies.sql
+psql "$PSQL_DATABASE_URL" -f prisma/rls/policies.sql
 
 echo "[migrate] seeding permission catalog..."
 npm run prisma:seed
