@@ -4,13 +4,13 @@
 // through. Reuses Logo.tsx's exact geometry and colors, just scaled down, so
 // this reads as literally the same mark, not a lookalike.
 //
-// Ticket.channel has 6 real values now (email/api/alert/widget/catalog/
-// agent) -- more than existed when the logo's 3-circle meaning was fixed in
-// docs/BRAND.md. Mapped down to the original 3: email keeps its own circle;
-// api/catalog/widget all go through the same API-shaped mechanism
-// (createTicketFromApi) and share the second circle; alert keeps the third;
-// agent (a human typed it in by hand) has nothing external converging, so
-// all three stay dim.
+// Ticket.channel has 7 real values now (email/api/alert/widget/catalog/
+// agent/telegram) -- more than existed when the logo's 3-circle meaning was
+// fixed in docs/BRAND.md. Mapped down to the original 3: email keeps its own
+// circle; api/catalog/widget/telegram all go through the same API-shaped
+// mechanism (createTicketFromApi) and share the second circle; alert keeps
+// the third; agent (a human typed it in by hand) has nothing external
+// converging, so all three stay dim.
 const CIRCLES = [
   { cx: 78, cy: 88, r: 52, color: '#818cf8' },
   { cx: 128, cy: 72, r: 42, color: '#6366f1' },
@@ -19,7 +19,7 @@ const CIRCLES = [
 
 function activeIndex(channel: string): number | null {
   if (channel === 'email') return 0;
-  if (channel === 'api' || channel === 'catalog' || channel === 'widget') return 1;
+  if (channel === 'api' || channel === 'catalog' || channel === 'widget' || channel === 'telegram') return 1;
   if (channel === 'alert') return 2;
   return null; // 'agent' and anything unrecognized: no channel converged
 }
@@ -29,6 +29,7 @@ const CHANNEL_LABEL: Record<string, string> = {
   api: 'Via API',
   catalog: 'Via service catalog',
   widget: 'Via chat widget',
+  telegram: 'Via Telegram',
   alert: 'Via monitoring alert',
   agent: 'Logged by an agent',
 };

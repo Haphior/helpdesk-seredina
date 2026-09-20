@@ -10,3 +10,4 @@ export * from './sla';
 export * from './oncall';
 export * from './notifications';
 export * from './kb';
+export * from './telegram';

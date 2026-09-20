@@ -341,3 +341,12 @@ export function BrandIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function PaperPlaneIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M17.5 2.5 2.5 9.2l5.6 2 1.9 5.7 2.4-3.6 4.7 3.4 0.4-14.2Z" />
+      <path d="M8.1 11.2 15 5.3" />
+    </Icon>
+  );
+}

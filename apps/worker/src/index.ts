@@ -10,6 +10,7 @@ import {
   ESCALATION_ADVANCE_QUEUE_NAME,
   NOTIFICATION_EMAIL_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
+  TELEGRAM_SEND_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
@@ -17,11 +18,13 @@ import {
   type EscalationAdvanceJobPayload,
   type NotificationEmailJobPayload,
   type SlaBreachCheckJobPayload,
+  type TelegramSendJobPayload,
   type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
 import { runDiscoveryJob } from './discovery/processor';
 import { pollActiveEmailChannels } from './email/poll';
 import { sendEmailMessage } from './email/send';
+import { sendTelegramMessage } from './telegram/send';
 import { deliverWebhook, markWebhookDeliveryFailed } from './webhooks/deliver';
 import { checkSlaBreach } from './sla/checkBreach';
 import { advanceEscalation } from './oncall/escalate';
@@ -106,6 +109,15 @@ const embedKbArticleWorker = new Worker<EmbedKbArticleJobPayload>(
   { connection, concurrency: 1 },
 );
 
+const telegramSendWorker = new Worker<TelegramSendJobPayload>(
+  TELEGRAM_SEND_QUEUE_NAME,
+  async (job) => {
+    const { tenantId, ticketId, messageId } = job.data;
+    await sendTelegramMessage(tenantId, ticketId, messageId);
+  },
+  { connection, concurrency: 4 },
+);
+
 discoveryWorker.on('failed', (job, err) => {
   console.error(`[worker] discovery job ${job?.id} failed:`, err);
   captureError(err);
@@ -140,6 +152,10 @@ embedKbArticleWorker.on('failed', (job, err) => {
   console.error(`[worker] embed kb article ${job?.id} failed:`, err);
   captureError(err);
 });
+telegramSendWorker.on('failed', (job, err) => {
+  console.error(`[worker] telegram-send job ${job?.id} failed:`, err);
+  captureError(err);
+});
 
 // Inbound email is a plain interval loop across every tenant's channels, not a
 // per-channel BullMQ repeatable job -- see docs/adr/0004-email-channel.md for why
@@ -172,5 +188,6 @@ console.log(
   ESCALATION_ADVANCE_QUEUE_NAME,
   NOTIFICATION_EMAIL_QUEUE_NAME,
   EMBED_KB_ARTICLE_QUEUE_NAME,
+  TELEGRAM_SEND_QUEUE_NAME,
 );
 console.log('[worker] polling email channels every', EMAIL_POLL_INTERVAL_MS, 'ms');

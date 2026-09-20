@@ -1368,7 +1368,22 @@ real Chromium browser via Playwright serving the test host page from a
 different origin/port than the API: bubble → pre-chat form → conversation
 start → follow-up → page-reload resumption from `localStorage` → an agent
 reply posted through the real ticket API appearing in the widget within
-one poll cycle. Zero console errors. WhatsApp/Telegram remain unbuilt.
+one poll cycle. Zero console errors. WhatsApp remains unbuilt (Meta Business
+verification + template-message approval is a much heavier lift than a
+self-issued token).
+
+**Telegram channel ✅ (this pass).** A tenant connects their own bot (created via
+`@BotFather`, no OAuth app registration needed — unlike Slack/Teams below, this had
+no external blocker) from a new Settings > Telegram page; a message to it becomes
+a ticket (`channel: 'telegram'`), and an agent's reply goes back as a real Telegram
+message via a `telegram-send` BullMQ queue mirroring `EmailChannel`'s own outbound
+shape. Threading reuses `Ticket.externalId` (the chat id) exactly like alert's own
+re-fire dedup (ADR 0003) rather than a new column. Webhook security is two
+independent values (an opaque `webhookId` routing the call, Telegram's own
+`secret_token` header verifying it) since Telegram's webhook config has no custom
+`Authorization` header the way Grafana's does. See `docs/adr/0044-telegram-channel.md`
+— including a real bug (a customer's own follow-up message would have echoed back
+to them) found live in dev before it shipped, not by the automated suite first.
 - **Slack and Microsoft Teams notifications** (a new ticket/an SLA breach
   posts to a channel an agent already has open, one-click "Connect Slack"
   using the existing `Webhook` delivery mechanism under the hood, OAuth

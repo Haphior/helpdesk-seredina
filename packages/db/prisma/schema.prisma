@@ -79,6 +79,7 @@ model Tenant {
   aiAgentRuns           AiAgentRun[]
   aiSettings            TenantAiSettings?
   uiSettings            TenantUiSettings?
+  telegramChannel       TelegramChannel?
 
   @@map("tenants")
 }
@@ -245,13 +246,16 @@ model Ticket {
   assignee   User?          @relation("TicketAssignee", fields: [assigneeId], references: [id])
   contactId  String         @map("contact_id") @db.Uuid
   contact    Contact        @relation(fields: [contactId], references: [id])
-  channel    String         @default("api") // 'api' | 'alert' | 'email' | 'widget' | 'catalog' | 'agent'
-  // Set only for channel='alert' -- the monitoring/security tool's own id for this
-  // problem (e.g. a Zabbix event id, a Wazuh alert id), used to fold a re-fired
-  // alert into the same ticket instead of spawning a duplicate. Not unique-
-  // constrained: dedup is a service-layer lookup (see ingestAlert), not a DB
-  // constraint, since "same externalId" is only a duplicate while the earlier
-  // ticket is still open -- a closed one legitimately gets a fresh ticket.
+  channel    String         @default("api") // 'api' | 'alert' | 'email' | 'widget' | 'catalog' | 'agent' | 'telegram'
+  // The source system's own id for this conversation/problem -- for channel='alert',
+  // the monitoring/security tool's own event id (e.g. a Zabbix event id, a Wazuh
+  // alert id); for channel='telegram', the Telegram chat id (see
+  // docs/adr/0044-telegram-channel.md). Both share the exact same fold-into-the-
+  // same-ticket-while-open service-layer dedup (see ingestAlert/handleTelegramUpdate)
+  // for the same reason: a re-fired alert or a customer's follow-up message should
+  // continue the existing conversation, not spawn a duplicate. Not unique-
+  // constrained: "same externalId" is only a duplicate while the earlier ticket is
+  // still open -- a closed one legitimately gets a fresh ticket next time.
   externalId String?        @map("external_id")
   // Set only for channel='widget' -- a random bearer token an anonymous
   // website visitor's browser holds (in localStorage, see
@@ -460,6 +464,30 @@ model EmailChannel {
   createdAt             DateTime  @default(now()) @map("created_at")
 
   @@map("email_channels")
+}
+
+// One row per tenant (unlike EmailChannel, which allows several) -- a tenant
+// connects at most one Telegram bot. See docs/adr/0044-telegram-channel.md.
+model TelegramChannel {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @unique @map("tenant_id") @db.Uuid
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  botUsername       String   @map("bot_username")
+  botTokenEncrypted String   @map("bot_token_encrypted") // AES-256-GCM, same pattern as EmailChannel's passwords
+  // Routes an incoming Telegram webhook POST to this tenant before any tenant
+  // context exists yet -- resolved via the resolve_tenant_id_by_telegram_webhook
+  // SECURITY DEFINER function (same shape as resolve_tenant_id_by_api_key_hash),
+  // never guessable-sequential since it's random. webhookSecret is the second,
+  // independent check: Telegram echoes it back on every call via the
+  // X-Telegram-Bot-Api-Secret-Token header (a documented Bot API feature), so
+  // knowing webhookId alone (e.g. from a leaked URL) isn't enough to inject
+  // fake messages -- same "why this is safe" reasoning as the widget's token.
+  webhookId     String   @unique @map("webhook_id")
+  webhookSecret String   @map("webhook_secret")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("telegram_channels")
 }
 
 // ---------------------------------------------------------------------------

@@ -33,7 +33,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   services, service_assets, kb_articles,
   on_call_schedules, on_call_shifts, escalation_tiers, escalation_runs, saved_views,
   notifications, notification_preferences, ai_usage_logs, attachments, kb_chunks,
-  autonomy_policies, ai_agent_runs, tenant_ai_settings, tenant_ui_settings
+  autonomy_policies, ai_agent_runs, tenant_ai_settings, tenant_ui_settings, telegram_channels
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -65,7 +65,7 @@ BEGIN
     'services', 'service_assets', 'kb_articles',
     'on_call_schedules', 'on_call_shifts', 'escalation_tiers', 'escalation_runs', 'saved_views',
     'notifications', 'notification_preferences', 'ai_usage_logs', 'attachments', 'kb_chunks',
-    'autonomy_policies', 'ai_agent_runs', 'tenant_ai_settings', 'tenant_ui_settings'
+    'autonomy_policies', 'ai_agent_runs', 'tenant_ai_settings', 'tenant_ui_settings', 'telegram_channels'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
@@ -152,3 +152,22 @@ $$;
 
 REVOKE ALL ON FUNCTION public.count_tenants() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.count_tenants() TO app_tenant;
+
+-- Same escape-hatch pattern as resolve_tenant_id_by_api_key_hash: an incoming
+-- Telegram webhook POST (docs/adr/0044-telegram-channel.md) carries only the
+-- opaque webhook_id in its URL path, no tenant context yet. Exposes only
+-- tenant_id -- never bot_token_encrypted or webhook_secret, which the API
+-- route fetches afterward through the normal tenant-scoped path once it has
+-- a tenantId, same as list_active_email_channels()'s own credentials never
+-- passing through a SECURITY DEFINER context.
+CREATE OR REPLACE FUNCTION public.resolve_tenant_id_by_telegram_webhook(p_webhook_id text)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT tenant_id FROM telegram_channels WHERE webhook_id = p_webhook_id;
+$$;
+
+REVOKE ALL ON FUNCTION public.resolve_tenant_id_by_telegram_webhook(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resolve_tenant_id_by_telegram_webhook(text) TO app_tenant;

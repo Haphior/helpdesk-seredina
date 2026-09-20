@@ -6,12 +6,14 @@ import {
   EMBED_KB_ARTICLE_QUEUE_NAME,
   NOTIFICATION_EMAIL_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
+  TELEGRAM_SEND_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
   type EmbedKbArticleJobPayload,
   type NotificationEmailJobPayload,
   type SlaBreachCheckJobPayload,
+  type TelegramSendJobPayload,
   type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
 
@@ -34,3 +36,4 @@ export const webhookDeliveryQueue = new Queue<WebhookDeliveryJobPayload>(WEBHOOK
 export const slaBreachQueue = new Queue<SlaBreachCheckJobPayload>(SLA_BREACH_QUEUE_NAME, { connection });
 export const notificationEmailQueue = new Queue<NotificationEmailJobPayload>(NOTIFICATION_EMAIL_QUEUE_NAME, { connection });
 export const embedKbArticleQueue = new Queue<EmbedKbArticleJobPayload>(EMBED_KB_ARTICLE_QUEUE_NAME, { connection });
+export const telegramSendQueue = new Queue<TelegramSendJobPayload>(TELEGRAM_SEND_QUEUE_NAME, { connection });

@@ -1,5 +1,5 @@
 import { prisma, withTenantTx, type MessageAuthorType, type Prisma, type TicketPriority, type TicketStatusCategory } from '@seredina/db';
-import { emailSendQueue } from '../../lib/queue';
+import { emailSendQueue, telegramSendQueue } from '../../lib/queue';
 import { dispatchWebhookEvent } from '../../lib/webhookDispatch';
 import { computeSlaDueAts, scheduleSlaBreachChecks } from '../sla/service';
 import { getActiveEscalationForTicket } from '../oncall/service';
@@ -35,6 +35,11 @@ export interface CreateTicketFromApiInput {
   customFields?: Record<string, unknown>;
   // Set only by the widget channel -- see modules/widget/service.ts.
   widgetToken?: string;
+  // Set only by the telegram channel -- the chat id, used the same way alert's
+  // externalId is (see modules/telegram/service.ts and the Ticket.externalId
+  // comment in schema.prisma), to fold a follow-up message into the same open
+  // ticket instead of starting a new one each time.
+  externalId?: string;
 }
 
 /** The API channel: POST /v1/tickets, authenticated by ApiKey -- see plugins/apiKeyAuth.ts. */
@@ -68,6 +73,7 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
         contactId: contact.id,
         channel: input.channel ?? 'api',
         widgetToken: input.widgetToken,
+        externalId: input.externalId,
         customFields: input.customFields as Prisma.InputJsonValue | undefined,
         createdAt,
         firstResponseDueAt: dueAts.firstResponseDueAt,
@@ -393,7 +399,7 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
   // deliberately outside it (network I/O doesn't belong inside a tenant transaction
   // -- see docs/adr/0001-multi-tenancy-rls.md), so the transaction closes first and
   // only then do we tell the worker there's an email to send.
-  const { message, shouldEmail } = await withTenantTx(prisma, tenantId, async (tx) => {
+  const { message, shouldEmail, shouldTelegram } = await withTenantTx(prisma, tenantId, async (tx) => {
     const ticket = await tx.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) throw new Error('ticket not found');
 
@@ -421,13 +427,28 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
       await tx.ticket.update({ where: { id: ticketId }, data: { firstRespondedAt: new Date() } });
     }
 
-    // Internal notes never leave Seredina; only a public reply on an email-sourced
-    // ticket needs to actually go out as an email.
-    return { message, shouldEmail: ticket.channel === 'email' && !input.isPrivateNote };
+    // Internal notes never leave Seredina; only a public REPLY (an agent or AI,
+    // never the contact's own message coming back at them) on an email- or
+    // telegram-sourced ticket needs to actually go out to the customer.
+    // authorType !== 'CONTACT' is load-bearing here, not defensive fluff: the
+    // telegram channel's own follow-up messages (handleTelegramUpdate, see
+    // docs/adr/0044-telegram-channel.md) call this exact function with
+    // authorType: 'CONTACT', same as the widget channel already does -- caught
+    // live in dev (a real telegram-send job enqueued for a customer's own
+    // inbound message) before this guard was added, not just reasoned about.
+    const shouldNotifyCustomer = authorType !== 'CONTACT' && !input.isPrivateNote;
+    return {
+      message,
+      shouldEmail: ticket.channel === 'email' && shouldNotifyCustomer,
+      shouldTelegram: ticket.channel === 'telegram' && shouldNotifyCustomer,
+    };
   });
 
   if (shouldEmail) {
     await emailSendQueue.add('send', { tenantId, ticketId, messageId: message.id });
+  }
+  if (shouldTelegram) {
+    await telegramSendQueue.add('send', { tenantId, ticketId, messageId: message.id });
   }
 
   // Internal notes are excluded here too, same reasoning as the AI copilot's

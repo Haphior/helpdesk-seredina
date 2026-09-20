@@ -35,6 +35,7 @@ import { AiSettings } from './pages/AiSettings';
 import { MonitoringIntegrations } from './pages/MonitoringIntegrations';
 import { ThemeSettings } from './pages/ThemeSettings';
 import { BrandingSettings } from './pages/BrandingSettings';
+import { TelegramSettings } from './pages/TelegramSettings';
 import { DataExport } from './pages/DataExport';
 import { TicketStatuses } from './pages/TicketStatuses';
 import { PublicKb } from './pages/PublicKb';
@@ -81,6 +82,7 @@ export function App() {
             <Route path="/monitoring-integrations" element={<MonitoringIntegrations />} />
             <Route path="/appearance" element={<ThemeSettings />} />
             <Route path="/branding" element={<BrandingSettings />} />
+            <Route path="/telegram" element={<TelegramSettings />} />
             <Route path="/data-export" element={<DataExport />} />
             <Route path="/ticket-statuses" element={<TicketStatuses />} />
             <Route path="/webhooks" element={<Webhooks />} />

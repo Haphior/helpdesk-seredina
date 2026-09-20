@@ -41,6 +41,7 @@ import integrationsRoutes from './modules/integrations/routes';
 import widgetRoutes from './modules/widget/routes';
 import uiSettingsRoutes from './modules/uisettings/routes';
 import brandingRoutes from './modules/branding/routes';
+import telegramRoutes from './modules/telegram/routes';
 
 initErrorTracking();
 
@@ -109,6 +110,7 @@ export function buildApp() {
   app.register(widgetRoutes);
   app.register(uiSettingsRoutes);
   app.register(brandingRoutes);
+  app.register(telegramRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

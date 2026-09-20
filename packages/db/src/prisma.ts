@@ -68,6 +68,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   AiAgentRun: 'tenantId',
   TenantAiSettings: 'tenantId',
   TenantUiSettings: 'tenantId',
+  TelegramChannel: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);
