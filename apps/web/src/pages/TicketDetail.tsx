@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, downloadFile, ApiError } from '../lib/api';
 import type {
   AssetSummary,
@@ -26,6 +27,7 @@ import { useTheme } from '../theme/ThemeContext';
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 
 export function TicketDetail() {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const { id } = useParams<{ id: string }>();
   const [ticket, setTicket] = useState<TicketDetailType | null>(null);
@@ -76,7 +78,7 @@ export function TicketDetail() {
     try {
       setTicket(await apiGet<TicketDetailType>(`/tickets/${id}`));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load ticket');
+      setError(err instanceof ApiError ? err.message : t('ticketDetail.errors.loadFailed'));
     }
   }, [id]);
 
@@ -103,7 +105,7 @@ export function TicketDetail() {
       setMacros(mc.macros);
       setProblems(pr.problems);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load ticket');
+      setError(err instanceof ApiError ? err.message : t('ticketDetail.errors.loadFailed'));
     }
   }, []);
 
@@ -142,7 +144,7 @@ export function TicketDetail() {
       await apiPatch(`/tickets/${id}`, data);
       await loadTicket();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Update failed');
+      setError(err instanceof ApiError ? err.message : t('ticketDetail.errors.updateFailed'));
     }
   }
 
@@ -153,7 +155,7 @@ export function TicketDetail() {
       setAssetToLink('');
       await loadTicket();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to link asset');
+      setError(err instanceof ApiError ? err.message : t('ticketDetail.errors.linkAssetFailed'));
     }
   }
 
@@ -163,7 +165,7 @@ export function TicketDetail() {
       await apiDelete(`/tickets/${id}/assets/${assetId}`);
       await loadTicket();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to unlink asset');
+      setError(err instanceof ApiError ? err.message : t('ticketDetail.errors.unlinkAssetFailed'));
     }
   }
 
@@ -173,7 +175,7 @@ export function TicketDetail() {
       await apiPost(`/tickets/${id}/escalation/acknowledge`);
       await loadTicket();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to acknowledge');
+      setError(err instanceof ApiError ? err.message : t('ticketDetail.errors.acknowledgeFailed'));
     }
   }
 
@@ -192,7 +194,7 @@ export function TicketDetail() {
       setUsedArticles([]);
       await loadTicket();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to send message');
+      setError(err instanceof ApiError ? err.message : t('ticketDetail.errors.sendMessageFailed'));
     } finally {
       setSending(false);
     }
@@ -222,7 +224,7 @@ export function TicketDetail() {
       setSummary(res.summary);
       loadAiUsage();
     } catch (err) {
-      setAiError(err instanceof ApiError ? err.message : 'Failed to summarize');
+      setAiError(err instanceof ApiError ? err.message : t('ticketDetail.errors.summarizeFailed'));
     } finally {
       setSummarizing(false);
     }
@@ -240,7 +242,7 @@ export function TicketDetail() {
       setUsedArticles(res.usedArticles ?? []);
       loadAiUsage();
     } catch (err) {
-      setAiError(err instanceof ApiError ? err.message : 'Failed to suggest a reply');
+      setAiError(err instanceof ApiError ? err.message : t('ticketDetail.errors.suggestFailed'));
     } finally {
       setSuggesting(false);
     }
@@ -256,7 +258,7 @@ export function TicketDetail() {
       loadAiUsage();
       await loadTicket();
     } catch (err) {
-      setAiError(err instanceof ApiError ? err.message : 'Failed to run the autonomous agent');
+      setAiError(err instanceof ApiError ? err.message : t('ticketDetail.errors.autonomousFailed'));
     } finally {
       setAutonomousRunning(false);
     }
@@ -270,21 +272,21 @@ export function TicketDetail() {
       await apiPost(`/tickets/${id}/apply-macro`, { macroId });
       await loadTicket();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to apply macro');
+      setError(err instanceof ApiError ? err.message : t('ticketDetail.errors.applyMacroFailed'));
     } finally {
       setApplyingMacroId(null);
     }
   }
 
   if (error && !ticket) return <div className="p-6 text-sm text-rose-600">{error}</div>;
-  if (!ticket) return <div className="p-6 text-sm text-slate-500">Loading…</div>;
+  if (!ticket) return <div className="p-6 text-sm text-slate-500">{t('common.loading')}</div>;
 
   return (
     <div className="flex h-full">
       <div className="flex-1 overflow-y-auto px-9 py-7">
         <Link to="/tickets" className="mb-3.5 flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-slate-600">
           <BackArrowIcon width={15} height={15} />
-          Tickets
+          {t('ticketDetail.backToTickets')}
         </Link>
 
         <div className="mb-5">
@@ -295,23 +297,23 @@ export function TicketDetail() {
               {ticket.status.label}
             </Badge>
             <Badge tone={PRIORITY_TONE[ticket.priority]} dot>
-              {ticket.priority} priority
+              {t('ticketDetail.priorityLabel', { priority: ticket.priority })}
             </Badge>
             <span className="flex items-center gap-1.5">
               {theme !== 'refined' && <ChannelGlyph channel={ticket.channel} />}
               <Badge tone={ticket.channel === 'alert' ? 'rose' : 'slate'}>{ticket.channel}</Badge>
             </span>
-            {ticket.externalId && <span className="text-xs text-slate-400">ref: {ticket.externalId}</span>}
+            {ticket.externalId && <span className="text-xs text-slate-400">{t('ticketDetail.ref', { id: ticket.externalId })}</span>}
             {isFirstResponseOverdue(ticket) && (
               <Badge tone="rose">
                 <ClockIcon width={11} height={11} />
-                First response overdue
+                {t('ticketDetail.firstResponseOverdue')}
               </Badge>
             )}
             {isResolutionOverdue(ticket) && (
               <Badge tone="rose">
                 <ClockIcon width={11} height={11} />
-                Resolution overdue
+                {t('ticketDetail.resolutionOverdue')}
               </Badge>
             )}
 
@@ -319,8 +321,9 @@ export function TicketDetail() {
               {presenceUserIds.length > 0 && (
                 <div className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
                   <EyeIcon width={12} height={12} />
-                  Also viewing:{' '}
-                  {presenceUserIds.map((uid) => users.find((u) => u.id === uid)?.name ?? 'Someone').join(', ')}
+                  {t('ticketDetail.alsoViewing', {
+                    names: presenceUserIds.map((uid) => users.find((u) => u.id === uid)?.name ?? 'Someone').join(', '),
+                  })}
                 </div>
               )}
               {!ticket.mergedIntoId && (
@@ -328,7 +331,7 @@ export function TicketDetail() {
                   onClick={() => setShowMerge(true)}
                   className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50"
                 >
-                  Merge into…
+                  {t('ticketDetail.mergeInto')}
                 </button>
               )}
               {macros.length > 0 && (
@@ -341,7 +344,7 @@ export function TicketDetail() {
                     className="rounded bg-transparent text-xs font-semibold text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
                   >
                     <option value="" disabled>
-                      {applyingMacroId ? 'Applying…' : 'Run macro…'}
+                      {applyingMacroId ? t('tickets.bulk.applying') : t('ticketDetail.runMacro')}
                     </option>
                     {macros.map((m) => (
                       <option key={m.id} value={m.id}>
@@ -357,23 +360,23 @@ export function TicketDetail() {
                 className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
               >
                 <SparkleIcon width={12} height={12} />
-                {summarizing ? 'Summarizing…' : 'Summarize'}
+                {summarizing ? t('ticketDetail.summarizing') : t('ticketDetail.summarize')}
               </button>
               <button
                 onClick={handleAutonomousRun}
                 disabled={autonomousRunning}
-                title="Let the AI agent investigate and, if it's confident, act on this ticket -- mutating actions still go through Autonomy Policy approval"
+                title={t('ticketDetail.autonomousRunTooltip')}
                 className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
               >
                 <SparkleIcon width={12} height={12} />
-                {autonomousRunning ? 'Running…' : 'Let AI try'}
+                {autonomousRunning ? t('ticketDetail.autonomousRunning') : t('ticketDetail.letAiTry')}
               </button>
               {aiUsage && aiUsage.totalCalls > 0 && (
                 <span
-                  title={`${aiUsage.totalCalls} AI call${aiUsage.totalCalls === 1 ? '' : 's'} on this ticket`}
+                  title={t('ticketDetail.aiCallsTooltip', { count: aiUsage.totalCalls })}
                   className="text-[11px] text-slate-400"
                 >
-                  AI cost: ${aiUsage.totalCostUsd.toFixed(4)}
+                  {t('ticketDetail.aiCost', { cost: aiUsage.totalCostUsd.toFixed(4) })}
                 </span>
               )}
             </div>
@@ -382,7 +385,7 @@ export function TicketDetail() {
 
         {ticket.mergedInto && (
           <div className="mb-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-[13.5px] text-orange-800">
-            This ticket was merged into{' '}
+            {t('ticketDetail.mergedIntoNotice')}{' '}
             <Link to={`/tickets/${ticket.mergedInto.id}`} className="font-semibold underline">
               #{ticket.mergedInto.number} {ticket.mergedInto.subject}
             </Link>
@@ -391,7 +394,7 @@ export function TicketDetail() {
         )}
         {ticket.mergedTickets && ticket.mergedTickets.length > 0 && (
           <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13.5px] text-slate-600">
-            Merged from:{' '}
+            {t('ticketDetail.mergedFromNotice')}{' '}
             {ticket.mergedTickets.map((t, i) => (
               <span key={t.id}>
                 {i > 0 && ', '}
@@ -413,23 +416,27 @@ export function TicketDetail() {
           >
             <span>
               {ticket.escalation.status === 'EXHAUSTED'
-                ? `Escalation exhausted (tier ${ticket.escalation.currentTierIndex + 1}) -- no one acknowledged.`
-                : `SLA breached -- currently at escalation tier ${ticket.escalation.currentTierIndex + 1}.`}
+                ? t('ticketDetail.escalationExhausted', { tier: ticket.escalation.currentTierIndex + 1 })
+                : t('ticketDetail.escalationActive', { tier: ticket.escalation.currentTierIndex + 1 })}
             </span>
             {ticket.escalation.status === 'ACTIVE' && (
               <button
                 onClick={acknowledgeEscalation}
                 className="flex-shrink-0 rounded-md bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-700"
               >
-                Acknowledge
+                {t('ticketDetail.acknowledge')}
               </button>
             )}
           </div>
         )}
         {ticket.escalation?.status === 'ACKNOWLEDGED' && (
           <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[13.5px] text-emerald-800">
-            Escalation acknowledged by {ticket.escalation.acknowledgedByUser?.name ?? 'someone'}
-            {ticket.escalation.acknowledgedAt && ` at ${formatDateTime(ticket.escalation.acknowledgedAt)}`}.
+            {ticket.escalation.acknowledgedAt
+              ? t('ticketDetail.escalationAcknowledgedAt', {
+                  name: ticket.escalation.acknowledgedByUser?.name ?? 'someone',
+                  time: formatDateTime(ticket.escalation.acknowledgedAt),
+                })
+              : t('ticketDetail.escalationAcknowledged', { name: ticket.escalation.acknowledgedByUser?.name ?? 'someone' })}
           </div>
         )}
 
@@ -440,7 +447,7 @@ export function TicketDetail() {
           <div className="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3.5">
             <div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-indigo-700">
               <SparkleIcon width={12} height={12} />
-              AI summary
+              {t('ticketDetail.aiSummaryTitle')}
             </div>
             <p className="text-[13.5px] leading-relaxed text-indigo-900">{summary}</p>
           </div>
@@ -450,9 +457,9 @@ export function TicketDetail() {
           <div className="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3.5">
             <div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-indigo-700">
               <SparkleIcon width={12} height={12} />
-              Autonomous agent run
+              {t('ticketDetail.autonomousRunTitle')}
               {autonomousResult.stoppedReason === 'max_iterations' && (
-                <span className="font-normal text-indigo-400">(stopped early -- too many steps)</span>
+                <span className="font-normal text-indigo-400">{t('ticketDetail.autonomousStoppedEarly')}</span>
               )}
             </div>
             <p className="mb-1.5 text-[13.5px] leading-relaxed text-indigo-900">{autonomousResult.summary}</p>
@@ -460,7 +467,7 @@ export function TicketDetail() {
               <p className="text-[12px] text-indigo-600">
                 {autonomousResult.steps.flatMap((s) => s.toolCalls).map((tc) => tc.name).join(', ')} —{' '}
                 <Link to="/ai-agent-activity" className="underline">
-                  see details / approve pending actions
+                  {t('ticketDetail.autonomousSeeDetails')}
                 </Link>
               </p>
             )}
@@ -484,7 +491,7 @@ export function TicketDetail() {
                     {message.isPrivateNote && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">
                         <LockIcon width={10} height={10} />
-                        Internal
+                        {t('ticketDetail.internal')}
                       </span>
                     )}
                   </div>
@@ -519,13 +526,13 @@ export function TicketDetail() {
           <textarea
             value={reply}
             onChange={(e) => setReply(e.target.value)}
-            placeholder="Write a reply…"
+            placeholder={t('ticketDetail.replyPlaceholder')}
             rows={3}
             className="w-full resize-none rounded-lg border-0 px-2.5 py-2 text-[13.5px] focus:outline-none focus:ring-2 focus:ring-indigo-100"
           />
           {usedArticles.length > 0 && (
             <p className="mb-1.5 px-1.5 text-[12px] text-slate-400">
-              Based on:{' '}
+              {t('ticketDetail.basedOn')}{' '}
               {usedArticles.map((a, i) => (
                 <span key={a.id}>
                   {i > 0 && ', '}
@@ -560,11 +567,11 @@ export function TicketDetail() {
                   className="h-3 w-3 accent-amber-500"
                 />
                 <LockIcon width={12} height={12} />
-                Internal note
+                {t('ticketDetail.internalNote')}
               </label>
               <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[12.5px] font-medium text-slate-500 hover:bg-slate-50">
                 <PaperclipIcon width={12} height={12} />
-                Attach
+                {t('ticketDetail.attach')}
                 <input type="file" multiple onChange={(e) => addPendingFiles(e.target.files)} className="hidden" />
               </label>
               <button
@@ -573,7 +580,7 @@ export function TicketDetail() {
                 className="flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[12.5px] font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50"
               >
                 <SparkleIcon width={12} height={12} />
-                {suggesting ? 'Drafting…' : 'Suggest reply'}
+                {suggesting ? t('ticketDetail.drafting') : t('ticketDetail.suggestReply')}
               </button>
             </div>
             <button
@@ -581,17 +588,17 @@ export function TicketDetail() {
               disabled={sending || !reply.trim()}
               className="rounded-lg bg-indigo-600 px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
             >
-              {sending ? 'Sending…' : isPrivateNote ? 'Add note' : 'Send reply'}
+              {sending ? t('ticketDetail.sending') : isPrivateNote ? t('ticketDetail.addNote') : t('ticketDetail.sendReply')}
             </button>
           </div>
         </div>
       </div>
 
       <aside className="w-[280px] flex-shrink-0 overflow-y-auto border-l border-slate-200 bg-white px-5 py-[22px]">
-        <h2 className="mb-4 text-[13px] font-bold uppercase tracking-wide text-slate-400">Details</h2>
+        <h2 className="mb-4 text-[13px] font-bold uppercase tracking-wide text-slate-400">{t('ticketDetail.detailsHeading')}</h2>
 
         <div className="flex flex-col gap-3.5">
-          <PropertyRow label="Status">
+          <PropertyRow label={t('ticketDetail.fields.status')}>
             <PropertySelect value={ticket.statusId} onChange={(v) => patch({ statusId: v })}>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -601,7 +608,7 @@ export function TicketDetail() {
             </PropertySelect>
           </PropertyRow>
 
-          <PropertyRow label="Priority">
+          <PropertyRow label={t('ticketDetail.fields.priority')}>
             <PropertySelect value={ticket.priority} onChange={(v) => patch({ priority: v })}>
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
@@ -611,20 +618,20 @@ export function TicketDetail() {
             </PropertySelect>
           </PropertyRow>
 
-          <PropertyRow label="Team">
+          <PropertyRow label={t('ticketDetail.fields.team')}>
             <PropertySelect value={ticket.teamId ?? ''} onChange={(v) => patch({ teamId: v || null })}>
-              <option value="">Unassigned</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
+              <option value="">{t('common.unassigned')}</option>
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
                 </option>
               ))}
             </PropertySelect>
           </PropertyRow>
 
-          <PropertyRow label="Assignee">
+          <PropertyRow label={t('ticketDetail.fields.assignee')}>
             <PropertySelect value={ticket.assigneeId ?? ''} onChange={(v) => patch({ assigneeId: v || null })}>
-              <option value="">Unassigned</option>
+              <option value="">{t('common.unassigned')}</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
@@ -633,9 +640,9 @@ export function TicketDetail() {
             </PropertySelect>
           </PropertyRow>
 
-          <PropertyRow label="Problem">
+          <PropertyRow label={t('ticketDetail.fields.problem')}>
             <PropertySelect value={ticket.problemId ?? ''} onChange={(v) => patch({ problemId: v || null })}>
-              <option value="">Unlinked</option>
+              <option value="">{t('ticketDetail.unlinkedProblem')}</option>
               {problems.map((p) => (
                 <option key={p.id} value={p.id}>
                   #{p.number} {p.title}
@@ -650,7 +657,7 @@ export function TicketDetail() {
             to={`/problems/${ticket.problem.id}`}
             className="mt-2 block text-[12.5px] font-medium text-indigo-700 hover:underline"
           >
-            View Problem #{ticket.problem.number} →
+            {t('ticketDetail.viewProblem', { number: ticket.problem.number })}
           </Link>
         )}
 
@@ -659,23 +666,27 @@ export function TicketDetail() {
             <div className="my-[18px] h-px bg-slate-100" />
             <div className="flex flex-col gap-3.5">
               {ticket.firstResponseDueAt && (
-                <PropertyRow label="First response">
+                <PropertyRow label={t('ticketDetail.firstResponseLabel')}>
                   {ticket.firstRespondedAt ? (
-                    <span className="text-[13px] font-medium text-emerald-600">Met {formatDateTime(ticket.firstRespondedAt)}</span>
+                    <span className="text-[13px] font-medium text-emerald-600">
+                      {t('ticketDetail.met', { time: formatDateTime(ticket.firstRespondedAt) })}
+                    </span>
                   ) : (
                     <span className={`text-[13px] font-medium ${isFirstResponseOverdue(ticket) ? 'text-rose-600' : 'text-slate-700'}`}>
-                      Due {formatDateTime(ticket.firstResponseDueAt)}
+                      {t('ticketDetail.due', { time: formatDateTime(ticket.firstResponseDueAt) })}
                     </span>
                   )}
                 </PropertyRow>
               )}
               {ticket.resolutionDueAt && (
-                <PropertyRow label="Resolution">
+                <PropertyRow label={t('ticketDetail.resolutionLabel')}>
                   {ticket.resolvedAt ? (
-                    <span className="text-[13px] font-medium text-emerald-600">Met {formatDateTime(ticket.resolvedAt)}</span>
+                    <span className="text-[13px] font-medium text-emerald-600">
+                      {t('ticketDetail.met', { time: formatDateTime(ticket.resolvedAt) })}
+                    </span>
                   ) : (
                     <span className={`text-[13px] font-medium ${isResolutionOverdue(ticket) ? 'text-rose-600' : 'text-slate-700'}`}>
-                      Due {formatDateTime(ticket.resolutionDueAt)}
+                      {t('ticketDetail.due', { time: formatDateTime(ticket.resolutionDueAt) })}
                     </span>
                   )}
                 </PropertyRow>
@@ -704,7 +715,7 @@ export function TicketDetail() {
 
         <div className="my-[18px] h-px bg-slate-100" />
 
-        <FieldGroup label="Contact">
+        <FieldGroup label={t('ticketDetail.contact')}>
           <div className="flex items-center gap-2.5">
             <Avatar name={ticket.contact.name} size={30} />
             <div className="min-w-0">
@@ -716,8 +727,8 @@ export function TicketDetail() {
 
         <div className="my-[18px] h-px bg-slate-100" />
 
-        <FieldGroup label="Linked assets">
-          {ticket.assets.length === 0 && <p className="mb-2 text-[13px] text-slate-400">None linked.</p>}
+        <FieldGroup label={t('ticketDetail.linkedAssets')}>
+          {ticket.assets.length === 0 && <p className="mb-2 text-[13px] text-slate-400">{t('ticketDetail.noneLinked')}</p>}
           {ticket.assets.map(({ asset }) => (
             <div key={asset.id} className="mb-1 rounded-lg bg-slate-50 px-2.5 py-1.5">
               <div className="flex items-center justify-between">
@@ -726,12 +737,12 @@ export function TicketDetail() {
                   {asset.ipAddress && <span className="text-slate-400"> · {asset.ipAddress}</span>}
                 </span>
                 <button onClick={() => unlinkAsset(asset.id)} className="flex-shrink-0 text-xs text-slate-400 hover:text-rose-600">
-                  remove
+                  {t('common.remove')}
                 </button>
               </div>
               {asset.services && asset.services.length > 0 && (
                 <div className="mt-0.5 text-[11.5px] text-orange-600">
-                  Affects: {asset.services.map((s) => s.name).join(', ')}
+                  {t('ticketDetail.affects', { services: asset.services.map((s) => s.name).join(', ') })}
                 </div>
               )}
             </div>
@@ -742,7 +753,7 @@ export function TicketDetail() {
               onChange={(e) => setAssetToLink(e.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[12.5px] text-slate-700"
             >
-              <option value="">Link an asset…</option>
+              <option value="">{t('ticketDetail.linkAssetPlaceholder')}</option>
               {allAssets
                 .filter((a) => !ticket.assets.some((ta) => ta.assetId === a.id))
                 .map((a) => (
@@ -756,7 +767,7 @@ export function TicketDetail() {
               disabled={!assetToLink}
               className="flex-shrink-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
             >
-              Link
+              {t('common.link')}
             </button>
           </div>
         </FieldGroup>
@@ -778,6 +789,7 @@ function MergeModal({
   onClose: () => void;
   onMerged: () => void;
 }) {
+  const { t } = useTranslation();
   const [candidates, setCandidates] = useState<Ticket[]>([]);
   const [intoTicketId, setIntoTicketId] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -785,7 +797,7 @@ function MergeModal({
 
   useEffect(() => {
     apiGet<{ tickets: Ticket[] }>('/tickets')
-      .then((res) => setCandidates(res.tickets.filter((t) => t.id !== currentTicket.id && !t.mergedIntoId)))
+      .then((res) => setCandidates(res.tickets.filter((tk) => tk.id !== currentTicket.id && !tk.mergedIntoId)))
       .catch(() => {});
   }, [currentTicket.id]);
 
@@ -798,29 +810,29 @@ function MergeModal({
       onMerged();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to merge ticket');
+      setError(err instanceof ApiError ? err.message : t('ticketDetail.mergeModal.failed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="Merge this ticket" onClose={onClose}>
+    <Modal title={t('ticketDetail.mergeModal.title')} onClose={onClose}>
       <div className="space-y-3">
         <p className="text-[13px] text-slate-500">
-          #{currentTicket.number}'s messages move onto the target ticket, and this one closes with a note pointing there.
+          {t('ticketDetail.mergeModal.description', { number: currentTicket.number })}
         </p>
         <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Merge into</span>
+          <span className="mb-1 block font-medium text-slate-700">{t('ticketDetail.mergeModal.mergeIntoLabel')}</span>
           <select
             value={intoTicketId}
             onChange={(e) => setIntoTicketId(e.target.value)}
             className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
           >
-            <option value="">Choose a ticket…</option>
-            {candidates.map((t) => (
-              <option key={t.id} value={t.id}>
-                #{t.number} {t.subject}
+            <option value="">{t('ticketDetail.mergeModal.chooseTicket')}</option>
+            {candidates.map((tk) => (
+              <option key={tk.id} value={tk.id}>
+                #{tk.number} {tk.subject}
               </option>
             ))}
           </select>
@@ -830,14 +842,14 @@ function MergeModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={onSubmit}
             disabled={submitting || !intoTicketId}
             className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {submitting ? 'Merging…' : 'Merge'}
+            {submitting ? t('ticketDetail.mergeModal.merging') : t('ticketDetail.mergeModal.merge')}
           </button>
         </div>
       </div>

@@ -128,5 +128,159 @@
     "recentActivity": {
       "empty": "No tickets yet."
     }
+  },
+  "common": {
+    "cancel": "Cancel",
+    "loading": "Loading…",
+    "save": "Save",
+    "saving": "Saving…",
+    "create": "Create",
+    "creating": "Creating…",
+    "remove": "remove",
+    "link": "Link",
+    "unassigned": "Unassigned"
+  },
+  "tickets": {
+    "title": "Tickets",
+    "countOfTotal": "{{count}} of {{total}}",
+    "newTicket": "New ticket",
+    "searchLabel": "Search tickets",
+    "searchPlaceholder": "Search tickets…",
+    "tabs": {
+      "all": "All",
+      "open": "Open",
+      "pending": "Pending",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "filters": {
+      "anyone": "Anyone",
+      "assignedToMe": "Assigned to me",
+      "anyPriority": "Any priority",
+      "saveThisView": "+ Save this view"
+    },
+    "bulk": {
+      "selected": "{{count}} selected",
+      "assignTo": "Assign to…",
+      "setStatus": "Set status…",
+      "setPriority": "Set priority…",
+      "applying": "Applying…",
+      "clearSelection": "Clear selection",
+      "updateFailed": "Bulk update failed"
+    },
+    "table": {
+      "subject": "Subject",
+      "status": "Status",
+      "priority": "Priority",
+      "assignee": "Assignee",
+      "channel": "Channel",
+      "updated": "Updated",
+      "slaOverdue": "SLA overdue"
+    },
+    "empty": "No tickets here.",
+    "loadFailed": "Failed to load tickets",
+    "loadMore": "Load more ({{count}} remaining)",
+    "removeSavedViewFailed": "Failed to remove saved view",
+    "saveView": {
+      "title": "Save this view",
+      "name": "Name",
+      "namePlaceholder": "My open tickets",
+      "failed": "Failed to save view"
+    },
+    "newTicketModal": {
+      "title": "New ticket",
+      "blank": "Blank ticket",
+      "fromCatalog": "From catalog"
+    },
+    "form": {
+      "subject": "Subject",
+      "requesterName": "Requester name",
+      "requesterEmail": "Requester email",
+      "description": "Description",
+      "priority": "Priority",
+      "subjectOptional": "Subject (optional)",
+      "request": "Request",
+      "createTicket": "Create ticket",
+      "createFailed": "Failed to create ticket"
+    }
+  },
+  "ticketDetail": {
+    "backToTickets": "Tickets",
+    "priorityLabel": "{{priority}} priority",
+    "ref": "ref: {{id}}",
+    "firstResponseOverdue": "First response overdue",
+    "resolutionOverdue": "Resolution overdue",
+    "alsoViewing": "Also viewing: {{names}}",
+    "mergeInto": "Merge into…",
+    "runMacro": "Run macro…",
+    "summarize": "Summarize",
+    "summarizing": "Summarizing…",
+    "letAiTry": "Let AI try",
+    "autonomousRunning": "Running…",
+    "autonomousRunTooltip": "Let the AI agent investigate and, if it's confident, act on this ticket -- mutating actions still go through Autonomy Policy approval",
+    "aiCost": "AI cost: ${{cost}}",
+    "aiCallsTooltip_one": "{{count}} AI call on this ticket",
+    "aiCallsTooltip_other": "{{count}} AI calls on this ticket",
+    "mergedIntoNotice": "This ticket was merged into",
+    "mergedFromNotice": "Merged from:",
+    "escalationExhausted": "Escalation exhausted (tier {{tier}}) -- no one acknowledged.",
+    "escalationActive": "SLA breached -- currently at escalation tier {{tier}}.",
+    "acknowledge": "Acknowledge",
+    "escalationAcknowledged": "Escalation acknowledged by {{name}}.",
+    "escalationAcknowledgedAt": "Escalation acknowledged by {{name}} at {{time}}.",
+    "aiSummaryTitle": "AI summary",
+    "autonomousRunTitle": "Autonomous agent run",
+    "autonomousStoppedEarly": "(stopped early -- too many steps)",
+    "autonomousSeeDetails": "see details / approve pending actions",
+    "internal": "Internal",
+    "replyPlaceholder": "Write a reply…",
+    "basedOn": "Based on:",
+    "internalNote": "Internal note",
+    "attach": "Attach",
+    "suggestReply": "Suggest reply",
+    "drafting": "Drafting…",
+    "sendReply": "Send reply",
+    "addNote": "Add note",
+    "sending": "Sending…",
+    "detailsHeading": "Details",
+    "fields": {
+      "status": "Status",
+      "priority": "Priority",
+      "team": "Team",
+      "assignee": "Assignee",
+      "problem": "Problem"
+    },
+    "unlinkedProblem": "Unlinked",
+    "viewProblem": "View Problem #{{number}} →",
+    "firstResponseLabel": "First response",
+    "resolutionLabel": "Resolution",
+    "met": "Met {{time}}",
+    "due": "Due {{time}}",
+    "contact": "Contact",
+    "linkedAssets": "Linked assets",
+    "noneLinked": "None linked.",
+    "affects": "Affects: {{services}}",
+    "linkAssetPlaceholder": "Link an asset…",
+    "mergeModal": {
+      "title": "Merge this ticket",
+      "description": "#{{number}}'s messages move onto the target ticket, and this one closes with a note pointing there.",
+      "mergeIntoLabel": "Merge into",
+      "chooseTicket": "Choose a ticket…",
+      "merging": "Merging…",
+      "merge": "Merge",
+      "failed": "Failed to merge ticket"
+    },
+    "errors": {
+      "loadFailed": "Failed to load ticket",
+      "updateFailed": "Update failed",
+      "linkAssetFailed": "Failed to link asset",
+      "unlinkAssetFailed": "Failed to unlink asset",
+      "acknowledgeFailed": "Failed to acknowledge",
+      "sendMessageFailed": "Failed to send message",
+      "summarizeFailed": "Failed to summarize",
+      "suggestFailed": "Failed to suggest a reply",
+      "autonomousFailed": "Failed to run the autonomous agent",
+      "applyMacroFailed": "Failed to apply macro"
+    }
   }
 }

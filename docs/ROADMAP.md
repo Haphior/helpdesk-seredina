@@ -1623,25 +1623,29 @@ these real users actually want:
   Microsoft Intune), effectively a separate product — revisit only if there's
   real demand, not preemptively.
 
-**Console internationalization (i18n) — 🚧 v1 shipped 2026-09-21, partial coverage
-(ADR 0049).** The admin console was English-only; real value for a self-hosted,
-open-source tool whose adopter base skews international (unlike a hosted SaaS with
-one default locale, a self-hosted operator's own staff and customers may not read
-English at all). Shipped: `react-i18next`, a per-user (not per-tenant) language
-preference persisted in `localStorage`, a real second locale (Spanish, not just
-scaffolding) covering Login/Register/the shared `AuthLayout`, the sidebar
-navigation (all groups and item labels), and the Dashboard (title, all 7 widget
-labels, every widget's empty-state copy) — the highest-traffic screens, the same
-phasing this project already used for the design system's original rollout. The
-file format (one JSON per locale, namespaced by feature) lets a community
-contributor add a language by editing one file, no build tooling or paid
-localization vendor required — deliberately a cost-free way to grow, unlike the
-OAuth-app/code-signing items above. **Not yet covered, named explicitly rather
-than silently incomplete**: Tickets Queue and Ticket Detail (the largest remaining
-surface, deferred to its own pass) and every other page under CMDB/Configuration/
-Operations/Administration (~49 files); the dashboard's onboarding-checklist item
-text is backend-supplied and needs a locale-aware API response, not just a
-frontend string sweep.
+**Console internationalization (i18n) — 🚧 v1/v1.1 shipped 2026-09-21, partial
+coverage (ADR 0049).** The admin console was English-only; real value for a
+self-hosted, open-source tool whose adopter base skews international (unlike a
+hosted SaaS with one default locale, a self-hosted operator's own staff and
+customers may not read English at all). Shipped: `react-i18next`, a per-user
+(not per-tenant) language preference persisted in `localStorage`, a real second
+locale (Spanish, not just scaffolding) covering Login/Register/the shared
+`AuthLayout`, the sidebar navigation (all groups and item labels), the Dashboard
+(title, all 7 widget labels, every widget's empty-state copy), and — same day,
+v1.1 — **Tickets Queue and Ticket Detail**, the two largest and highest-traffic
+screens in the console (tabs, search, filters, saved views, bulk-edit bar, the
+ticket table, both new-ticket forms, the message composer, escalation/merge/AI
+controls, the Details sidebar). Tenant-configured data (ticket status labels,
+custom field labels, macro/team/service names, and the priority enum values
+themselves) is deliberately left untranslated throughout — it isn't frontend
+copy, it can't live in a static locale file. The file format (one JSON per
+locale, namespaced by feature) lets a community contributor add a language by
+editing one file, no build tooling or paid localization vendor required —
+deliberately a cost-free way to grow, unlike the OAuth-app/code-signing items
+above. **Not yet covered, named explicitly rather than silently incomplete**:
+every other page under CMDB/Configuration/Operations/Administration (~49
+files); the dashboard's onboarding-checklist item text is backend-supplied and
+needs a locale-aware API response, not just a frontend string sweep.
 
 **AI-assisted initial setup, added 2026-09-21.** Phase 2's first-run product tour
 (✅, `getOnboardingChecklist`) is a static checklist — customize a status, set an

@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted, implemented (partial coverage — see Scope).
+Accepted, implemented (partial coverage — see Scope). Extended same-day to cover
+Tickets Queue and Ticket Detail (see "v1.1" below) — the two screens explicitly
+named as the next-highest-priority gap when v1 shipped.
 
 ## Context
 
@@ -52,16 +54,57 @@ visitor/prospect sees (auth), the persistent chrome every logged-in session sees
 (nav), and the default landing page (dashboard) — not exhaustive, but not
 cosmetic either.
 
-**Explicitly NOT translated in this pass, named here rather than silently
-incomplete**: Tickets Queue and Ticket Detail (790 and large multi-file
-surfaces — the single biggest remaining lift, deliberately deferred to its own
-follow-up pass rather than rushed), and every other page under Work/CMDB/
-Configuration/Operations/Administration (~49 files). The dashboard's onboarding
-checklist item text (`"Customize your ticket statuses"`, etc.) is backend-supplied
-content from `GET /onboarding-checklist`, not a frontend string — translating it
-needs the API to return a locale-aware response (or a client-side key mapping),
-a real follow-up distinct from the frontend-string sweep this ADR covers, so it's
+**Explicitly NOT translated in v1, named here rather than silently
+incomplete**: Tickets Queue and Ticket Detail (790 and 954 lines, the two
+largest single-page surfaces in the app — covered same-day, see "v1.1" below),
+and every other page under CMDB/Configuration/Operations/Administration (~49
+files, still open). The dashboard's onboarding checklist item text
+(`"Customize your ticket statuses"`, etc.) is backend-supplied content from
+`GET /onboarding-checklist`, not a frontend string — translating it needs the
+API to return a locale-aware response (or a client-side key mapping), a real
+follow-up distinct from the frontend-string sweep this ADR covers, so it's
 still shown in English regardless of the selected UI language.
+
+## v1.1 — Tickets Queue and Ticket Detail (same day)
+
+Extended coverage to the two highest-traffic screens agents actually live in
+day to day: `TicketsQueue.tsx` (tabs, search, assignee/priority filters, saved
+views, bulk-edit bar, the ticket table, the New Ticket modal's blank and
+catalog-request forms) and `TicketDetail.tsx` (header badges, merge/macro/
+AI-summarize/autonomous-run controls, the escalation banner, the message
+composer, the Details sidebar, the Merge modal). Added a `common.*` locale
+namespace (`cancel`, `loading`, `save`/`saving`, `create`/`creating`, `remove`,
+`link`, `unassigned`) once it became clear both ticket screens — and any future
+one — repeat the same handful of generic verbs many times over; feature-specific
+copy stays under `tickets.*` (queue) and `ticketDetail.*` (detail/merge modal).
+
+Two things deliberately stayed untranslated, consistent with the v1 decision
+already made for the Dashboard's priority badges: **ticket priority values**
+(`LOW`/`NORMAL`/`HIGH`/`URGENT`) and **ticket status labels** — the latter are
+tenant-configured data (`TicketStatus.label`, editable per tenant in Ticket
+Statuses), not frontend copy, so they can't be looked up in a static locale
+file at all. Same reasoning applies to custom field labels, macro names, team
+names, and service catalog item names throughout both screens — all tenant
+data, correctly left as-is.
+
+**A real i18next pluralization case**: the "AI cost" tooltip
+(`"N AI call(s) on this ticket"`) uses i18next's built-in `_one`/`_other` key
+suffixes (`aiCallsTooltip_one`/`aiCallsTooltip_other`) driven by a `count`
+interpolation value, rather than a hand-rolled ternary — the first real plural
+string in the app now used this mechanism instead of the manual
+`` `${n} thing${n === 1 ? '' : 's'}` `` pattern still used for other counts.
+
+**A naming collision to watch for**: both files had loop variables named `t`
+(the tab being rendered in `TicketsQueue.tsx`, the team in `TicketDetail.tsx`'s
+sidebar, the ticket in `MergeModal`'s candidate list) that would have silently
+shadowed `useTranslation()`'s own `t` the moment it was introduced — TypeScript
+does catch the resulting "not callable" error at compile time (the shadowed
+`t` has a non-function type), but only once `t(...)` is actually called
+somewhere in that shadowed scope, so it's easy to rename late and miss a spot.
+Renamed to `tabItem`/`team`/`tk` at each site before wiring in translations,
+worth flagging for whoever does the next batch of pages since this project's
+existing code leaned on `t` as a natural single-letter name for "the current
+tab/team/ticket" in several places.
 
 ## Files
 
@@ -77,6 +120,11 @@ still shown in English regardless of the selected UI language.
   `apps/web/src/components/Layout.tsx` — converted to `useTranslation()`.
   `Layout.tsx`'s `navGroups` array changed from hardcoded `label` strings to
   `labelKey`/`itemKey` fields resolved through `t()` at render time.
+- `apps/web/src/pages/TicketsQueue.tsx`, `TicketDetail.tsx` (v1.1) — converted
+  to `useTranslation()`; `TABS` array changed from `label` to `labelKey` the
+  same way `navGroups` did.
+- `apps/web/src/i18n/locales/{en,es}.json` (v1.1) — added `common.*`,
+  `tickets.*`, `ticketDetail.*` namespaces.
 
 ## Consequences
 
@@ -103,6 +151,25 @@ the page and confirmed the Spanish choice persisted via `localStorage`, logged o
 and confirmed the Login page also rendered in the persisted language. Zero
 console errors (one real bug caught and fixed during this verification, see
 below) — Playwright screenshots of the Spanish dashboard and login page.
+
+**v1.1 verification**: `npx tsc --noEmit` and `npm run build` clean after the
+Tickets Queue/Ticket Detail changes; full `apps/api` suite 282/282 (one
+`ai-usage.test.ts` timeout was confirmed flaky by re-running it alone — that
+file is untouched by this change, backend-only, unrelated to the frontend
+i18n work). Live, against the real running dev stack with genuinely
+real created tickets (not fixtures): registered a tenant, created tickets
+through the actual "New ticket" modal, confirmed the queue table (tabs, search,
+filters, column headers, bulk-select) and a real Ticket Detail page (header
+badges, macro/summarize/AI-run buttons, Details sidebar, message composer)
+both render correctly in English; switched to Spanish and confirmed the same
+ticket's detail page re-rendered every covered string correctly with live
+data (`"prioridad NORMAL"`, `"Fusionar en…"`, `"Sin asignar"`, `"Vincular un
+activo…"`, etc.); filtered the Spanish queue by tab and search text and
+confirmed the `"{{count}} de {{total}}"` counter updated correctly; created
+and persisted a real Saved View in Spanish and confirmed it round-tripped
+through the actual API and re-rendered as a chip. Zero console errors across
+every run. Playwright screenshots of the Spanish queue table (filtered and
+with a saved view) and both languages' Ticket Detail pages.
 
 **Bug caught during verification**: the first live-verification run showed a
 React "Invalid hook call" / `Cannot read properties of null (reading

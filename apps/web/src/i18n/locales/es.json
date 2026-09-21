@@ -128,5 +128,159 @@
     "recentActivity": {
       "empty": "Aún no hay tickets."
     }
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "loading": "Cargando…",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "create": "Crear",
+    "creating": "Creando…",
+    "remove": "quitar",
+    "link": "Vincular",
+    "unassigned": "Sin asignar"
+  },
+  "tickets": {
+    "title": "Tickets",
+    "countOfTotal": "{{count}} de {{total}}",
+    "newTicket": "Nuevo ticket",
+    "searchLabel": "Buscar tickets",
+    "searchPlaceholder": "Buscar tickets…",
+    "tabs": {
+      "all": "Todos",
+      "open": "Abiertos",
+      "pending": "Pendientes",
+      "resolved": "Resueltos",
+      "closed": "Cerrados"
+    },
+    "filters": {
+      "anyone": "Cualquiera",
+      "assignedToMe": "Asignados a mí",
+      "anyPriority": "Cualquier prioridad",
+      "saveThisView": "+ Guardar esta vista"
+    },
+    "bulk": {
+      "selected": "{{count}} seleccionados",
+      "assignTo": "Asignar a…",
+      "setStatus": "Establecer estado…",
+      "setPriority": "Establecer prioridad…",
+      "applying": "Aplicando…",
+      "clearSelection": "Limpiar selección",
+      "updateFailed": "Error al actualizar en lote"
+    },
+    "table": {
+      "subject": "Asunto",
+      "status": "Estado",
+      "priority": "Prioridad",
+      "assignee": "Responsable",
+      "channel": "Canal",
+      "updated": "Actualizado",
+      "slaOverdue": "SLA vencido"
+    },
+    "empty": "No hay tickets aquí.",
+    "loadFailed": "No se pudieron cargar los tickets",
+    "loadMore": "Cargar más ({{count}} restantes)",
+    "removeSavedViewFailed": "No se pudo quitar la vista guardada",
+    "saveView": {
+      "title": "Guardar esta vista",
+      "name": "Nombre",
+      "namePlaceholder": "Mis tickets abiertos",
+      "failed": "No se pudo guardar la vista"
+    },
+    "newTicketModal": {
+      "title": "Nuevo ticket",
+      "blank": "Ticket en blanco",
+      "fromCatalog": "Desde catálogo"
+    },
+    "form": {
+      "subject": "Asunto",
+      "requesterName": "Nombre del solicitante",
+      "requesterEmail": "Correo del solicitante",
+      "description": "Descripción",
+      "priority": "Prioridad",
+      "subjectOptional": "Asunto (opcional)",
+      "request": "Solicitud",
+      "createTicket": "Crear ticket",
+      "createFailed": "No se pudo crear el ticket"
+    }
+  },
+  "ticketDetail": {
+    "backToTickets": "Tickets",
+    "priorityLabel": "prioridad {{priority}}",
+    "ref": "ref: {{id}}",
+    "firstResponseOverdue": "Primera respuesta vencida",
+    "resolutionOverdue": "Resolución vencida",
+    "alsoViewing": "También viendo: {{names}}",
+    "mergeInto": "Fusionar en…",
+    "runMacro": "Ejecutar macro…",
+    "summarize": "Resumir",
+    "summarizing": "Resumiendo…",
+    "letAiTry": "Dejar que la IA lo intente",
+    "autonomousRunning": "Ejecutando…",
+    "autonomousRunTooltip": "Deja que el agente de IA investigue y, si tiene confianza, actúe sobre este ticket -- las acciones que modifican datos igual pasan por la aprobación de la Política de Autonomía",
+    "aiCost": "Costo de IA: ${{cost}}",
+    "aiCallsTooltip_one": "{{count}} llamada de IA en este ticket",
+    "aiCallsTooltip_other": "{{count}} llamadas de IA en este ticket",
+    "mergedIntoNotice": "Este ticket fue fusionado en",
+    "mergedFromNotice": "Fusionado desde:",
+    "escalationExhausted": "Escalamiento agotado (nivel {{tier}}) -- nadie lo confirmó.",
+    "escalationActive": "SLA incumplido -- actualmente en el nivel de escalamiento {{tier}}.",
+    "acknowledge": "Confirmar",
+    "escalationAcknowledged": "Escalamiento confirmado por {{name}}.",
+    "escalationAcknowledgedAt": "Escalamiento confirmado por {{name}} a las {{time}}.",
+    "aiSummaryTitle": "Resumen de IA",
+    "autonomousRunTitle": "Ejecución del agente autónomo",
+    "autonomousStoppedEarly": "(detenido antes de tiempo -- demasiados pasos)",
+    "autonomousSeeDetails": "ver detalles / aprobar acciones pendientes",
+    "internal": "Interno",
+    "replyPlaceholder": "Escribe una respuesta…",
+    "basedOn": "Basado en:",
+    "internalNote": "Nota interna",
+    "attach": "Adjuntar",
+    "suggestReply": "Sugerir respuesta",
+    "drafting": "Redactando…",
+    "sendReply": "Enviar respuesta",
+    "addNote": "Agregar nota",
+    "sending": "Enviando…",
+    "detailsHeading": "Detalles",
+    "fields": {
+      "status": "Estado",
+      "priority": "Prioridad",
+      "team": "Equipo",
+      "assignee": "Responsable",
+      "problem": "Problema"
+    },
+    "unlinkedProblem": "Sin vincular",
+    "viewProblem": "Ver Problema #{{number}} →",
+    "firstResponseLabel": "Primera respuesta",
+    "resolutionLabel": "Resolución",
+    "met": "Cumplido {{time}}",
+    "due": "Vence {{time}}",
+    "contact": "Contacto",
+    "linkedAssets": "Activos vinculados",
+    "noneLinked": "Ninguno vinculado.",
+    "affects": "Afecta a: {{services}}",
+    "linkAssetPlaceholder": "Vincular un activo…",
+    "mergeModal": {
+      "title": "Fusionar este ticket",
+      "description": "Los mensajes de #{{number}} se trasladan al ticket destino, y este se cierra con una nota que apunta allí.",
+      "mergeIntoLabel": "Fusionar en",
+      "chooseTicket": "Elige un ticket…",
+      "merging": "Fusionando…",
+      "merge": "Fusionar",
+      "failed": "No se pudo fusionar el ticket"
+    },
+    "errors": {
+      "loadFailed": "No se pudo cargar el ticket",
+      "updateFailed": "No se pudo actualizar",
+      "linkAssetFailed": "No se pudo vincular el activo",
+      "unlinkAssetFailed": "No se pudo desvincular el activo",
+      "acknowledgeFailed": "No se pudo confirmar",
+      "sendMessageFailed": "No se pudo enviar el mensaje",
+      "summarizeFailed": "No se pudo resumir",
+      "suggestFailed": "No se pudo sugerir una respuesta",
+      "autonomousFailed": "No se pudo ejecutar el agente autónomo",
+      "applyMacroFailed": "No se pudo aplicar la macro"
+    }
   }
 }

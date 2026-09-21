@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type {
   CustomFieldDefinition,
@@ -24,12 +25,12 @@ import { useTheme } from '../theme/ThemeContext';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 
-const TABS: { key: TicketStatusCategory | 'ALL'; label: string }[] = [
-  { key: 'ALL', label: 'All' },
-  { key: 'OPEN', label: 'Open' },
-  { key: 'PENDING', label: 'Pending' },
-  { key: 'RESOLVED', label: 'Resolved' },
-  { key: 'CLOSED', label: 'Closed' },
+const TABS: { key: TicketStatusCategory | 'ALL'; labelKey: string }[] = [
+  { key: 'ALL', labelKey: 'all' },
+  { key: 'OPEN', labelKey: 'open' },
+  { key: 'PENDING', labelKey: 'pending' },
+  { key: 'RESOLVED', labelKey: 'resolved' },
+  { key: 'CLOSED', labelKey: 'closed' },
 ];
 
 const CHANNEL_TONE: Record<string, 'rose' | 'slate'> = { alert: 'rose', email: 'slate', api: 'slate' };
@@ -39,6 +40,7 @@ const ROW_COLUMNS = '24px 56px 1fr 108px 120px 130px 110px 100px';
 const PAGE_SIZE = 50;
 
 export function TicketsQueue() {
+  const { t } = useTranslation();
   const { hasPermission, payload } = useAuth();
   const { theme } = useTheme();
   const canBulkEdit = hasPermission('tickets:write');
@@ -81,7 +83,7 @@ export function TicketsQueue() {
         setTickets((prev) => (offset > 0 && prev ? [...prev, ...res.tickets] : res.tickets));
         setTotal(res.total);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load tickets'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('tickets.loadFailed')))
       .finally(() => setLoadingMore(false));
   }
 
@@ -115,7 +117,7 @@ export function TicketsQueue() {
       await apiDelete(`/saved-views/${id}`);
       loadSavedViews();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to remove saved view');
+      setError(err instanceof ApiError ? err.message : t('tickets.removeSavedViewFailed'));
     }
   }
 
@@ -144,7 +146,7 @@ export function TicketsQueue() {
       await Promise.all([...selected].map((id) => apiPatch(`/tickets/${id}`, data)));
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Bulk update failed');
+      setError(err instanceof ApiError ? err.message : t('tickets.bulk.updateFailed'));
     } finally {
       setApplyingBulk(false);
     }
@@ -155,27 +157,27 @@ export function TicketsQueue() {
       <div className="flex flex-col gap-4 px-8 pb-5 pt-7">
         <div className="flex items-baseline justify-between gap-2.5">
           <div className="flex items-baseline gap-2.5">
-            <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Tickets</h1>
+            <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('tickets.title')}</h1>
             {tickets && (
               <span className="text-[13px] text-slate-400">
-                {tickets.length} of {total}
+                {t('tickets.countOfTotal', { count: tickets.length, total })}
               </span>
             )}
           </div>
-          {hasPermission('tickets:write') && <Button onClick={() => setShowRequest(true)}>New ticket</Button>}
+          {hasPermission('tickets:write') && <Button onClick={() => setShowRequest(true)}>{t('tickets.newTicket')}</Button>}
         </div>
 
         <div className="flex items-center justify-between gap-4">
           <div className="flex gap-1 rounded-[9px] bg-slate-100 p-[3px]">
-            {TABS.map((t) => (
+            {TABS.map((tabItem) => (
               <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+                key={tabItem.key}
+                onClick={() => setTab(tabItem.key)}
                 className={`rounded-[7px] px-3.5 py-1.5 text-[13px] font-medium ${
-                  tab === t.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  tab === tabItem.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                {t.label}
+                {t(`tickets.tabs.${tabItem.labelKey}`)}
               </button>
             ))}
           </div>
@@ -183,11 +185,11 @@ export function TicketsQueue() {
           <div className="w-[280px]">
             <Input
               hideLabel
-              aria-label="Search tickets"
+              aria-label={t('tickets.searchLabel')}
               icon={<SearchIcon width={15} height={15} />}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search tickets…"
+              placeholder={t('tickets.searchPlaceholder')}
             />
           </div>
         </div>
@@ -212,9 +214,9 @@ export function TicketsQueue() {
             onChange={(e) => setAssigneeFilter(e.target.value)}
             className="rounded-[7px] border border-slate-200 bg-white px-2 py-1 text-[12.5px] text-slate-600"
           >
-            <option value="">Anyone</option>
-            {payload && <option value={payload.sub}>Assigned to me</option>}
-            <option value="unassigned">Unassigned</option>
+            <option value="">{t('tickets.filters.anyone')}</option>
+            {payload && <option value={payload.sub}>{t('tickets.filters.assignedToMe')}</option>}
+            <option value="unassigned">{t('common.unassigned')}</option>
             {users.filter((u) => u.id !== payload?.sub).map((u) => (
               <option key={u.id} value={u.id}>
                 {u.name}
@@ -227,7 +229,7 @@ export function TicketsQueue() {
             onChange={(e) => setPriorityFilter(e.target.value as TicketPriority | '')}
             className="rounded-[7px] border border-slate-200 bg-white px-2 py-1 text-[12.5px] text-slate-600"
           >
-            <option value="">Any priority</option>
+            <option value="">{t('tickets.filters.anyPriority')}</option>
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -237,14 +239,14 @@ export function TicketsQueue() {
 
           {hasActiveFilters && (
             <button onClick={() => setShowSaveView(true)} className="text-[12.5px] font-medium text-indigo-600 hover:underline">
-              + Save this view
+              {t('tickets.filters.saveThisView')}
             </button>
           )}
         </div>
 
         {canBulkEdit && selected.size > 0 && (
           <div className="flex items-center gap-3 rounded-[9px] border border-indigo-200 bg-indigo-50 px-3.5 py-2">
-            <span className="text-[13px] font-semibold text-indigo-700">{selected.size} selected</span>
+            <span className="text-[13px] font-semibold text-indigo-700">{t('tickets.bulk.selected', { count: selected.size })}</span>
             <select
               defaultValue=""
               disabled={applyingBulk}
@@ -252,7 +254,7 @@ export function TicketsQueue() {
               className="rounded-md border border-indigo-200 bg-white px-2 py-1 text-xs text-slate-600"
             >
               <option value="" disabled>
-                Assign to…
+                {t('tickets.bulk.assignTo')}
               </option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -267,7 +269,7 @@ export function TicketsQueue() {
               className="rounded-md border border-indigo-200 bg-white px-2 py-1 text-xs text-slate-600"
             >
               <option value="" disabled>
-                Set status…
+                {t('tickets.bulk.setStatus')}
               </option>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -282,7 +284,7 @@ export function TicketsQueue() {
               className="rounded-md border border-indigo-200 bg-white px-2 py-1 text-xs text-slate-600"
             >
               <option value="" disabled>
-                Set priority…
+                {t('tickets.bulk.setPriority')}
               </option>
               {(['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const).map((p) => (
                 <option key={p} value={p}>
@@ -290,9 +292,9 @@ export function TicketsQueue() {
                 </option>
               ))}
             </select>
-            {applyingBulk && <span className="text-xs text-indigo-500">Applying…</span>}
+            {applyingBulk && <span className="text-xs text-indigo-500">{t('tickets.bulk.applying')}</span>}
             <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-indigo-600 hover:underline">
-              Clear selection
+              {t('tickets.bulk.clearSelection')}
             </button>
           </div>
         )}
@@ -300,8 +302,8 @@ export function TicketsQueue() {
 
       <div className="flex-1 overflow-y-auto px-8 pb-7">
         {error && <p className="text-sm text-rose-600">{error}</p>}
-        {tickets === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
-        {tickets?.length === 0 && <p className="text-sm text-slate-500">No tickets here.</p>}
+        {tickets === null && !error && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+        {tickets?.length === 0 && <p className="text-sm text-slate-500">{t('tickets.empty')}</p>}
 
         {tickets && tickets.length > 0 && (
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -320,12 +322,12 @@ export function TicketsQueue() {
                 )}
               </span>
               <span>#</span>
-              <span>Subject</span>
-              <span>Status</span>
-              <span>Priority</span>
-              <span>Assignee</span>
-              <span>Channel</span>
-              <span className="text-right">Updated</span>
+              <span>{t('tickets.table.subject')}</span>
+              <span>{t('tickets.table.status')}</span>
+              <span>{t('tickets.table.priority')}</span>
+              <span>{t('tickets.table.assignee')}</span>
+              <span>{t('tickets.table.channel')}</span>
+              <span className="text-right">{t('tickets.table.updated')}</span>
             </div>
 
             <div className="divide-y divide-slate-100">
@@ -350,7 +352,7 @@ export function TicketsQueue() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         {isTicketOverdue(ticket) && (
-                          <span title="SLA overdue">
+                          <span title={t('tickets.table.slaOverdue')}>
                             <ClockIcon width={13} height={13} className="flex-shrink-0 text-rose-500" />
                           </span>
                         )}
@@ -374,7 +376,7 @@ export function TicketsQueue() {
                         <span className="truncate text-[12.5px] text-slate-600">{ticket.assignee.name}</span>
                       </div>
                     ) : (
-                      <span className="text-[12.5px] text-slate-400">Unassigned</span>
+                      <span className="text-[12.5px] text-slate-400">{t('common.unassigned')}</span>
                     )}
                     <span className="flex w-fit items-center gap-1.5">
                       {theme !== 'refined' && <ChannelGlyph channel={ticket.channel} />}
@@ -395,7 +397,7 @@ export function TicketsQueue() {
               disabled={loadingMore}
               className="rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-[13px] font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-50"
             >
-              {loadingMore ? 'Loading…' : `Load more (${total - tickets.length} remaining)`}
+              {loadingMore ? t('common.loading') : t('tickets.loadMore', { count: total - tickets.length })}
             </button>
           </div>
         )}
@@ -426,6 +428,7 @@ function SaveViewModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -439,21 +442,21 @@ function SaveViewModal({
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save view');
+      setError(err instanceof ApiError ? err.message : t('tickets.saveView.failed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="Save this view" onClose={onClose}>
+    <Modal title={t('tickets.saveView.title')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Name</span>
+          <span className="mb-1 block font-medium text-slate-700">{t('tickets.saveView.name')}</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="My open tickets"
+            placeholder={t('tickets.saveView.namePlaceholder')}
             required
             className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
           />
@@ -463,14 +466,14 @@ function SaveViewModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             disabled={submitting}
             className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </form>
@@ -479,6 +482,7 @@ function SaveViewModal({
 }
 
 function NewTicketModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [items, setItems] = useState<ServiceCatalogItem[] | null>(null);
   const [mode, setMode] = useState<'blank' | 'catalog'>('blank');
@@ -491,9 +495,9 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <Modal title="New ticket" onClose={onClose}>
+    <Modal title={t('tickets.newTicketModal.title')} onClose={onClose}>
       {items === null ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-slate-500">{t('common.loading')}</p>
       ) : (
         <>
           {items.length > 0 && (
@@ -505,7 +509,7 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
                   mode === 'blank' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                Blank ticket
+                {t('tickets.newTicketModal.blank')}
               </button>
               <button
                 type="button"
@@ -514,7 +518,7 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
                   mode === 'catalog' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                From catalog
+                {t('tickets.newTicketModal.fromCatalog')}
               </button>
             </div>
           )}
@@ -535,6 +539,7 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
 // zero catalog items configured had no way to create a ticket at all from
 // the console.
 function BlankTicketForm({ onClose, onCreated }: { onClose: () => void; onCreated: (ticketId: string) => void }) {
+  const { t } = useTranslation();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [contactName, setContactName] = useState('');
@@ -552,7 +557,7 @@ function BlankTicketForm({ onClose, onCreated }: { onClose: () => void; onCreate
       onClose();
       onCreated(ticket.id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create ticket');
+      setError(err instanceof ApiError ? err.message : t('tickets.form.createFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -561,7 +566,7 @@ function BlankTicketForm({ onClose, onCreated }: { onClose: () => void; onCreate
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Subject</span>
+        <span className="mb-1 block font-medium text-slate-700">{t('tickets.form.subject')}</span>
         <input
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
@@ -572,7 +577,7 @@ function BlankTicketForm({ onClose, onCreated }: { onClose: () => void; onCreate
 
       <div className="flex gap-2">
         <label className="block flex-1 text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Requester name</span>
+          <span className="mb-1 block font-medium text-slate-700">{t('tickets.form.requesterName')}</span>
           <input
             value={contactName}
             onChange={(e) => setContactName(e.target.value)}
@@ -581,7 +586,7 @@ function BlankTicketForm({ onClose, onCreated }: { onClose: () => void; onCreate
           />
         </label>
         <label className="block flex-1 text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Requester email</span>
+          <span className="mb-1 block font-medium text-slate-700">{t('tickets.form.requesterEmail')}</span>
           <input
             type="email"
             value={contactEmail}
@@ -593,7 +598,7 @@ function BlankTicketForm({ onClose, onCreated }: { onClose: () => void; onCreate
       </div>
 
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Description</span>
+        <span className="mb-1 block font-medium text-slate-700">{t('tickets.form.description')}</span>
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -604,7 +609,7 @@ function BlankTicketForm({ onClose, onCreated }: { onClose: () => void; onCreate
       </label>
 
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Priority</span>
+        <span className="mb-1 block font-medium text-slate-700">{t('tickets.form.priority')}</span>
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value as TicketPriority)}
@@ -622,14 +627,14 @@ function BlankTicketForm({ onClose, onCreated }: { onClose: () => void; onCreate
 
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={submitting}
           className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
         >
-          {submitting ? 'Creating…' : 'Create ticket'}
+          {submitting ? t('common.creating') : t('tickets.form.createTicket')}
         </button>
       </div>
     </form>
@@ -645,6 +650,7 @@ function CatalogRequestForm({
   onClose: () => void;
   onCreated: (ticketId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
   const [itemId, setItemId] = useState(items[0]?.id ?? '');
   const [contactEmail, setContactEmail] = useState('');
@@ -675,7 +681,7 @@ function CatalogRequestForm({
       onClose();
       onCreated(ticket.id);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create ticket');
+      setError(err instanceof ApiError ? err.message : t('tickets.form.createFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -684,7 +690,7 @@ function CatalogRequestForm({
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">Request</span>
+        <span className="mb-1 block font-medium text-slate-700">{t('tickets.form.request')}</span>
             <select
               value={itemId}
               onChange={(e) => {
@@ -705,7 +711,7 @@ function CatalogRequestForm({
 
           <div className="flex gap-2">
             <label className="block flex-1 text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Requester name</span>
+              <span className="mb-1 block font-medium text-slate-700">{t('tickets.form.requesterName')}</span>
               <input
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
@@ -714,7 +720,7 @@ function CatalogRequestForm({
               />
             </label>
             <label className="block flex-1 text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Requester email</span>
+              <span className="mb-1 block font-medium text-slate-700">{t('tickets.form.requesterEmail')}</span>
               <input
                 type="email"
                 value={contactEmail}
@@ -726,7 +732,7 @@ function CatalogRequestForm({
           </div>
 
           <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Subject (optional)</span>
+            <span className="mb-1 block font-medium text-slate-700">{t('tickets.form.subjectOptional')}</span>
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
@@ -775,14 +781,14 @@ function CatalogRequestForm({
 
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting || !itemId}
               className="rounded-md bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {submitting ? 'Creating…' : 'Create ticket'}
+              {submitting ? t('common.creating') : t('tickets.form.createTicket')}
             </button>
           </div>
     </form>
