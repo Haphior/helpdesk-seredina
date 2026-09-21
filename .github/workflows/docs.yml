@@ -32,7 +32,13 @@ jobs:
 
       - run: npm run build --workspace=@seredina/docs
 
+      # enablement: true -- turns Pages on with source=GitHub Actions the first
+      # time this runs, instead of requiring a manual Settings -> Pages click
+      # first (the default `configure-pages` behavior 404s on a repo that has
+      # never had Pages enabled at all).
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
