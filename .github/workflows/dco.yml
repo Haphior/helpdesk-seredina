@@ -1,0 +1,41 @@
+name: DCO
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+# A from-scratch check, not a marketplace GitHub App (dcoapp/app etc.) --
+# this project doesn't run third-party code inside itself anywhere else
+# (see docs/ROADMAP.md's "integrations, not a plugin platform" decision),
+# and a five-line git-log grep needs no more trust than that.
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify every commit is signed off
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -e
+          missing=0
+          for sha in $(git rev-list "$BASE_SHA..$HEAD_SHA"); do
+            if ! git log -1 --format=%B "$sha" | grep -qE '^Signed-off-by: .+ <.+@.+>$'; then
+              subject=$(git log -1 --format=%s "$sha")
+              echo "::error::Commit $sha (\"$subject\") has no Signed-off-by trailer."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo ""
+            echo "Every commit needs a 'Signed-off-by' line (the Developer Certificate"
+            echo "of Origin -- see DCO.md). Fix with:"
+            echo "  git commit --amend -s --no-edit        # just the last commit"
+            echo "  git rebase --signoff origin/main        # every commit on this branch"
+            exit 1
+          fi
+          echo "All commits signed off."

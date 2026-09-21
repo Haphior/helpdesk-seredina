@@ -1687,8 +1687,10 @@ self-hosted, full stop.
   runs unscoped.
 - Never call slow external I/O (LLM completions, SMTP sends) inside `withTenantTx` —
   it holds a pooled connection open for the duration and will starve the pool.
-- AGPLv3: audit new dependencies for license compatibility; decide a contributor/CLA
-  policy before accepting outside PRs.
+- AGPLv3: audit new dependencies for license compatibility. Contributor policy
+  decided 2026-09-21: DCO sign-off (`DCO.md`, CI-enforced via
+  `.github/workflows/dco.yml`), not a full CLA — there's no dual-licensing/
+  enterprise-fork plan this project would need to re-license for later.
 - Autonomous AI mode is trust-sensitive — ship it opt-in, capped, and audited, never
   default-on.
 - Agentless discovery is architecturally meaningless in shared multi-tenant cloud

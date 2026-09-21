@@ -185,3 +185,11 @@ route, a UI pass on one screen) rather than batching a whole feature into one
 commit. Easier to review, `git bisect`, and revert. This wasn't followed
 consistently early on (Phase 0/1 commits are large, feature-sized) — new work
 should do better, not match that precedent.
+
+Every commit needs a `Signed-off-by` trailer (the
+[Developer Certificate of Origin](DCO.md), not a copyright transfer) — commit
+with `git commit -s` and CI checks it automatically on every pull request. See
+[DCO.md](DCO.md) for the full text and how to fix a commit that's missing one.
+Please also read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md); security issues go
+through [SECURITY.md](SECURITY.md)'s private reporting flow, never a public
+issue.
