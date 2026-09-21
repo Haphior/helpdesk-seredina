@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { WEBHOOK_EVENTS } from '@seredina/shared';
+import { WEBHOOK_EVENTS, WEBHOOK_KINDS } from '@seredina/shared';
 import { requirePermission } from '../rbac/permissions';
 import { createWebhook, deleteWebhook, listWebhooks, rotateWebhookSecret, updateWebhook } from './service';
 
 const createWebhookSchema = z.object({
   url: z.string().url(),
   events: z.array(z.enum(WEBHOOK_EVENTS)).min(1),
+  kind: z.enum(WEBHOOK_KINDS).optional(),
 });
 
 const updateWebhookSchema = z.object({

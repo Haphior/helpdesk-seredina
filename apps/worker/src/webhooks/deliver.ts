@@ -1,7 +1,8 @@
 import { createHmac } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
 import { prisma, withTenantTx } from '@seredina/db';
-import { decryptSecret, isPrivateOrReservedIp, type WebhookDeliveryJobPayload } from '@seredina/shared';
+import { CHAT_WEBHOOK_EVENTS, decryptSecret, isPrivateOrReservedIp, type ChatWebhookEvent, type WebhookDeliveryJobPayload } from '@seredina/shared';
+import { formatChatMessage } from './chatMessage';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 if (!ENCRYPTION_KEY) {
@@ -9,6 +10,10 @@ if (!ENCRYPTION_KEY) {
 }
 
 const DELIVERY_TIMEOUT_MS = 10_000;
+
+function isChatWebhookEvent(event: string): event is ChatWebhookEvent {
+  return (CHAT_WEBHOOK_EVENTS as readonly string[]).includes(event);
+}
 
 /**
  * BullMQ's own retry/backoff (configured on the Worker in index.ts) handles
@@ -36,20 +41,32 @@ export async function deliverWebhook(payload: WebhookDeliveryJobPayload): Promis
     throw new Error(`refusing to deliver to a private/reserved address: ${resolved.address}`);
   }
 
-  const secret = decryptSecret(webhook.secretEncrypted, ENCRYPTION_KEY!);
-  const body = JSON.stringify({ event: payload.event, occurredAt: payload.occurredAt, data: payload.data });
-  const signature = createHmac('sha256', secret).update(body).digest('hex');
+  // 'slack'/'teams' post the plain {"text": "..."} shape both platforms'
+  // current real webhook mechanisms accept (Slack Incoming Webhooks, Teams
+  // Workflows -- confirmed against Teams' own live docs, not assumed) and skip
+  // signing entirely: neither has an HMAC-verification concept, so there's no
+  // secretEncrypted to decrypt for these (see docs/adr/0048-chat-notifications.md).
+  const isChatKind = webhook.kind === 'slack' || webhook.kind === 'teams';
+  let body: string;
+  let headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+  if (isChatKind) {
+    if (!isChatWebhookEvent(payload.event)) {
+      throw new Error(`${webhook.kind} webhook received an unsupported event: ${payload.event}`);
+    }
+    body = JSON.stringify({ text: formatChatMessage(payload.event, payload.data) });
+  } else {
+    const secret = decryptSecret(webhook.secretEncrypted!, ENCRYPTION_KEY!);
+    body = JSON.stringify({ event: payload.event, occurredAt: payload.occurredAt, data: payload.data });
+    const signature = createHmac('sha256', secret).update(body).digest('hex');
+    headers = { ...headers, 'X-Seredina-Signature': `sha256=${signature}` };
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DELIVERY_TIMEOUT_MS);
 
   try {
-    const response = await fetch(webhook.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Seredina-Signature': `sha256=${signature}` },
-      body,
-      signal: controller.signal,
-    });
+    const response = await fetch(webhook.url, { method: 'POST', headers, body, signal: controller.signal });
     if (!response.ok) {
       throw new Error(`webhook endpoint responded ${response.status}`);
     }

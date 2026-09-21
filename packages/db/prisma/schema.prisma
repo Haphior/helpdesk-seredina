@@ -962,12 +962,22 @@ model ProcessStepInstance {
 // notifying Seredina). secretEncrypted follows EmailChannel's precedent: a
 // genuinely recoverable secret (needed to HMAC-sign every delivery), AES-256-GCM,
 // never a hash. See docs/adr/0009-outbound-webhooks.md.
+//
+// kind (added docs/adr/0048-chat-notifications.md): 'generic' (default, the
+// original shape above) | 'slack' | 'teams'. A chat-kind row posts a plain
+// {"text": "..."} message -- the same wire format both platforms' own current
+// real webhook mechanisms accept (Slack's Incoming Webhooks, Teams' Workflows
+// app) -- to a URL the TENANT generates themselves in their own Slack/Teams
+// workspace, no OAuth app or app-review process on this project's side.
+// secretEncrypted is nullable because of this: neither platform's webhook has
+// an HMAC-signature concept, the URL itself is the only credential.
 model Webhook {
   id                 String    @id @default(uuid()) @db.Uuid
   tenantId           String    @map("tenant_id") @db.Uuid
   tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kind               String    @default("generic")
   url                String
-  secretEncrypted    String    @map("secret_encrypted")
+  secretEncrypted    String?   @map("secret_encrypted")
   events             String[]
   isActive           Boolean   @default(true) @map("is_active")
   createdAt          DateTime  @default(now()) @map("created_at")

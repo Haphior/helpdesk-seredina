@@ -1392,22 +1392,23 @@ independent values (an opaque `webhookId` routing the call, Telegram's own
 `Authorization` header the way Grafana's does. See `docs/adr/0044-telegram-channel.md`
 — including a real bug (a customer's own follow-up message would have echoed back
 to them) found live in dev before it shipped, not by the automated suite first.
-**Slack and Microsoft Teams notifications — re-scoped 2026-09-21 to bring-your-
-own, not a Seredina-operated OAuth app.** A single shared OAuth app registered
-by this project would mean this project's own name goes through Slack's/
-Microsoft's app-review process, and its approval, rate limits, and any future
-review requirements become an ongoing maintenance burden with real cost/risk for
-an unfunded open-source project — the same reasoning that keeps a signed agent
-installer out of Phase 5. Both platforms already support a much simpler,
-zero-review path that fits this project's existing shape better: Slack's
-"Incoming Webhooks" and Microsoft Teams' own "Incoming Webhook" connector are
-both a tenant-side, workspace-internal setup (a few clicks in their own
-Slack/Teams admin, no app-store submission) that hands back a plain webhook URL
-— a tenant pastes that URL into Seredina, same "bring your own" pattern as a
-Telegram bot token or an AI provider key (`TenantAiSettings`), and it reuses the
-*existing* generic `Webhook` delivery mechanism (Phase 2 ✅) as-is, not a new
-OAuth flow. Not started, but no longer blocked on anything this project needs
-to register.
+**Slack and Microsoft Teams notifications ✅ (this pass) — re-scoped 2026-09-21
+to bring-your-own, not a Seredina-operated OAuth app.** A single shared OAuth
+app registered by this project would mean this project's own name goes through
+Slack's/Microsoft's app-review process, and its approval, rate limits, and any
+future review requirements become an ongoing maintenance burden with real
+cost/risk for an unfunded open-source project — the same reasoning that keeps a
+signed agent installer out of Phase 5. Both platforms' own *current* real
+webhook mechanisms (checked live, not assumed — Microsoft's legacy Office 365
+Connectors are being retired in favor of the Workflows app) turned out to
+accept the identical plain `{"text": "..."}"` payload shape, so one new `kind`
+column on the existing `Webhook` model (`'generic' | 'slack' | 'teams'`) and one
+shared formatter cover both platforms — reusing the existing delivery queue,
+retry/backoff, and SSRF guard entirely unchanged, only the payload content and
+whether it's HMAC-signed differ by kind. A curated 3-event subset (new ticket,
+either SLA breach) avoids forwarding UUID-only or potentially-sensitive raw
+event data into a possibly-public channel. See
+`docs/adr/0048-chat-notifications.md`.
 
 **Grafana Alerting integration ✅ (this pass) — one of the "one or two
 monitoring tools" named integrations.** `POST /v1/alerts/grafana`

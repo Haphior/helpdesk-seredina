@@ -280,8 +280,15 @@ export type WebhookEvent =
   | 'sla.first_response_breached'
   | 'sla.resolution_breached';
 
+export type WebhookKind = 'generic' | 'slack' | 'teams';
+
+// The curated subset 'slack'/'teams' webhooks are limited to -- see
+// docs/adr/0048-chat-notifications.md.
+export const CHAT_WEBHOOK_EVENTS: WebhookEvent[] = ['ticket.created', 'sla.first_response_breached', 'sla.resolution_breached'];
+
 export interface Webhook {
   id: string;
+  kind: WebhookKind;
   url: string;
   events: WebhookEvent[];
   isActive: boolean;
