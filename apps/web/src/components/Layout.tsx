@@ -1,10 +1,12 @@
 import { useEffect, useState, type ComponentType, type SVGProps } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { apiGet } from '../lib/api';
 import type { Permission } from '../lib/types';
 import { ThemeProvider } from '../theme/ThemeContext';
 import { Avatar } from './Avatar';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { NotificationBell } from './NotificationBell';
 import {
   AssetsIcon,
@@ -50,65 +52,71 @@ interface Me {
 // tickets/processes/catalog items behave, vs. integrations/scheduling/
 // insight-ops, vs. tenant/account-level setup). Configuration itself split
 // into two groups once Ticket Statuses pushed it to 11 flat items.
-const navGroups: { label: string; items: { to: string; label: string; icon: ComponentType<SVGProps<SVGSVGElement>>; permission?: Permission }[] }[] = [
+// `labelKey`/`itemKey` index into the `nav.groups`/`nav.items` translation
+// namespaces (src/i18n/locales/*.json) rather than hardcoding English.
+const navGroups: {
+  labelKey: string;
+  items: { to: string; itemKey: string; icon: ComponentType<SVGProps<SVGSVGElement>>; permission?: Permission }[];
+}[] = [
   {
-    label: 'Work',
+    labelKey: 'work',
     items: [
-      { to: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
-      { to: '/tickets', label: 'Tickets', icon: TicketIcon },
-      { to: '/processes', label: 'Processes', icon: ChecklistIcon, permission: 'tickets:write' },
-      { to: '/problems', label: 'Problems', icon: WarningIcon, permission: 'tickets:write' },
-      { to: '/knowledge-base', label: 'Knowledge Base', icon: BookIcon, permission: 'tickets:read' },
+      { to: '/dashboard', itemKey: 'dashboard', icon: DashboardIcon },
+      { to: '/tickets', itemKey: 'tickets', icon: TicketIcon },
+      { to: '/processes', itemKey: 'processes', icon: ChecklistIcon, permission: 'tickets:write' },
+      { to: '/problems', itemKey: 'problems', icon: WarningIcon, permission: 'tickets:write' },
+      { to: '/knowledge-base', itemKey: 'knowledgeBase', icon: BookIcon, permission: 'tickets:read' },
     ],
   },
   {
-    label: 'CMDB',
+    labelKey: 'cmdb',
     items: [
-      { to: '/assets', label: 'Assets', icon: AssetsIcon },
-      { to: '/devices', label: 'Devices', icon: DevicesIcon, permission: 'assets:read' },
-      { to: '/equipment-catalog', label: 'Equipment Catalog', icon: LayersIcon, permission: 'assets:manage' },
-      { to: '/services', label: 'Services', icon: ServiceMapIcon, permission: 'assets:manage' },
+      { to: '/assets', itemKey: 'assets', icon: AssetsIcon },
+      { to: '/devices', itemKey: 'devices', icon: DevicesIcon, permission: 'assets:read' },
+      { to: '/equipment-catalog', itemKey: 'equipmentCatalog', icon: LayersIcon, permission: 'assets:manage' },
+      { to: '/services', itemKey: 'services', icon: ServiceMapIcon, permission: 'assets:manage' },
     ],
   },
   {
-    label: 'Configuration',
+    labelKey: 'configuration',
     items: [
-      { to: '/ticket-statuses', label: 'Ticket Statuses', icon: CheckIcon, permission: 'tickets:manage_all' },
-      { to: '/custom-fields', label: 'Custom Fields', icon: SlidersIcon, permission: 'tickets:manage_all' },
-      { to: '/service-catalog', label: 'Service Catalog', icon: CatalogIcon, permission: 'tickets:manage_all' },
-      { to: '/process-templates', label: 'Process Templates', icon: ChecklistIcon, permission: 'tickets:manage_all' },
-      { to: '/macros', label: 'Macros', icon: BoltIcon, permission: 'tickets:manage_all' },
-      { to: '/sla-policies', label: 'SLA Policies', icon: ClockIcon, permission: 'tickets:manage_all' },
+      { to: '/ticket-statuses', itemKey: 'ticketStatuses', icon: CheckIcon, permission: 'tickets:manage_all' },
+      { to: '/custom-fields', itemKey: 'customFields', icon: SlidersIcon, permission: 'tickets:manage_all' },
+      { to: '/service-catalog', itemKey: 'serviceCatalog', icon: CatalogIcon, permission: 'tickets:manage_all' },
+      { to: '/process-templates', itemKey: 'processTemplates', icon: ChecklistIcon, permission: 'tickets:manage_all' },
+      { to: '/macros', itemKey: 'macros', icon: BoltIcon, permission: 'tickets:manage_all' },
+      { to: '/sla-policies', itemKey: 'slaPolicies', icon: ClockIcon, permission: 'tickets:manage_all' },
     ],
   },
   {
-    label: 'Operations',
+    labelKey: 'operations',
     items: [
-      { to: '/webhooks', label: 'Webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' },
-      { to: '/on-call', label: 'On-Call & Escalation', icon: BellIcon, permission: 'tickets:manage_all' },
-      { to: '/business-hours', label: 'Business Hours', icon: CalendarIcon, permission: 'tickets:manage_all' },
-      { to: '/ai-usage', label: 'AI Usage', icon: SparkleIcon, permission: 'tickets:manage_all' },
-      { to: '/ai-agent-activity', label: 'AI Agent Activity', icon: ShieldIcon, permission: 'tickets:manage_all' },
-      { to: '/ai-settings', label: 'AI Settings', icon: SparkleIcon, permission: 'tickets:manage_all' },
-      { to: '/data-export', label: 'Data Export', icon: DownloadIcon, permission: 'tickets:manage_all' },
+      { to: '/webhooks', itemKey: 'webhooks', icon: WebhookIcon, permission: 'tickets:manage_all' },
+      { to: '/on-call', itemKey: 'onCall', icon: BellIcon, permission: 'tickets:manage_all' },
+      { to: '/business-hours', itemKey: 'businessHours', icon: CalendarIcon, permission: 'tickets:manage_all' },
+      { to: '/ai-usage', itemKey: 'aiUsage', icon: SparkleIcon, permission: 'tickets:manage_all' },
+      { to: '/ai-agent-activity', itemKey: 'aiAgentActivity', icon: ShieldIcon, permission: 'tickets:manage_all' },
+      { to: '/ai-settings', itemKey: 'aiSettings', icon: SparkleIcon, permission: 'tickets:manage_all' },
+      { to: '/data-export', itemKey: 'dataExport', icon: DownloadIcon, permission: 'tickets:manage_all' },
     ],
   },
   {
-    label: 'Administration',
+    labelKey: 'administration',
     items: [
-      { to: '/users', label: 'Users', icon: UsersIcon, permission: 'users:manage' },
-      { to: '/roles', label: 'Roles', icon: ShieldIcon, permission: 'roles:manage' },
-      { to: '/api-keys', label: 'API Keys', icon: KeyIcon },
-      { to: '/email-channels', label: 'Email Channels', icon: MailIcon, permission: 'channels:manage' },
-      { to: '/telegram', label: 'Telegram', icon: PaperPlaneIcon, permission: 'channels:manage' },
-      { to: '/monitoring-integrations', label: 'Monitoring Integrations', icon: WarningIcon, permission: 'channels:manage' },
-      { to: '/appearance', label: 'Appearance', icon: PaletteIcon, permission: 'tickets:manage_all' },
-      { to: '/branding', label: 'Branding', icon: BrandIcon, permission: 'tickets:manage_all' },
+      { to: '/users', itemKey: 'users', icon: UsersIcon, permission: 'users:manage' },
+      { to: '/roles', itemKey: 'roles', icon: ShieldIcon, permission: 'roles:manage' },
+      { to: '/api-keys', itemKey: 'apiKeys', icon: KeyIcon },
+      { to: '/email-channels', itemKey: 'emailChannels', icon: MailIcon, permission: 'channels:manage' },
+      { to: '/telegram', itemKey: 'telegram', icon: PaperPlaneIcon, permission: 'channels:manage' },
+      { to: '/monitoring-integrations', itemKey: 'monitoringIntegrations', icon: WarningIcon, permission: 'channels:manage' },
+      { to: '/appearance', itemKey: 'appearance', icon: PaletteIcon, permission: 'tickets:manage_all' },
+      { to: '/branding', itemKey: 'branding', icon: BrandIcon, permission: 'tickets:manage_all' },
     ],
   },
 ];
 
 export function Layout() {
+  const { t } = useTranslation();
   const { logout, hasPermission } = useAuth();
   const [me, setMe] = useState<Me | null>(null);
 
@@ -138,9 +146,9 @@ export function Layout() {
             const visibleItems = group.items.filter((item) => !item.permission || hasPermission(item.permission));
             if (visibleItems.length === 0) return null;
             return (
-              <div key={group.label}>
+              <div key={group.labelKey}>
                 <span className="mb-1 block px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                  {group.label}
+                  {t(`nav.groups.${group.labelKey}`)}
                 </span>
                 <div className="space-y-0.5">
                   {visibleItems.map((item) => (
@@ -154,7 +162,7 @@ export function Layout() {
                       }
                     >
                       <item.icon />
-                      {item.label}
+                      {t(`nav.items.${item.itemKey}`)}
                     </NavLink>
                   ))}
                 </div>
@@ -163,13 +171,16 @@ export function Layout() {
           })}
         </nav>
 
+        <div className="border-t border-slate-100 px-4 py-2.5">
+          <LanguageSwitcher />
+        </div>
         <div className="flex items-center gap-2.5 border-t border-slate-100 px-4 py-3.5">
           <Avatar name={me?.name ?? '?'} size={28} />
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13px] font-semibold text-slate-800">{me?.name ?? '…'}</div>
             <div className="truncate text-[11.5px] capitalize text-slate-400">{me?.role?.key ?? ''}</div>
           </div>
-          <button onClick={logout} aria-label="Log out" className="flex-shrink-0 text-slate-400 hover:text-slate-700">
+          <button onClick={logout} aria-label={t('layout.logOut')} className="flex-shrink-0 text-slate-400 hover:text-slate-700">
             <LogoutIcon width={16} height={16} />
           </button>
         </div>

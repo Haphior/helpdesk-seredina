@@ -1,0 +1,132 @@
+{
+  "auth": {
+    "login": {
+      "tagline": "Helpdesk & ITSM software your team will actually enjoy using.",
+      "bullets": [
+        "Ticketing, assets & CMDB in one place",
+        "NOC/SOC alerts flow straight into tickets",
+        "Open source, self-hosted or cloud"
+      ],
+      "title": "Sign in to Seredina",
+      "subtitle": "Enter your workspace to continue.",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "noOrg": "No organization yet?",
+      "createOne": "Create one",
+      "failed": "Login failed"
+    },
+    "register": {
+      "tagline": "Set up your workspace in under a minute.",
+      "bullets": [
+        "Your own tenant, isolated by row-level security",
+        "Invite your team once you're in",
+        "No credit card, self-hosted or cloud"
+      ],
+      "title": "Create your organization",
+      "subtitle": "You'll be the first admin. Invite teammates after.",
+      "submit": "Create organization",
+      "submitting": "Creating…",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "failed": "Registration failed"
+    },
+    "fields": {
+      "orgSlug": "Organization slug",
+      "orgName": "Organization name",
+      "yourName": "Your name",
+      "yourEmail": "Your email",
+      "email": "Email",
+      "password": "Password"
+    },
+    "copyright": "© Seredina — AGPL-3.0"
+  },
+  "nav": {
+    "groups": {
+      "work": "Work",
+      "cmdb": "CMDB",
+      "configuration": "Configuration",
+      "operations": "Operations",
+      "administration": "Administration"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "tickets": "Tickets",
+      "processes": "Processes",
+      "problems": "Problems",
+      "knowledgeBase": "Knowledge Base",
+      "assets": "Assets",
+      "devices": "Devices",
+      "equipmentCatalog": "Equipment Catalog",
+      "services": "Services",
+      "ticketStatuses": "Ticket Statuses",
+      "customFields": "Custom Fields",
+      "serviceCatalog": "Service Catalog",
+      "processTemplates": "Process Templates",
+      "macros": "Macros",
+      "slaPolicies": "SLA Policies",
+      "webhooks": "Webhooks",
+      "onCall": "On-Call & Escalation",
+      "businessHours": "Business Hours",
+      "aiUsage": "AI Usage",
+      "aiAgentActivity": "AI Agent Activity",
+      "aiSettings": "AI Settings",
+      "dataExport": "Data Export",
+      "users": "Users",
+      "roles": "Roles",
+      "apiKeys": "API Keys",
+      "emailChannels": "Email Channels",
+      "telegram": "Telegram",
+      "monitoringIntegrations": "Monitoring Integrations",
+      "appearance": "Appearance",
+      "branding": "Branding",
+      "language": "Language"
+    }
+  },
+  "layout": {
+    "logOut": "Log out"
+  },
+  "language": {
+    "english": "English",
+    "spanish": "Español"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Hide or reorder widgets with the controls that appear on hover — it's saved per person, not tenant-wide.",
+    "loading": "Loading…",
+    "loadFailed": "Failed to load dashboard",
+    "hidden": "Hidden",
+    "moveUp": "Move {{widget}} widget up",
+    "moveDown": "Move {{widget}} widget down",
+    "hide": "Hide {{widget}} widget",
+    "show": "Show {{widget}} widget",
+    "widgets": {
+      "onboarding_checklist": "Get started",
+      "ticket_volume": "Ticket volume",
+      "priority_breakdown": "Open tickets by priority",
+      "sla_compliance": "SLA compliance",
+      "csat_score": "Customer satisfaction",
+      "agent_workload": "Agent workload",
+      "recent_activity": "Recent activity"
+    },
+    "sla": {
+      "empty": "No resolved tickets with an SLA target in the last 90 days.",
+      "met": "{{count}} met",
+      "breached": "{{count}} breached",
+      "summary": "met on time ({{total}} resolved, last 90 days)"
+    },
+    "csat": {
+      "empty": "No survey responses in the last 90 days.",
+      "summary": "avg. out of 5 ({{total}} responses, last 90 days)"
+    },
+    "workload": {
+      "unassigned": "Unassigned",
+      "empty": "No open tickets."
+    },
+    "onboarding": {
+      "allDone": "All set up — hide this widget any time with the eye icon above."
+    },
+    "recentActivity": {
+      "empty": "No tickets yet."
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiGet, apiPut, ApiError } from '../lib/api';
 import type {
   AgentWorkloadReport,
@@ -17,16 +18,6 @@ import { Card } from '../components/Card';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE } from '../lib/format';
 
-const WIDGET_LABEL: Record<WidgetType, string> = {
-  onboarding_checklist: 'Get started',
-  ticket_volume: 'Ticket volume',
-  priority_breakdown: 'Open tickets by priority',
-  sla_compliance: 'SLA compliance',
-  csat_score: 'Customer satisfaction',
-  agent_workload: 'Agent workload',
-  recent_activity: 'Recent activity',
-};
-
 interface DashboardData {
   onboarding: OnboardingChecklist;
   volume: TicketVolumePoint[];
@@ -38,6 +29,7 @@ interface DashboardData {
 }
 
 export function Dashboard() {
+  const { t } = useTranslation();
   const [prefs, setPrefs] = useState<DashboardPref[] | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +50,7 @@ export function Dashboard() {
         setPrefs(p.widgets);
         setData({ onboarding: ob, volume: v.volume, priority: pr.breakdown, sla: s, csat: c, workload: w, recent: r.tickets });
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load dashboard'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('dashboard.loadFailed')));
   }
 
   useEffect(load, []);
@@ -99,13 +91,11 @@ export function Dashboard() {
 
   return (
     <div className="px-8 py-7">
-      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">Dashboard</h1>
-      <p className="mb-5 text-[13.5px] text-slate-500">
-        Hide or reorder widgets with the controls that appear on hover — it's saved per person, not tenant-wide.
-      </p>
+      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">{t('dashboard.title')}</h1>
+      <p className="mb-5 text-[13.5px] text-slate-500">{t('dashboard.subtitle')}</p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {(!prefs || !data) && !error && <p className="text-sm text-slate-500">Loading…</p>}
+      {(!prefs || !data) && !error && <p className="text-sm text-slate-500">{t('dashboard.loading')}</p>}
 
       {prefs && data && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -145,7 +135,8 @@ function WidgetCard({
   onMoveDown: () => void;
   children: React.ReactNode;
 }) {
-  const label = WIDGET_LABEL[pref.widgetType];
+  const { t } = useTranslation();
+  const label = t(`dashboard.widgets.${pref.widgetType}`);
   return (
     <Card className={`group ${!pref.visible ? 'opacity-50' : ''}`}>
       <div className="mb-3 flex items-center justify-between">
@@ -155,7 +146,7 @@ function WidgetCard({
             iconOnly
             variant="ghost"
             size="sm"
-            aria-label={`Move ${label} widget up`}
+            aria-label={t('dashboard.moveUp', { widget: label })}
             onClick={onMoveUp}
             disabled={!canMoveUp}
           >
@@ -165,7 +156,7 @@ function WidgetCard({
             iconOnly
             variant="ghost"
             size="sm"
-            aria-label={`Move ${label} widget down`}
+            aria-label={t('dashboard.moveDown', { widget: label })}
             onClick={onMoveDown}
             disabled={!canMoveDown}
           >
@@ -175,14 +166,14 @@ function WidgetCard({
             iconOnly
             variant="ghost"
             size="sm"
-            aria-label={pref.visible ? `Hide ${label} widget` : `Show ${label} widget`}
+            aria-label={pref.visible ? t('dashboard.hide', { widget: label }) : t('dashboard.show', { widget: label })}
             onClick={onToggle}
           >
             {pref.visible ? <EyeIcon width={13} height={13} /> : <EyeOffIcon width={13} height={13} />}
           </Button>
         </div>
       </div>
-      {pref.visible ? children : <p className="text-xs text-slate-400">Hidden</p>}
+      {pref.visible ? children : <p className="text-xs text-slate-400">{t('dashboard.hidden')}</p>}
     </Card>
   );
 }
@@ -277,38 +268,40 @@ function PriorityBreakdownWidget({ counts }: { counts: Record<string, number> })
 }
 
 function SlaComplianceWidget({ report }: { report: SlaComplianceReport }) {
+  const { t } = useTranslation();
   if (report.total === 0) {
-    return <p className="text-xs text-slate-400">No resolved tickets with an SLA target in the last 90 days.</p>;
+    return <p className="text-xs text-slate-400">{t('dashboard.sla.empty')}</p>;
   }
   const pct = report.percentMet ?? 0;
   return (
     <div>
       <div className="mb-2 flex items-baseline gap-2">
         <span className="text-3xl font-bold text-slate-900">{pct}%</span>
-        <span className="text-xs text-slate-400">met on time ({report.total} resolved, last 90 days)</span>
+        <span className="text-xs text-slate-400">{t('dashboard.sla.summary', { total: report.total })}</span>
       </div>
       <div className="flex h-2 overflow-hidden rounded-full bg-slate-100">
         <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
         <div className="h-full bg-rose-400" style={{ width: `${100 - pct}%` }} />
       </div>
       <div className="mt-1.5 flex justify-between text-[11px] text-slate-400">
-        <span>{report.met} met</span>
-        <span>{report.breached} breached</span>
+        <span>{t('dashboard.sla.met', { count: report.met })}</span>
+        <span>{t('dashboard.sla.breached', { count: report.breached })}</span>
       </div>
     </div>
   );
 }
 
 function CsatScoreWidget({ summary }: { summary: CsatSummary }) {
+  const { t } = useTranslation();
   if (summary.total === 0) {
-    return <p className="text-xs text-slate-400">No survey responses in the last 90 days.</p>;
+    return <p className="text-xs text-slate-400">{t('dashboard.csat.empty')}</p>;
   }
   const max = Math.max(1, ...Object.values(summary.distribution));
   return (
     <div>
       <div className="mb-2 flex items-baseline gap-2">
         <span className="text-3xl font-bold text-slate-900">{summary.average}</span>
-        <span className="text-xs text-slate-400">avg. out of 5 ({summary.total} responses, last 90 days)</span>
+        <span className="text-xs text-slate-400">{t('dashboard.csat.summary', { total: summary.total })}</span>
       </div>
       <div className="flex flex-col gap-1.5">
         {[5, 4, 3, 2, 1].map((star) => (
@@ -324,6 +317,7 @@ function CsatScoreWidget({ summary }: { summary: CsatSummary }) {
 }
 
 function AgentWorkloadWidget({ report }: { report: AgentWorkloadReport }) {
+  const { t } = useTranslation();
   const max = Math.max(1, report.unassigned, ...report.agents.map((a) => a.count));
   return (
     <div className="flex flex-col gap-2">
@@ -336,24 +330,27 @@ function AgentWorkloadWidget({ report }: { report: AgentWorkloadReport }) {
       ))}
       {report.unassigned > 0 && (
         <div className="flex items-center gap-2.5">
-          <span className="w-24 truncate text-[12.5px] text-slate-400">Unassigned</span>
+          <span className="w-24 truncate text-[12.5px] text-slate-400">{t('dashboard.workload.unassigned')}</span>
           <ProgressBar value={report.unassigned} max={max} colorClassName="bg-slate-300" />
           <span className="w-6 text-right text-[12.5px] font-medium text-slate-400">{report.unassigned}</span>
         </div>
       )}
-      {report.agents.length === 0 && report.unassigned === 0 && <p className="text-xs text-slate-400">No open tickets.</p>}
+      {report.agents.length === 0 && report.unassigned === 0 && (
+        <p className="text-xs text-slate-400">{t('dashboard.workload.empty')}</p>
+      )}
     </div>
   );
 }
 
 function OnboardingChecklistWidget({ checklist }: { checklist: OnboardingChecklist }) {
+  const { t } = useTranslation();
   if (checklist.allDone) {
     return (
       <div className="flex items-center gap-2 text-[13px] text-slate-500">
         <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
           <CheckIcon width={12} height={12} />
         </span>
-        All set up — hide this widget any time with the eye icon above.
+        {t('dashboard.onboarding.allDone')}
       </div>
     );
   }
@@ -380,7 +377,8 @@ function OnboardingChecklistWidget({ checklist }: { checklist: OnboardingCheckli
 }
 
 function RecentActivityWidget({ tickets }: { tickets: Ticket[] }) {
-  if (tickets.length === 0) return <p className="text-xs text-slate-400">No tickets yet.</p>;
+  const { t } = useTranslation();
+  if (tickets.length === 0) return <p className="text-xs text-slate-400">{t('dashboard.recentActivity.empty')}</p>;
   return (
     <div className="flex flex-col gap-2">
       {tickets.map((t) => (

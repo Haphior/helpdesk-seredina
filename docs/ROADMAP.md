@@ -1623,18 +1623,25 @@ these real users actually want:
   Microsoft Intune), effectively a separate product — revisit only if there's
   real demand, not preemptively.
 
-**Console internationalization (i18n), added 2026-09-21.** The admin console and
-self-service portal are English-only today — real value for a self-hosted, open-
-source tool whose adopter base skews international (unlike a hosted SaaS with one
-default locale, a self-hosted operator's own staff and customers may not read
-English at all). Concretely: extract every user-facing string in `apps/web` into a
-translation resource, ship a real second locale at launch (not just English with
-scaffolding around it — a locale nobody can select yet proves nothing), and shape
-the file format so a community contributor can add a new language by editing one
-file and opening a PR, no build tooling or paid localization vendor required —
-deliberately a cost-free way to grow, unlike the OAuth-app/code-signing items
-above. Framework choice (react-i18next vs. a lighter homegrown key→string map) and
-which second locale ships first are open questions for whoever picks this up.
+**Console internationalization (i18n) — 🚧 v1 shipped 2026-09-21, partial coverage
+(ADR 0049).** The admin console was English-only; real value for a self-hosted,
+open-source tool whose adopter base skews international (unlike a hosted SaaS with
+one default locale, a self-hosted operator's own staff and customers may not read
+English at all). Shipped: `react-i18next`, a per-user (not per-tenant) language
+preference persisted in `localStorage`, a real second locale (Spanish, not just
+scaffolding) covering Login/Register/the shared `AuthLayout`, the sidebar
+navigation (all groups and item labels), and the Dashboard (title, all 7 widget
+labels, every widget's empty-state copy) — the highest-traffic screens, the same
+phasing this project already used for the design system's original rollout. The
+file format (one JSON per locale, namespaced by feature) lets a community
+contributor add a language by editing one file, no build tooling or paid
+localization vendor required — deliberately a cost-free way to grow, unlike the
+OAuth-app/code-signing items above. **Not yet covered, named explicitly rather
+than silently incomplete**: Tickets Queue and Ticket Detail (the largest remaining
+surface, deferred to its own pass) and every other page under CMDB/Configuration/
+Operations/Administration (~49 files); the dashboard's onboarding-checklist item
+text is backend-supplied and needs a locale-aware API response, not just a
+frontend string sweep.
 
 **AI-assisted initial setup, added 2026-09-21.** Phase 2's first-run product tour
 (✅, `getOnboardingChecklist`) is a static checklist — customize a status, set an

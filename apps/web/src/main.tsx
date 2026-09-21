@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import * as Sentry from '@sentry/react';
 import { App } from './App';
 import { initErrorTracking } from './lib/errorTracking';
+import './i18n';
 import './index.css';
 
 initErrorTracking();

@@ -367,3 +367,12 @@ export function DevicesIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function GlobeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="M2.5 10h15M10 2.5c2.1 2.1 3.2 4.8 3.2 7.5s-1.1 5.4-3.2 7.5c-2.1-2.1-3.2-4.8-3.2-7.5S7.9 4.6 10 2.5Z" />
+    </Icon>
+  );
+}

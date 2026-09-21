@@ -1,0 +1,132 @@
+{
+  "auth": {
+    "login": {
+      "tagline": "Software de mesa de ayuda e ITSM que tu equipo realmente disfrutará usar.",
+      "bullets": [
+        "Tickets, activos y CMDB en un solo lugar",
+        "Las alertas de NOC/SOC se convierten directamente en tickets",
+        "Código abierto, autoalojado o en la nube"
+      ],
+      "title": "Inicia sesión en Seredina",
+      "subtitle": "Ingresa a tu espacio de trabajo para continuar.",
+      "submit": "Iniciar sesión",
+      "submitting": "Iniciando sesión…",
+      "noOrg": "¿Aún no tienes una organización?",
+      "createOne": "Crea una",
+      "failed": "Error al iniciar sesión"
+    },
+    "register": {
+      "tagline": "Configura tu espacio de trabajo en menos de un minuto.",
+      "bullets": [
+        "Tu propio tenant, aislado mediante seguridad a nivel de fila",
+        "Invita a tu equipo una vez dentro",
+        "Sin tarjeta de crédito, autoalojado o en la nube"
+      ],
+      "title": "Crea tu organización",
+      "subtitle": "Serás el primer administrador. Invita a tu equipo después.",
+      "submit": "Crear organización",
+      "submitting": "Creando…",
+      "haveAccount": "¿Ya tienes una cuenta?",
+      "signIn": "Iniciar sesión",
+      "failed": "Error al registrarse"
+    },
+    "fields": {
+      "orgSlug": "Identificador de la organización",
+      "orgName": "Nombre de la organización",
+      "yourName": "Tu nombre",
+      "yourEmail": "Tu correo electrónico",
+      "email": "Correo electrónico",
+      "password": "Contraseña"
+    },
+    "copyright": "© Seredina — AGPL-3.0"
+  },
+  "nav": {
+    "groups": {
+      "work": "Trabajo",
+      "cmdb": "CMDB",
+      "configuration": "Configuración",
+      "operations": "Operaciones",
+      "administration": "Administración"
+    },
+    "items": {
+      "dashboard": "Panel",
+      "tickets": "Tickets",
+      "processes": "Procesos",
+      "problems": "Problemas",
+      "knowledgeBase": "Base de Conocimiento",
+      "assets": "Activos",
+      "devices": "Dispositivos",
+      "equipmentCatalog": "Catálogo de Equipos",
+      "services": "Servicios",
+      "ticketStatuses": "Estados de Tickets",
+      "customFields": "Campos Personalizados",
+      "serviceCatalog": "Catálogo de Servicios",
+      "processTemplates": "Plantillas de Procesos",
+      "macros": "Macros",
+      "slaPolicies": "Políticas de SLA",
+      "webhooks": "Webhooks",
+      "onCall": "Guardia y Escalamiento",
+      "businessHours": "Horario Laboral",
+      "aiUsage": "Uso de IA",
+      "aiAgentActivity": "Actividad del Agente IA",
+      "aiSettings": "Configuración de IA",
+      "dataExport": "Exportar Datos",
+      "users": "Usuarios",
+      "roles": "Roles",
+      "apiKeys": "Claves de API",
+      "emailChannels": "Canales de Correo",
+      "telegram": "Telegram",
+      "monitoringIntegrations": "Integraciones de Monitoreo",
+      "appearance": "Apariencia",
+      "branding": "Marca",
+      "language": "Idioma"
+    }
+  },
+  "layout": {
+    "logOut": "Cerrar sesión"
+  },
+  "language": {
+    "english": "English",
+    "spanish": "Español"
+  },
+  "dashboard": {
+    "title": "Panel",
+    "subtitle": "Oculta o reordena los widgets con los controles que aparecen al pasar el cursor — se guarda por persona, no por tenant.",
+    "loading": "Cargando…",
+    "loadFailed": "No se pudo cargar el panel",
+    "hidden": "Oculto",
+    "moveUp": "Mover el widget {{widget}} hacia arriba",
+    "moveDown": "Mover el widget {{widget}} hacia abajo",
+    "hide": "Ocultar el widget {{widget}}",
+    "show": "Mostrar el widget {{widget}}",
+    "widgets": {
+      "onboarding_checklist": "Primeros pasos",
+      "ticket_volume": "Volumen de tickets",
+      "priority_breakdown": "Tickets abiertos por prioridad",
+      "sla_compliance": "Cumplimiento de SLA",
+      "csat_score": "Satisfacción del cliente",
+      "agent_workload": "Carga de trabajo de agentes",
+      "recent_activity": "Actividad reciente"
+    },
+    "sla": {
+      "empty": "No hay tickets resueltos con una meta de SLA en los últimos 90 días.",
+      "met": "{{count}} cumplidos",
+      "breached": "{{count}} incumplidos",
+      "summary": "cumplidos a tiempo ({{total}} resueltos, últimos 90 días)"
+    },
+    "csat": {
+      "empty": "No hay respuestas de encuestas en los últimos 90 días.",
+      "summary": "prom. sobre 5 ({{total}} respuestas, últimos 90 días)"
+    },
+    "workload": {
+      "unassigned": "Sin asignar",
+      "empty": "No hay tickets abiertos."
+    },
+    "onboarding": {
+      "allDone": "Todo configurado — oculta este widget cuando quieras con el ícono del ojo."
+    },
+    "recentActivity": {
+      "empty": "Aún no hay tickets."
+    }
+  }
+}
