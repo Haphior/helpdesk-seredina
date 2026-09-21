@@ -51,7 +51,16 @@ initErrorTracking();
 export function buildApp() {
   // Explicit, not the framework default by omission -- Fastify's implicit 1 MiB
   // applied either way, but this makes it a decision instead of an accident.
-  const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
+  // redact: defense-in-depth, not a fix for an existing leak -- no route handler
+  // currently logs the Authorization header, but nothing structurally stops one
+  // from starting to (e.g. a future `request.log.info(request.headers)` debug
+  // line), and pino's redact runs before the log line is ever written, catching
+  // that mistake automatically instead of relying on every future handler to
+  // remember not to.
+  const app = Fastify({
+    logger: { level: 'info', redact: ['req.headers.authorization', 'req.headers.cookie'] },
+    bodyLimit: 1024 * 1024,
+  });
   attachErrorTracking(app);
 
   app.register(helmet);

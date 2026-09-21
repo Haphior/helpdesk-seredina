@@ -4,6 +4,10 @@
 
 <h1 align="center">Seredina</h1>
 <p align="center"><b>Open-source ITSM that meets you in the middle.</b></p>
+<p align="center">
+  <a href="https://github.com/Haphior/helpdesk-seredina/actions/workflows/ci.yml"><img src="https://github.com/Haphior/helpdesk-seredina/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
+</p>
 
 Ticketing, asset management/CMDB, and NOC/SOC alert ingestion — with an AI copilot
 that drafts, and a human who approves — in one open-source helpdesk. "Seredina"
@@ -14,26 +18,31 @@ Run it as a self-hosted Docker deployment or as a multi-tenant cloud service —
 codebase, same containers, your choice. Full source, AGPL-3.0, no separate
 "enterprise" fork holding features back.
 
-Status: Phase 1 done, Phase 2 in progress (ticketing core, agent console, CMDB +
-agentless discovery, NOC/SOC alert ingestion, AI copilot v1, SLA engine, macros,
-custom fields) — see [docs/ROADMAP.md](docs/ROADMAP.md) for what's shipped and
-what's next.
+Status: Phases 0-5 done (multi-tenant ticketing core, SLA + macros + service
+catalog + change/problem/release management, AI copilot with autonomous mode and
+an MCP server, cloud hardening, Slack/Teams/Telegram/Zabbix integrations, and a
+real endpoint agent for hardware/software inventory), plus a first pass of
+console internationalization (English + Spanish) — see
+[docs/ROADMAP.md](docs/ROADMAP.md) for the full breakdown of what's shipped,
+what's disclosed-but-deferred, and what's still backlog.
 
 ## Stack
 
 - **API**: Node.js/TypeScript, Fastify, Prisma, PostgreSQL (with Row-Level Security for
   tenant isolation)
 - **Web**: React, Vite, Tailwind
-- **Worker**: BullMQ (Redis) for agentless network discovery and outbound email
-  send; a plain interval loop for inbound email polling (see
-  docs/adr/0004-email-channel.md for why that one isn't BullMQ too); AI jobs, SLA
-  timers still to come
-- **AI**: pluggable provider adapters (`packages/ai-adapters`; Anthropic implemented,
-  optional — unset `ANTHROPIC_API_KEY` and the feature 503s cleanly) power a v1
-  copilot (suggest-reply/summarize on a ticket, human approves — see
-  docs/adr/0005-ai-copilot.md); autonomous mode and a first-class MCP server so
-  external agents can operate on tickets/knowledge base under the same guardrails
-  are still Phase 3
+- **Worker**: BullMQ (Redis) for agentless network discovery, outbound email/
+  webhook/notification delivery, and SLA escalation timers; a plain interval
+  loop for inbound email polling (see docs/adr/0004-email-channel.md for why
+  that one isn't BullMQ too)
+- **AI**: pluggable provider adapters (`packages/ai-adapters`; Anthropic and
+  OpenAI implemented, plus a local Ollama option — bring your own key, or unset
+  it entirely and the feature 503s cleanly) power a copilot (suggest-reply/
+  summarize on a ticket), a full autonomous tool-use loop gated by a per-tenant
+  Autonomy Policy (mutating actions need human approval unless explicitly
+  allow-listed), and `apps/mcp-server` (stdio + Streamable HTTP) so an external
+  agent can operate on tickets/knowledge base under the same guardrails — see
+  docs/adr/0005-ai-copilot.md and docs/adr/0033-ai-tool-catalog-and-autonomy.md
 - **License**: AGPL-3.0-only — see [LICENSE](LICENSE)
 
 ## Repo layout

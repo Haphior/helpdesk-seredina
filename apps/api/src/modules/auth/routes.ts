@@ -26,7 +26,7 @@ const registerSchema = z.object({
   tenantName: z.string().min(1),
   adminEmail: z.string().email(),
   adminName: z.string().min(1),
-  password: z.string().min(8),
+  password: z.string().min(8).max(128),
 });
 
 const loginSchema = z.object({
@@ -38,7 +38,7 @@ const loginSchema = z.object({
 const createUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
-  password: z.string().min(8),
+  password: z.string().min(8).max(128),
   roleKey: z.string().min(1),
 });
 
@@ -63,7 +63,7 @@ const updateRoleSchema = z.object({
   permissions: z.array(z.enum(PERMISSIONS)).optional(),
 });
 
-const resetPasswordSchema = z.object({ password: z.string().min(8) });
+const resetPasswordSchema = z.object({ password: z.string().min(8).max(128) });
 
 export default async function authRoutes(app: FastifyInstance) {
   // Tighter than the global default (see index.ts) -- these are the two routes an
