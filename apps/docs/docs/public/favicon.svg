@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!--
+    Same geometry as Logo.tsx, unscaled. Unlike the previous arc-based
+    mark, three semi-transparent filled circles need no dedicated
+    small-size treatment. Verified by rendering this exact markup at
+    128, 64, 32, and 16px: it holds up at every size on fill opacity
+    alone, since there is no stroke or line endpoint to collapse below
+    1px.
+  -->
+  <circle cx="78" cy="88" r="52" fill="#818cf8" fill-opacity="0.88" />
+  <circle cx="128" cy="72" r="42" fill="#6366f1" fill-opacity="0.88" />
+  <circle cx="112" cy="132" r="46" fill="#8b5cf6" fill-opacity="0.9" />
+</svg>

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 build/
+apps/docs/docs/.vitepress/cache/
 .env
 .env.*
 !.env.example

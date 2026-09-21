@@ -18,6 +18,12 @@ Run it as a self-hosted Docker deployment or as a multi-tenant cloud service —
 codebase, same containers, your choice. Full source, AGPL-3.0, no separate
 "enterprise" fork holding features back.
 
+**Full documentation**: **[haphior.github.io/helpdesk-seredina](https://haphior.github.io/helpdesk-seredina/)**
+— user guide (every feature, from the console's point of view), deployment/
+hosting reference, and the API/webhooks/MCP-server integration reference.
+Source lives in `apps/docs/`, built with [VitePress](https://vitepress.dev)
+and deployed via `.github/workflows/docs.yml`.
+
 Status: Phases 0-5 done (multi-tenant ticketing core, SLA + macros + service
 catalog + change/problem/release management, AI copilot with autonomous mode and
 an MCP server, cloud hardening, Slack/Teams/Telegram/Zabbix integrations, and a
@@ -53,6 +59,7 @@ apps/
   web/          Agent/admin console
   worker/       Discovery + email (IMAP poll, SMTP send) background processing — src/email/, src/discovery/
   mcp-server/   MCP server exposing the same tool catalog as the AI copilot/autonomous modes
+  docs/         User guide + deployment + API reference (VitePress), deployed to GitHub Pages
 packages/
   db/           Prisma schema/migrations/RLS policies + the guarded-client/withTenantTx
                 tenant-isolation mechanism -- shared by apps/api and apps/worker,
