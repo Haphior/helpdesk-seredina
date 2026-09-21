@@ -70,6 +70,8 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   TenantUiSettings: 'tenantId',
   TelegramChannel: 'tenantId',
   CsatResponse: 'tenantId',
+  DeviceEnrollmentToken: 'tenantId',
+  Device: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

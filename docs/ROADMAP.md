@@ -1492,14 +1492,31 @@ sandbox can't orchestrate multiple replicas behind a load balancer). See
 
 ## Phase 5 — Endpoint agents (Windows/Linux/macOS)
 
-Not yet built. Deeper than Phase 1's agentless discovery (a best-effort TCP+SNMP
-network scan that only ever reads what's reachable from outside a device) — a
-real lightweight background agent installed *on* a device: full hardware/software
-inventory, OS patch level, disk-encryption/AV status, and — opt-in, higher trust
-— remote script execution and software/patch deployment. Sequenced after Phase 4
-deliberately: letting a fleet of real, privileged endpoints phone home safely is
-much lower-stakes once the multi-tenant cloud hardening above already exists,
-than bolting it onto an earlier phase.
+Deeper than Phase 1's agentless discovery (a best-effort TCP+SNMP network scan
+that only ever reads what's reachable from outside a device) — a real lightweight
+background agent installed *on* a device: full hardware/software inventory, OS
+patch level, disk-encryption/AV status, and — opt-in, higher trust — remote script
+execution and software/patch deployment. Sequenced after Phase 4 deliberately:
+letting a fleet of real, privileged endpoints phone home safely is much
+lower-stakes once the multi-tenant cloud hardening above already exists, than
+bolting it onto an earlier phase.
+
+**Tier 1 (inventory-only) ✅ (this pass).** `apps/agent`, a real Node.js reference
+agent (zero dependencies, no build step, no signed installer — researched and
+confirmed this is the real pattern GLPI-Agent itself uses, not a shortcut) reports
+hardware/software inventory, OS version, disk encryption, and antivirus status from
+a genuinely real device. Per-device enrollment via a short-lived, single-use token
+minting a permanent per-device credential (same exact-match-hash shape as `ApiKey`)
+— a single compromised device can be revoked without touching any other device.
+New `Device`/`DeviceEnrollmentToken` models plus new inventory columns directly on
+the existing `Asset` model (a new `discoverySource: 'AGENT'` value, following the
+same source-specific-nullable-column shape agentless discovery's `snmpSysDescr`
+already established). Tiers 2/3 (remote execution, software deployment) remain
+designed-for but not built — the safest-default posture the roadmap itself called
+for, mirroring `AutonomyPolicy`'s own tiering from Phase 3. Signed installers need
+a real code-signing certificate and a Windows/macOS CI runner, neither available in
+this sandbox — named as concrete next-step work, not silently skipped. See
+`docs/adr/0047-endpoint-agents-v1.md`.
 
 **Explicitly desktop/server only — not Android/iOS in this phase.** Real mobile
 MDM means enrolling as an Android Enterprise or Apple MDM device-policy

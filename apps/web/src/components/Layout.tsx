@@ -8,6 +8,7 @@ import { Avatar } from './Avatar';
 import { NotificationBell } from './NotificationBell';
 import {
   AssetsIcon,
+  DevicesIcon,
   BellIcon,
   BoltIcon,
   BookIcon,
@@ -64,6 +65,7 @@ const navGroups: { label: string; items: { to: string; label: string; icon: Comp
     label: 'CMDB',
     items: [
       { to: '/assets', label: 'Assets', icon: AssetsIcon },
+      { to: '/devices', label: 'Devices', icon: DevicesIcon, permission: 'assets:read' },
       { to: '/equipment-catalog', label: 'Equipment Catalog', icon: LayersIcon, permission: 'assets:manage' },
       { to: '/services', label: 'Services', icon: ServiceMapIcon, permission: 'assets:manage' },
     ],

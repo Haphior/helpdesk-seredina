@@ -34,7 +34,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   on_call_schedules, on_call_shifts, escalation_tiers, escalation_runs, saved_views,
   notifications, notification_preferences, ai_usage_logs, attachments, kb_chunks,
   autonomy_policies, ai_agent_runs, tenant_ai_settings, tenant_ui_settings, telegram_channels,
-  csat_responses
+  csat_responses, device_enrollment_tokens, devices
   TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
@@ -67,7 +67,7 @@ BEGIN
     'on_call_schedules', 'on_call_shifts', 'escalation_tiers', 'escalation_runs', 'saved_views',
     'notifications', 'notification_preferences', 'ai_usage_logs', 'attachments', 'kb_chunks',
     'autonomy_policies', 'ai_agent_runs', 'tenant_ai_settings', 'tenant_ui_settings', 'telegram_channels',
-    'csat_responses'
+    'csat_responses', 'device_enrollment_tokens', 'devices'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
@@ -173,3 +173,33 @@ $$;
 
 REVOKE ALL ON FUNCTION public.resolve_tenant_id_by_telegram_webhook(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_tenant_id_by_telegram_webhook(text) TO app_tenant;
+
+-- Same escape-hatch pattern as resolve_tenant_id_by_api_key_hash, twice over:
+-- an endpoint agent's enrollment call and its own check-in call both carry
+-- only an opaque credential, no tenant context yet (docs/adr/0047-endpoint-
+-- agents-v1.md). Exposes only tenant_id -- never hashed_token/hashed_credential
+-- or anything else about the row, which the API re-fetches through the normal
+-- tenant-scoped path once it has a tenantId.
+CREATE OR REPLACE FUNCTION public.resolve_tenant_id_by_enrollment_token_hash(p_hashed_token text)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT tenant_id FROM device_enrollment_tokens WHERE hashed_token = p_hashed_token;
+$$;
+
+REVOKE ALL ON FUNCTION public.resolve_tenant_id_by_enrollment_token_hash(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resolve_tenant_id_by_enrollment_token_hash(text) TO app_tenant;
+
+CREATE OR REPLACE FUNCTION public.resolve_tenant_id_by_device_credential_hash(p_hashed_credential text)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT tenant_id FROM devices WHERE hashed_credential = p_hashed_credential;
+$$;
+
+REVOKE ALL ON FUNCTION public.resolve_tenant_id_by_device_credential_hash(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resolve_tenant_id_by_device_credential_hash(text) TO app_tenant;

@@ -136,7 +136,18 @@ export interface CustomFieldDefinition {
 
 export type AssetType = 'SERVER' | 'WORKSTATION' | 'NETWORK_DEVICE' | 'PRINTER' | 'MOBILE_DEVICE' | 'OTHER';
 export type AssetStatus = 'ACTIVE' | 'INACTIVE' | 'RETIRED';
-export type AssetDiscoverySource = 'MANUAL' | 'AGENTLESS_SCAN';
+export type AssetDiscoverySource = 'MANUAL' | 'AGENTLESS_SCAN' | 'AGENT';
+
+export interface AssetDiskSummary {
+  mount: string;
+  totalGb: number;
+  freeGb: number;
+}
+
+export interface AssetInstalledPackage {
+  name: string;
+  version?: string;
+}
 
 export interface Asset {
   id: string;
@@ -152,6 +163,14 @@ export interface Asset {
   operatingSystem: string | null;
   discoverySource: AssetDiscoverySource;
   snmpSysDescr: string | null;
+  // Set only for discoverySource: 'AGENT' -- see docs/adr/0047-endpoint-agents-v1.md.
+  cpuModel: string | null;
+  memoryTotalMb: number | null;
+  diskSummary: AssetDiskSummary[] | null;
+  osVersion: string | null;
+  diskEncrypted: boolean | null;
+  antivirusStatus: string | null;
+  installedPackages: AssetInstalledPackage[] | null;
   lastSeenAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -182,6 +201,15 @@ export interface AssetSummary {
 export interface AssetDetail extends Asset {
   tickets: { ticket: { id: string; number: number; subject: string } }[];
   services: { id: string; name: string }[];
+}
+
+export interface DeviceListItem {
+  id: string;
+  platform: string;
+  agentVersion: string | null;
+  enrolledAt: string;
+  revokedAt: string | null;
+  asset: { id: string; name: string; hostname: string | null; lastSeenAt: string | null; osVersion: string | null };
 }
 
 export type DiscoveryJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';

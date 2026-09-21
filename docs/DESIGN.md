@@ -188,6 +188,9 @@ Flat by default. A single `shadow-sm` is the only elevation token, applied to to
 ### Channel Glyph (`components/ChannelGlyph.tsx`)
 - The logo's 3-circle motif, made functional: highlights which channel-group a ticket arrived through (email / api·catalog·widget / alert), dimmed uniformly for agent-logged tickets. Renders only under the default theme ("Meet in the Middle") — hidden under "Refined" via `theme !== 'refined'` at each call site (`TicketsQueue.tsx`, `TicketDetail.tsx`).
 
+### Devices (`pages/Devices.tsx`)
+- CMDB nav group. A "Generate enrollment command" button reveals a one-time, copy-pasteable shell command (`components/Copyable.tsx`'s `CopyableCodeBlock`, extracted from `MonitoringIntegrations.tsx` once a second page needed it) and a device table (hostname/platform/last check-in/status, `Active`/`Revoked` badges). Each row links to the enrolled device's own `Asset` detail page, which gets a read-only "Agent inventory" card (CPU/memory/OS version/disk encryption/antivirus/disk breakdown) when `discoverySource === 'AGENT'`.
+
 ### CSAT Survey (`pages/PublicCsat.tsx`)
 - Public, unauthenticated page at `/csat/:tenantSlug/:token`. Uses `PortalBrand` like the other 2 public pages. A 5-star `StarPicker` (amber fill on select/hover) plus an optional comment field; submitting shows a read-only filled-star summary and a thank-you, and reloading the same link shows that same state rather than the form again (the answer is idempotent).
 

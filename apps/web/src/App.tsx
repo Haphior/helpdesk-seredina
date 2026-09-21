@@ -9,6 +9,7 @@ import { TicketsQueue } from './pages/TicketsQueue';
 import { TicketDetail } from './pages/TicketDetail';
 import { ApiKeys } from './pages/ApiKeys';
 import { Assets } from './pages/Assets';
+import { Devices } from './pages/Devices';
 import { AssetDetail } from './pages/AssetDetail';
 import { Users } from './pages/Users';
 import { Roles } from './pages/Roles';
@@ -61,6 +62,7 @@ export function App() {
             <Route path="/tickets" element={<TicketsQueue />} />
             <Route path="/tickets/:id" element={<TicketDetail />} />
             <Route path="/assets" element={<Assets />} />
+            <Route path="/devices" element={<Devices />} />
             <Route path="/assets/:id" element={<AssetDetail />} />
             <Route path="/api-keys" element={<ApiKeys />} />
             <Route path="/users" element={<Users />} />

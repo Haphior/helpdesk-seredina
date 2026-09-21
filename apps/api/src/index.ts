@@ -11,6 +11,7 @@ import { attachErrorTracking, initErrorTracking } from './lib/errorTracking';
 import { rateLimitRedis } from './lib/rateLimitRedis';
 import jwtPlugin from './plugins/jwt';
 import apiKeyAuthPlugin from './plugins/apiKeyAuth';
+import deviceAuthPlugin from './plugins/deviceAuth';
 import authRoutes from './modules/auth/routes';
 import apiKeyRoutes from './modules/apikeys/routes';
 import ticketRoutes from './modules/tickets/routes';
@@ -43,6 +44,7 @@ import uiSettingsRoutes from './modules/uisettings/routes';
 import brandingRoutes from './modules/branding/routes';
 import telegramRoutes from './modules/telegram/routes';
 import csatRoutes from './modules/csat/routes';
+import deviceRoutes from './modules/devices/routes';
 
 initErrorTracking();
 
@@ -81,6 +83,7 @@ export function buildApp() {
 
   app.register(jwtPlugin);
   app.register(apiKeyAuthPlugin);
+  app.register(deviceAuthPlugin);
   app.register(authRoutes);
   app.register(apiKeyRoutes);
   app.register(ticketRoutes);
@@ -113,6 +116,7 @@ export function buildApp() {
   app.register(brandingRoutes);
   app.register(telegramRoutes);
   app.register(csatRoutes);
+  app.register(deviceRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

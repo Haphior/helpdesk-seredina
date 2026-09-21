@@ -358,3 +358,12 @@ export function StarIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function DevicesIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="2.5" y="3" width="15" height="10" rx="1.5" />
+      <path d="M7 16.5h6M10 13v3.5" />
+    </Icon>
+  );
+}

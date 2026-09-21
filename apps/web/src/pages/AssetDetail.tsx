@@ -104,6 +104,41 @@ export function AssetDetail() {
             )}
           </Card>
 
+          {asset.discoverySource === 'AGENT' && (
+            <Card>
+              <h2 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-slate-400">Agent inventory</h2>
+              <dl className="grid grid-cols-2 gap-3 text-[13px]">
+                <Spec label="CPU" value={asset.cpuModel} />
+                <Spec label="Memory" value={asset.memoryTotalMb ? `${(asset.memoryTotalMb / 1024).toFixed(1)} GB` : null} />
+                <Spec label="OS version" value={asset.osVersion} />
+                <Spec
+                  label="Disk encryption"
+                  value={asset.diskEncrypted === null ? null : asset.diskEncrypted ? 'Enabled' : 'Disabled'}
+                />
+                <Spec label="Antivirus" value={asset.antivirusStatus} />
+                <Spec
+                  label="Installed packages"
+                  value={asset.installedPackages ? `${asset.installedPackages.length} packages` : null}
+                />
+              </dl>
+              {asset.diskSummary && asset.diskSummary.length > 0 && (
+                <div className="mt-3 border-t border-slate-100 pt-3">
+                  <div className="mb-1.5 text-[11.5px] font-semibold uppercase tracking-wide text-slate-400">Disks</div>
+                  <div className="flex flex-col gap-1">
+                    {asset.diskSummary.map((disk, i) => (
+                      <div key={i} className="flex justify-between text-[12.5px] text-slate-600">
+                        <span>{disk.mount}</span>
+                        <span className="text-slate-400">
+                          {disk.freeGb.toFixed(1)} GB free of {disk.totalGb.toFixed(1)} GB
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
           <Card>
             <h2 className="mb-2.5 text-[13px] font-bold uppercase tracking-wide text-slate-400">
               Linked tickets ({asset.tickets.length})

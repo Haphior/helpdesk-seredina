@@ -47,6 +47,8 @@ model Tenant {
   assets          Asset[]
   ticketAssets    TicketAsset[]
   discoveryJobs   DiscoveryJob[]
+  devices               Device[]
+  deviceEnrollmentTokens DeviceEnrollmentToken[]
   emailChannels   EmailChannel[]
   customFieldDefinitions CustomFieldDefinition[]
   manufacturers   Manufacturer[]
@@ -533,6 +535,7 @@ enum AssetStatus {
 enum AssetDiscoverySource {
   MANUAL
   AGENTLESS_SCAN
+  AGENT
 }
 
 // A best-effort seed record from network discovery (see apps/worker/src/discovery),
@@ -556,6 +559,17 @@ model Asset {
   operatingSystem String?              @map("operating_system")
   discoverySource AssetDiscoverySource @default(MANUAL) @map("discovery_source")
   snmpSysDescr    String?              @map("snmp_sys_descr")
+  // Set only for discoverySource='AGENT' (docs/adr/0047-endpoint-agents-v1.md),
+  // the same "source-specific nullable column directly on Asset" shape
+  // snmpSysDescr already established above, not a separate inventory table.
+  // installedPackages is informational only in v1 -- not paginated or searchable.
+  cpuModel          String?  @map("cpu_model")
+  memoryTotalMb     Int?     @map("memory_total_mb")
+  diskSummary       Json?    @map("disk_summary")
+  osVersion         String?  @map("os_version")
+  diskEncrypted     Boolean? @map("disk_encrypted")
+  antivirusStatus   String?  @map("antivirus_status")
+  installedPackages Json?    @map("installed_packages")
   lastSeenAt      DateTime?            @map("last_seen_at")
   createdAt       DateTime             @default(now()) @map("created_at")
   updatedAt       DateTime             @updatedAt @map("updated_at")
@@ -571,12 +585,54 @@ model Asset {
 
   tickets  TicketAsset[]
   services ServiceAsset[]
+  device   Device?
 
   // Re-scanning the same range upserts by (tenantId, ipAddress) rather than
   // duplicating -- imperfect under DHCP churn, a known v1 limitation (see ADR), not
   // an oversight.
   @@unique([tenantId, ipAddress])
   @@map("assets")
+}
+
+// Phase 5 v1 (docs/adr/0047-endpoint-agents-v1.md) -- inventory-only endpoint
+// agents. A short-lived, single-use token that mints a Device's permanent
+// credential -- same exact-match-hash shape as ApiKey (sha256Hex, see
+// packages/shared/src/crypto.ts), never bcrypt, since this is a high-entropy
+// random token, not a user password.
+model DeviceEnrollmentToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hashedToken String    @unique @map("hashed_token")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("device_enrollment_tokens")
+}
+
+// One row per enrolled endpoint. hashedCredential is the device's own permanent
+// credential (same shape as ApiKey.hashedKey), minted when a DeviceEnrollmentToken
+// is redeemed. assetId is required and unique -- every Device owns exactly one
+// Asset, created atomically at enrollment (see modules/devices/service.ts);
+// onDelete: Cascade from Asset means deleting the CMDB record removes the
+// enrollment with it, while *revoking* (setting revokedAt) is the normal
+// compromise-response path -- it leaves the Asset/history alone and just cuts
+// off future check-ins for that one device, never every device (the whole point
+// of per-device credentials over a shared secret).
+model Device {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assetId          String    @unique @map("asset_id") @db.Uuid
+  asset            Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  hashedCredential String    @unique @map("hashed_credential")
+  platform         String // os.platform() at enrollment: 'linux' | 'darwin' | 'win32'
+  agentVersion     String?   @map("agent_version")
+  enrolledAt       DateTime  @default(now()) @map("enrolled_at")
+  revokedAt        DateTime? @map("revoked_at")
+
+  @@map("devices")
 }
 
 // Equipment catalog: a curated reference list, decoupled from Asset instances --
