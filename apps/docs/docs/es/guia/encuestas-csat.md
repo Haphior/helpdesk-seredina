@@ -10,13 +10,13 @@ ticket**, nunca se re-envía.
 ::: tip Requiere `WEB_ORIGIN` configurada
 Sin esa variable de entorno, la encuesta simplemente no se genera —
 degrada de forma silenciosa, no rompe el resto del flujo de resolución del
-ticket. Ver [Variables de entorno](/despliegue/variables-de-entorno#red-y-puertos).
+ticket. Ver [Variables de entorno](/es/despliegue/variables-de-entorno#red-y-puertos).
 :::
 
 ## Dónde se ve
 
 - El promedio de todas las respuestas, últimos 90 días, en el widget
-  **Satisfacción del cliente** del [panel](/guia/reportes-y-panel).
+  **Satisfacción del cliente** del [panel](/es/guia/reportes-y-panel).
 - La respuesta a una encuesta específica no aparece como un mensaje
   normal del ticket — es un registro separado, pensado para agregarse en
   reportes, no para revisarse ticket por ticket.

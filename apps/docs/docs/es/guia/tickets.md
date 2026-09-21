@@ -29,7 +29,7 @@ una ruta de backend separada.
 - **Ticket en blanco** — para un caso que llegó por teléfono o en
   persona: asunto, descripción, datos del solicitante, prioridad.
 - **Desde catálogo** — si tu tenant tiene ítems configurados en el
-  [Catálogo de servicios](/guia/catalogo-de-servicios), elegís uno y el
+  [Catálogo de servicios](/es/guia/catalogo-de-servicios), elegís uno y el
   formulario se arma solo con sus campos personalizados asociados.
 
 Si no hay ítems de catálogo configurados, el modal arranca directo en modo
@@ -41,7 +41,7 @@ Si no hay ítems de catálogo configurados, el modal arranca directo en modo
 
 Estado, prioridad y canal como badges; un indicador si la primera
 respuesta o la resolución están vencidas según el SLA aplicable (ver
-[SLA y escalamiento](/guia/sla-y-escalamiento)); y, si hay más de un
+[SLA y escalamiento](/es/guia/sla-y-escalamiento)); y, si hay más de un
 agente mirando el mismo ticket en simultáneo, un aviso "También viendo:"
 con los nombres — para evitar que dos personas respondan lo mismo sin
 saberlo.
@@ -55,7 +55,7 @@ saberlo.
   conjunto de cambios predefinidos (cambiar estado, asignar, agregar una
   respuesta) desde **Configuración → Macros**.
 - **Resumir** / **Dejar que la IA lo intente** — ver
-  [Copiloto de IA](/guia/copiloto-de-ia).
+  [Copiloto de IA](/es/guia/copiloto-de-ia).
 
 ### Mensajes y respuestas
 
@@ -71,7 +71,7 @@ vinculado (si lo hay) — todos editables en línea, sin abrir un formulario
 aparte. Debajo, si el ticket tiene una fecha límite de primera respuesta
 o de resolución, se muestra cuándo se cumplió o cuándo vence.
 
-Si tu tenant tiene [campos personalizados](/guia/administracion#campos-personalizados)
+Si tu tenant tiene [campos personalizados](/es/guia/administracion#campos-personalizados)
 configurados, aparecen en el mismo panel — el tipo de campo (texto,
 número, sí/no, fecha, o una lista de opciones) determina el control que
 se muestra.

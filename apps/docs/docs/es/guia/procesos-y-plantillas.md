@@ -43,7 +43,7 @@ investigación, identificado, resuelto...), causa raíz y solución
 temporal (workaround) mientras no hay arreglo definitivo.
 
 Un problema puede vincularse a un ticket específico desde el propio
-[detalle del ticket](/guia/tickets#el-panel-de-propiedades) — así varios
+[detalle del ticket](/es/guia/tickets#el-panel-de-propiedades) — así varios
 tickets causados por el mismo problema de fondo quedan agrupados y
 visibles juntos — y, opcionalmente, al cambio que finalmente lo
 solucionó de forma permanente: el flujo real de una gestión de problemas

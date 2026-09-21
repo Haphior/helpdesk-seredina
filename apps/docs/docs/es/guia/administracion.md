@@ -23,7 +23,7 @@ como necesites, no estás atado a los tres roles de fábrica.
 ## Claves de API
 
 **Administración → Claves de API** — para integraciones externas, no
-para agentes humanos. Ver [Autenticación](/api/#api-keys-para-integraciones-lo-que-necesitás-vos)
+para agentes humanos. Ver [Autenticación](/es/api/#api-keys-para-integraciones-lo-que-necesitás-vos)
 para el detalle completo.
 
 ## Campos personalizados
@@ -32,7 +32,7 @@ para el detalle completo.
 aparecen en el panel de propiedades de cada ticket. Cinco tipos
 disponibles: texto, número, sí/no, fecha, y lista de opciones. Un campo
 personalizado también puede asociarse a un
-[ítem del catálogo de servicios](/guia/catalogo-de-servicios#catálogo-de-servicios-pedidos),
+[ítem del catálogo de servicios](/es/guia/catalogo-de-servicios#catálogo-de-servicios-pedidos),
 así distintos tipos de solicitud piden datos distintos.
 
 ## Apariencia
@@ -50,7 +50,7 @@ misma organización ven el mismo tema.
 ## Marca blanca
 
 **Administración → Marca** — logo y color de acento propios, visibles en
-el [portal de autoservicio y la página de estado pública](/guia/portal-publico)
+el [portal de autoservicio y la página de estado pública](/es/guia/portal-publico)
 que ven tus clientes. La consola interna de agentes mantiene la identidad
 de Seredina — el white-label es para las superficies que da la cara al
 público, no para reemplazar la marca puertas adentro.

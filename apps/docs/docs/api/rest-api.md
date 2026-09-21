@@ -1,86 +1,86 @@
-# API REST
+# REST API
 
-La API pública (autenticada con [API Keys](/api/#api-keys-para-integraciones-lo-que-necesitás-vos))
-es deliberadamente chica: crear tickets desde afuera y convertir alertas de
-monitoreo en tickets. No es un CRUD completo — la consola web habla con
-una API interna mucho más grande (`/tickets`, `/users`, `/assets`, ...),
-pero esa está pensada para el propio frontend de Seredina, autenticada por
-sesión de agente, no para integraciones de terceros.
+The public API (authenticated with
+[API Keys](/api/#api-keys-for-integrations-what-you-want)) is deliberately
+small: create tickets from outside, and turn monitoring alerts into
+tickets. It's not a full CRUD surface — the web console talks to a much
+larger internal API (`/tickets`, `/users`, `/assets`, ...), but that one is
+built for Seredina's own frontend, authenticated by agent session, not for
+third-party integrations.
 
-Todos los endpoints devuelven JSON. Un body inválido devuelve `400` con el
-detalle de validación de [Zod](https://zod.dev); una clave inválida o
-ausente devuelve `401`.
+Every endpoint returns JSON. An invalid body returns `400` with
+[Zod](https://zod.dev)'s validation detail; a missing or invalid key
+returns `401`.
 
 ## `POST /v1/tickets`
 
-Crea un ticket como si llegara desde un formulario de contacto o una
-integración propia — el canal queda registrado como `api`.
+Creates a ticket as if it arrived from a contact form or your own
+integration — the channel is recorded as `api`.
 
 ```bash
-curl -X POST https://tu-instancia.example.com/v1/tickets \
+curl -X POST https://your-instance.example.com/v1/tickets \
   -H "Authorization: Bearer sk_..." \
   -H "Content-Type: application/json" \
   -d '{
-    "subject": "No puedo acceder a mi cuenta",
-    "body": "Intenté resetear la contraseña tres veces.",
-    "contactEmail": "cliente@example.com",
-    "contactName": "Ana Cliente",
+    "subject": "Cannot access my account",
+    "body": "Tried resetting the password three times.",
+    "contactEmail": "customer@example.com",
+    "contactName": "Ana Customer",
     "priority": "HIGH"
   }'
 ```
 
-| Campo | Tipo | Requerido | Notas |
+| Field | Type | Required | Notes |
 |---|---|---|---|
-| `subject` | string | Sí | 1–200 caracteres |
-| `body` | string | Sí | El primer mensaje del ticket |
-| `contactEmail` | string | Sí | Email válido |
-| `contactName` | string | Sí | |
-| `priority` | `LOW` \| `NORMAL` \| `HIGH` \| `URGENT` | No | `NORMAL` si se omite |
+| `subject` | string | Yes | 1–200 characters |
+| `body` | string | Yes | The ticket's first message |
+| `contactEmail` | string | Yes | A valid email |
+| `contactName` | string | Yes | |
+| `priority` | `LOW` \| `NORMAL` \| `HIGH` \| `URGENT` | No | `NORMAL` if omitted |
 
-Devuelve `201` con el ticket creado.
+Returns `201` with the created ticket.
 
 ## `POST /v1/alerts`
 
-El punto de entrada genérico para NOC/SOC: cualquier herramienta de
-monitoreo que pueda hacer un `POST` con un token Bearer puede convertir
-una alerta en un ticket. Es el mismo mecanismo que usan las integraciones
-específicas (Grafana, Zabbix) por debajo.
+The generic entry point for NOC/SOC: any monitoring tool that can make a
+`POST` with a Bearer token can turn an alert into a ticket. It's the same
+mechanism the platform-specific integrations (Grafana, Zabbix) use under
+the hood.
 
 ```bash
-curl -X POST https://tu-instancia.example.com/v1/alerts \
+curl -X POST https://your-instance.example.com/v1/alerts \
   -H "Authorization: Bearer sk_..." \
   -H "Content-Type: application/json" \
   -d '{
     "source": "zabbix",
     "severity": "HIGH",
-    "title": "Disco al 95% en db-prod-01",
-    "description": "Partición /var/lib/postgresql al 95% de uso.",
+    "title": "Disk at 95% on db-prod-01",
+    "description": "The /var/lib/postgresql partition is at 95% usage.",
     "externalId": "zbx-88213"
   }'
 ```
 
-| Campo | Tipo | Requerido | Notas |
+| Field | Type | Required | Notes |
 |---|---|---|---|
-| `source` | string | Sí | 1–100 caracteres — el nombre de la herramienta que manda la alerta |
-| `severity` | `CRITICAL` \| `HIGH` \| `MEDIUM` \| `LOW` \| `INFO` | No | Mapea a la prioridad del ticket |
-| `title` | string | Sí | 1–200 caracteres |
+| `source` | string | Yes | 1–100 characters — the name of the tool sending the alert |
+| `severity` | `CRITICAL` \| `HIGH` \| `MEDIUM` \| `LOW` \| `INFO` | No | Maps to the ticket's priority |
+| `title` | string | Yes | 1–200 characters |
 | `description` | string | No | |
-| `externalId` | string | No | El id de la alerta en el sistema de origen — útil para deduplicar |
+| `externalId` | string | No | The alert's id in the source system — useful for deduplication |
 
 ## `POST /v1/alerts/grafana`
 
-Igual que `/v1/alerts`, pero acepta directamente el payload nativo que
-manda el "contact point" webhook de Grafana Alerting — no hace falta
-transformar nada del lado de Grafana, solo apuntar la URL y poner
-`Authorization: Bearer sk_...` en el header custom que Grafana permite
-configurar. Ver
-[Monitoreo e integraciones](/guia/canales#alertas-de-monitoreo-noc-soc) en
-la guía de usuario para la configuración paso a paso desde Grafana/Zabbix.
+Same as `/v1/alerts`, but accepts Grafana Alerting's own native "contact
+point" webhook payload directly — nothing needs transforming on Grafana's
+side, just point the URL and set `Authorization: Bearer sk_...` in the
+custom header Grafana lets you configure. See
+[Channels](/guide/channels#monitoring-alerts-noc-soc) in the user guide
+for the step-by-step setup from Grafana/Zabbix.
 
-## Errores
+## Errors
 
-| Código | Cuándo |
+| Code | When |
 |---|---|
-| `400` | El body no pasa la validación — la respuesta incluye el detalle campo por campo |
-| `401` | Falta el header `Authorization`, o la clave no es válida/fue revocada |
-| `201` | Éxito — devuelve el recurso creado |
+| `400` | The body fails validation — the response includes field-by-field detail |
+| `401` | The `Authorization` header is missing, or the key is invalid/revoked |
+| `201` | Success — returns the created resource |

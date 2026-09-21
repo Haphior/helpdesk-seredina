@@ -16,7 +16,7 @@ semana) — un ticket urgente abierto un viernes a la noche no empieza a
 
 ## Cómo se ve en un ticket
 
-En el panel de propiedades del [detalle de un ticket](/guia/tickets#el-panel-de-propiedades),
+En el panel de propiedades del [detalle de un ticket](/es/guia/tickets#el-panel-de-propiedades),
 si aplica una política de SLA, se muestra cuándo se cumplió la primera
 respuesta y la resolución (en verde) o cuándo vencen si todavía no
 ocurrieron (en rojo si ya está vencido). En la cola de tickets, un ícono

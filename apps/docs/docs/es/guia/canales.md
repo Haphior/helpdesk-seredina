@@ -4,7 +4,7 @@ Todo lo que llega a Seredina termina siendo un ticket, sin importar por
 dónde entró — esa convergencia es literalmente lo que significa el nombre
 del producto. Esta página cubre cómo configurar cada canal de entrada;
 para notificaciones *salientes* (Slack, Teams, tu propio webhook), ver
-[Webhooks salientes](/api/webhooks).
+[Webhooks salientes](/es/api/webhooks).
 
 ## Correo electrónico
 
@@ -21,14 +21,14 @@ se agrega como mensaje al ticket correspondiente.
 ## API
 
 Para integraciones propias — tu sitio, un script, cualquier sistema que
-pueda hacer un `POST`. Ver [API REST](/api/rest-api) para el detalle
+pueda hacer un `POST`. Ver [API REST](/es/api/rest-api) para el detalle
 técnico completo con ejemplos.
 
 ## Widget de chat embebible
 
 Un `<script>` que convierte cualquier página web en un canal de chat, sin
 cuenta ni credencial de por medio. Ver
-[Widget embebible](/api/widget).
+[Widget embebible](/es/api/widget).
 
 ## Telegram
 
@@ -41,7 +41,7 @@ otro canal, y la respuesta llega al usuario por Telegram.
 Telegram entrega mensajes llamando directamente a tu API — necesitás
 `API_PUBLIC_URL` configurada con una dirección HTTPS real y alcanzable
 desde internet. `localhost` no funciona para este canal en particular. Ver
-[Variables de entorno](/despliegue/variables-de-entorno#red-y-puertos).
+[Variables de entorno](/es/despliegue/variables-de-entorno#red-y-puertos).
 :::
 
 ## Alertas de monitoreo (NOC/SOC)
@@ -57,7 +57,7 @@ listas para copiar y pegar para conectar:
 
 Ambos convierten una alerta que dispara en un ticket, con la severidad de
 la alerta mapeada a una prioridad de ticket. Es el mismo mecanismo
-genérico documentado en [API REST](/api/rest-api#post-v1-alerts) — no hace
+genérico documentado en [API REST](/es/api/rest-api#post-v1-alerts) — no hace
 falta una integración de backend específica por cada herramienta de
 monitoreo nueva, cualquiera que pueda mandar un `POST` con un token
 Bearer sirve.

@@ -14,7 +14,7 @@ descubrir-la-siguiente.
 Estás en `SEREDINA_MODE=self_hosted` (el modo por defecto, pensado para
 una sola organización) e intentaste registrar una segunda. Si de verdad
 necesitás múltiples organizaciones independientes, es
-[modo cloud](/despliegue/modo-cloud), no self-hosted.
+[modo cloud](/es/despliegue/modo-cloud), no self-hosted.
 
 ## `ENCRYPTION_KEY` inválida
 
@@ -29,7 +29,7 @@ Es el comportamiento esperado sin un proveedor de IA configurado — no es
 un error de instalación. Revisá `AI_PROVIDER` y la clave correspondiente
 (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, o que `OLLAMA_BASE_URL` apunte a
 una instancia de Ollama corriendo de verdad) en
-[Variables de entorno](/despliegue/variables-de-entorno). También revisá
+[Variables de entorno](/es/despliegue/variables-de-entorno). También revisá
 que el tenant no tenga su propia clave configurada en Configuración → IA
 que esté mal — si el tenant tiene una clave propia, se usa *en vez de* la
 del despliegue, nunca como respaldo.

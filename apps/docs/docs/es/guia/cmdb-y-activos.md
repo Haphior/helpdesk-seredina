@@ -11,7 +11,7 @@ Cada fila es un servidor, estación de trabajo, dispositivo de red,
 impresora o dispositivo móvil — con tipo, estado, IP, hostname, número de
 serie, fabricante/modelo y sistema operativo. Un activo se puede vincular
 a los tickets que lo afectan (desde el propio ticket, ver
-[Tickets](/guia/tickets#el-panel-de-propiedades)), así queda un historial
+[Tickets](/es/guia/tickets#el-panel-de-propiedades)), así queda un historial
 de qué problemas tuvo cada equipo.
 
 ### Cómo llega un activo al inventario

@@ -1,71 +1,70 @@
-# Servidor MCP
+# MCP Server
 
-`apps/mcp-server` expone el mismo catálogo de herramientas que usa el
-copiloto de IA interno (consultar/responder/cambiar estado/asignar/aplicar
-macro/escalar sobre tickets) a **tu propio** agente compatible con MCP —
-Claude Desktop, un flujo de n8n, un script propio. Es la forma de conectar
-un agente de IA externo a Seredina sin reimplementar nada de la lógica de
-negocio ni saltarte los controles de autorización.
+`apps/mcp-server` exposes the same tool catalog the internal AI copilot
+uses (look up/reply to/change status of/assign/apply a macro to/escalate a
+ticket) to **your own** MCP-compatible agent — Claude Desktop, an n8n
+flow, your own script. It's how you connect an external AI agent to
+Seredina without reimplementing any business logic or bypassing any
+authorization controls.
 
-## Dos transportes
+## Two transports
 
-Elegís con `MCP_TRANSPORT` (por defecto `stdio`):
+Chosen with `MCP_TRANSPORT` (defaults to `stdio`):
 
 ### `stdio`
 
-Un proceso separado de `api`/`worker` — no forma parte de un
-`docker compose up` normal. El cliente lo lanza por sesión y controla su
-stdin/stdout directamente, igual que Claude Desktop lanza cualquier otro
-servidor MCP local. El tenant se resuelve una sola vez al arrancar, a
-partir de `SEREDINA_API_KEY`.
+A separate process from `api`/`worker` — not part of a plain
+`docker compose up`. The client spawns it per session and owns its
+stdin/stdout directly, the same way Claude Desktop spawns any other local
+MCP server. The tenant is resolved once at startup, from
+`SEREDINA_API_KEY`.
 
 ```bash
-# 1. Creá una API Key desde Administración → Claves de API en la consola.
+# 1. Create an API Key from Administration -> API Keys in the console.
 
-# 2. Construí la imagen:
+# 2. Build the image:
 docker build -f infra/docker/Dockerfile.mcp-server -t seredina-mcp-server .
 
-# 3. Apuntá tu cliente MCP a:
+# 3. Point your MCP client at:
 docker run -i --rm \
-  -e SEREDINA_API_KEY=<tu clave> \
+  -e SEREDINA_API_KEY=<your key> \
   -e DATABASE_URL=... \
   -e ENCRYPTION_KEY=... \
   seredina-mcp-server
 ```
 
-En desarrollo, correr `apps/mcp-server` directamente con `tsx`/`node`
-(ver el script `dev` en `apps/mcp-server/package.json`) evita el paso de
-build de imagen.
+In development, running `apps/mcp-server` directly with `tsx`/`node` (see
+the `dev` script in `apps/mcp-server/package.json`) skips the image build
+step.
 
 ### `http`
 
-Un servicio de red genuinamente siempre-activo (Streamable HTTP,
-deliberadamente sin estado), para un agente remoto o de larga duración en
-vez de uno lanzado localmente. Cada request lleva su propio header
-`Authorization: Bearer <ApiKey>` — el tenant se resuelve en cada llamada,
-nunca queda cacheado del lado del servidor.
+A genuinely always-on network service (Streamable HTTP, deliberately
+stateless), for a remote or long-running agent instead of a locally
+spawned one. Every request carries its own `Authorization` header with a
+Bearer API Key — the tenant is resolved per request, never cached
+server-side.
 
 ```bash
 docker compose --profile mcp up mcp-server-http
 ```
 
-Gated por perfil deliberadamente — un `docker compose up` normal nunca lo
-levanta. También se puede correr directo con `MCP_TRANSPORT=http` en
+Deliberately profile-gated — a plain `docker compose up` never starts it.
+You can also run it directly with `MCP_TRANSPORT=http` in
 `apps/mcp-server`.
 
-## Autorización
+## Authorization
 
-Cada llamada de herramienta que modifica datos pasa por la Política de
-Autonomía del tenant (**Operaciones → Actividad del Agente de IA** en la
-consola): las herramientas que no están en la lista de auto-ejecución
-esperan ahí a que un humano apruebe o rechace — y **toda** llamada,
-auto-ejecutada o no, queda en el mismo registro de auditoría. Tu agente
-externo tiene exactamente los mismos límites que el copiloto interno, no
-un camino separado con menos control.
+Every tool call that changes data goes through the tenant's Autonomy
+Policy (**Operations → AI Agent Activity** in the console): tools not on
+the auto-execute allow-list wait there for a human to approve or reject —
+and **every** call, whether auto-executed or not, lands in the same audit
+log. Your external agent has exactly the same limits as the internal
+copilot, not a separate path with fewer controls.
 
-## Catálogo de herramientas
+## Tool catalog
 
-El mismo set que el copiloto interno usa para su modo autónomo — consultar
-un ticket, agregar una respuesta, cambiar estado, asignar, aplicar una
-macro, escalar. Ver [Copiloto de IA](/guia/copiloto-de-ia) en la guía de
-usuario para cómo funciona el lado de aprobación humana desde la consola.
+The same set the internal copilot uses for its autonomous mode — look up
+a ticket, add a reply, change status, assign, apply a macro, escalate.
+See [AI Copilot](/guide/ai-copilot) in the user guide for how the
+human-approval side works from the console.

@@ -33,7 +33,7 @@ misma seriedad que a una contraseña de base de datos.
 
 | Variable | Requerida | Descripción |
 |---|---|---|
-| `SEREDINA_MODE` | Sí | `self_hosted` o `cloud`. Ver [Modo cloud](/despliegue/modo-cloud) para qué cambia realmente. |
+| `SEREDINA_MODE` | Sí | `self_hosted` o `cloud`. Ver [Modo cloud](/es/despliegue/modo-cloud) para qué cambia realmente. |
 
 ## Copiloto de IA (opcional)
 
@@ -69,7 +69,7 @@ del despliegue.
 |---|---|---|
 | `SENTRY_DSN` | No | Seguimiento de errores (`api`/`worker`/`web`). Sin definir, no hace nada — apunta a Sentry.io o a una instancia propia de [GlitchTip](https://glitchtip.com/) (compatible con el protocolo de Sentry). |
 | `EMAIL_POLL_INTERVAL_MS` | No | Cada cuánto el worker revisa el buzón IMAP de cada canal de correo activo (`30000` ms por defecto). |
-| `MCP_HTTP_PORT` | No | Solo usada por el servicio `mcp-server-http`, gated por perfil (`docker compose --profile mcp up`). Ver [Servidor MCP](/api/mcp-server). |
+| `MCP_HTTP_PORT` | No | Solo usada por el servicio `mcp-server-http`, gated por perfil (`docker compose --profile mcp up`). Ver [Servidor MCP](/es/api/mcp-server). |
 
 ## Validación al arrancar
 

@@ -10,7 +10,7 @@ La pantalla de inicio, con siete widgets:
 | Volumen de tickets | Tickets creados por día, últimos 14 días |
 | Tickets abiertos por prioridad | Cuántos tickets abiertos hay en cada nivel de prioridad |
 | Cumplimiento de SLA | % de tickets resueltos a tiempo, últimos 90 días |
-| Satisfacción del cliente | Promedio de las [encuestas CSAT](/guia/encuestas-csat), últimos 90 días |
+| Satisfacción del cliente | Promedio de las [encuestas CSAT](/es/guia/encuestas-csat), últimos 90 días |
 | Carga de trabajo de agentes | Tickets abiertos asignados a cada agente, más los sin asignar |
 | Actividad reciente | Los últimos tickets tocados, con su estado actual |
 

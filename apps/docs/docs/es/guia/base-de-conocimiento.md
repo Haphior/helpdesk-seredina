@@ -23,7 +23,7 @@ publicados y, si encuentra alguno relevante, lo usa para redactar la
 sugerencia y lo muestra como "Basado en:" debajo del cuadro de respuesta
 — así el agente sabe de dónde salió la sugerencia antes de enviarla, en
 vez de confiar a ciegas en el texto generado. Ver
-[Copiloto de IA](/guia/copiloto-de-ia) para el resto de lo que hace el
+[Copiloto de IA](/es/guia/copiloto-de-ia) para el resto de lo que hace el
 copiloto.
 
 Mantener la base de conocimiento actualizada no es solo para los clientes

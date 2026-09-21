@@ -1,38 +1,37 @@
-# Widget embebible
+# Embeddable Widget
 
-Una burbuja de chat flotante para cualquier sitio web propio — sin login,
-sin API Key, funciona desde cualquier dominio.
+A floating chat bubble for any website you own — no login, no API Key,
+works from any domain.
 
-## Instalación
+## Installation
 
-Un único `<script>` en cualquier página:
+A single `<script>` tag on any page:
 
 ```html
-<script src="https://tu-instancia.example.com/widget.js" data-tenant="tu-organizacion"></script>
+<script src="https://your-instance.example.com/widget.js" data-tenant="your-organization"></script>
 ```
 
-`data-tenant` es el slug de tu organización (el mismo que usás para
-iniciar sesión). Eso es todo — no hace falta configurar CORS del lado del
-sitio que lo embebe ni generar ninguna credencial.
+`data-tenant` is your organization's slug (the same one you use to log
+in). That's it — no CORS configuration needed on the embedding site's
+side, and no credential to generate.
 
-## Cómo funciona
+## How it works
 
-Un visitante que escribe en la burbuja genera un ticket normal en
-Seredina, con `channel: "widget"` — los agentes lo ven y responden en la
-cola de tickets exactamente igual que cualquier otro canal.
+A visitor who types into the bubble creates a normal ticket in Seredina,
+with `channel: "widget"` — agents see it and reply in the ticket queue
+exactly like any other channel.
 
-La continuidad de la conversación entre visitas (que el visitante siga
-viendo el mismo hilo si vuelve a la página) se maneja con un token
-aleatorio que el propio navegador del visitante guarda en
-`localStorage` — no hay una cuenta ni un login de por medio. Si el
-visitante limpia el `localStorage` o cambia de navegador, empieza una
-conversación nueva.
+Conversation continuity across visits (the visitor seeing the same thread
+if they come back) is handled with a random token the visitor's own
+browser stores in `localStorage` — there's no account or login involved.
+If the visitor clears `localStorage` or switches browsers, a new
+conversation starts.
 
-## Seguridad
+## Security
 
-El widget funciona desde cualquier dominio a propósito — es lo que lo hace
-embebible en tu sitio sin configuración adicional — pero eso no debilita
-el resto de la política CORS de la API, que sigue restringida
-normalmente para el resto de los endpoints. El manejo de CORS específico
-del widget está documentado en detalle en
-`docs/adr/0040-embeddable-widget.md` si te interesa el porqué técnico.
+The widget deliberately works from any domain — that's what makes it
+embeddable on your site with zero extra configuration — but that doesn't
+weaken the rest of the API's CORS policy, which stays normally locked down
+for every other endpoint. The widget's specific CORS handling is
+documented in detail in `docs/adr/0040-embeddable-widget.md` if you're
+curious about the technical why.

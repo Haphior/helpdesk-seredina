@@ -1,32 +1,31 @@
-# Webhooks salientes
+# Outbound Webhooks
 
-La dirección contraria a la API REST: en vez de que vos llames a
-Seredina, Seredina te avisa a vos cuando algo pasa. Se configuran desde
-**Operaciones → Webhooks** en la consola.
+The reverse direction of the REST API: instead of you calling Seredina,
+Seredina notifies you when something happens. Configured from
+**Operations → Webhooks** in the console.
 
-## Tipos de webhook
+## Webhook kinds
 
-Hay tres tipos (`kind`), y el tipo se fija al crear el webhook — no se
-puede cambiar después (borrar y crear uno nuevo es el mismo trabajo de
-todas formas):
+There are three kinds, and the kind is fixed when the webhook is created
+— it can't be changed afterward (deleting and creating a new one is the
+same amount of work anyway):
 
-| Tipo | Para qué | Firma |
+| Kind | For | Signature |
 |---|---|---|
-| `generic` | Tu propio receptor — un endpoint que vos escribiste | Sí, HMAC-SHA256 |
-| `slack` | Publica directo a un canal de Slack, vía sus "Incoming Webhooks" | No |
-| `teams` | Publica directo a un canal de Teams, vía la app "Workflows" | No |
+| `generic` | Your own receiver — an endpoint you wrote | Yes, HMAC-SHA256 |
+| `slack` | Posts directly to a Slack channel, via its "Incoming Webhooks" | No |
+| `teams` | Posts directly to a Teams channel, via the "Workflows" app | No |
 
-Los webhooks de Slack/Teams son deliberadamente **"trae tu propia URL"**:
-vos generás el webhook en tu propio workspace (Slack: Incoming Webhooks;
-Teams: la plantilla "Post to a channel when a webhook request is
-received" de la app Workflows) y pegás esa URL en Seredina — no hay una
-app de Slack/Teams que Seredina opere ni un proceso de aprobación de
-terceros de por medio.
+Slack/Teams webhooks are deliberately **"bring your own URL"**: you
+generate the webhook in your own workspace (Slack: Incoming Webhooks;
+Teams: the "Post to a channel when a webhook request is received"
+template in the Workflows app) and paste that URL into Seredina — there's
+no Slack/Teams app Seredina operates and no third-party approval process
+involved.
 
-## Eventos disponibles
+## Available events
 
-Un webhook `generic` puede suscribirse a cualquier combinación de estos
-cinco:
+A `generic` webhook can subscribe to any combination of these five:
 
 - `ticket.created`
 - `ticket.updated`
@@ -34,36 +33,36 @@ cinco:
 - `sla.first_response_breached`
 - `sla.resolution_breached`
 
-Los webhooks `slack`/`teams` están limitados a un subconjunto de tres —
+`slack`/`teams` webhooks are limited to a subset of three —
 `ticket.created`, `sla.first_response_breached`,
-`sla.resolution_breached` — porque `ticket.updated` viaja con ids en vez
-de texto legible, y `message.created` podría filtrar una nota interna o el
-mensaje de un cliente a un canal potencialmente público sin que lo hayas
-elegido explícitamente.
+`sla.resolution_breached` — because `ticket.updated` carries ids instead
+of readable text, and `message.created` could leak an internal note or a
+customer's own message into a possibly-public channel without you
+explicitly choosing that.
 
-## Firma (solo webhooks `generic`)
+## Signature (`generic` webhooks only)
 
-Cada entrega a un webhook `generic` incluye el header
-`X-Seredina-Signature: sha256=<hmac>`, calculado con el secreto que
-Seredina generó al crear el webhook (se muestra una sola vez, igual que
-una API Key):
+Every delivery to a `generic` webhook includes the
+`X-Seredina-Signature: sha256=<hmac>` header, computed with the secret
+Seredina generated when the webhook was created (shown once, same as an
+API Key):
 
 ```js
 const crypto = require('crypto');
 
-function verificarFirma(bodyCrudo, firmaHeader, secreto) {
-  const esperada = 'sha256=' + crypto.createHmac('sha256', secreto).update(bodyCrudo).digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(firmaHeader), Buffer.from(esperada));
+function verifySignature(rawBody, signatureHeader, secret) {
+  const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expected));
 }
 ```
 
-Los webhooks `slack`/`teams` **no llevan firma** — ninguna de las dos
-plataformas tiene ese concepto en sus webhooks entrantes, y la URL
-generada en tu propio workspace es la única credencial.
+`slack`/`teams` webhooks **carry no signature** — neither platform's
+incoming webhook has that concept, and the URL you generated in your own
+workspace is the only credential.
 
 ## Payload
 
-Un webhook `generic` recibe el evento completo:
+A `generic` webhook receives the full event:
 
 ```json
 {
@@ -73,34 +72,34 @@ Un webhook `generic` recibe el evento completo:
 }
 ```
 
-Un webhook `slack`/`teams` recibe un mensaje de texto plano ya formateado,
-listo para publicar tal cual:
+A `slack`/`teams` webhook receives an already-formatted plain-text
+message, ready to post as-is:
 
 ```json
 { "text": "🎫 New ticket #142: Printer jammed on 3rd floor" }
 ```
 
-## Reintentos
+## Retries
 
-Cada entrega corre en la cola de trabajos (BullMQ) con reintento y
-backoff — una caída temporal de tu endpoint no pierde el evento. El
-estado de la última entrega (éxito/error y cuándo) se ve directamente en
-la lista de webhooks de la consola.
+Every delivery runs through the job queue (BullMQ) with retry and
+backoff — a temporary outage on your endpoint doesn't lose the event. The
+last delivery's status (success/error and when) is visible directly in
+the webhook list in the console.
 
-## Crear uno
+## Creating one
 
 ```bash
-curl -X POST https://tu-instancia.example.com/webhooks \
-  -H "Authorization: Bearer <tu sesión de agente>" \
+curl -X POST https://your-instance.example.com/webhooks \
+  -H "Authorization: Bearer <your agent session>" \
   -H "Content-Type: application/json" \
   -d '{
-    "url": "https://tu-servidor.example.com/seredina-webhook",
+    "url": "https://your-server.example.com/seredina-webhook",
     "events": ["ticket.created", "sla.first_response_breached"],
     "kind": "generic"
   }'
 ```
 
-`kind` es opcional y por defecto es `generic`. Esta llamada usa tu propia
-sesión de agente (no una API Key) porque es configuración de tenant, no un
-endpoint público — hacela desde la consola en vez de a mano si no
-necesitás automatizarlo.
+`kind` is optional and defaults to `generic`. This call uses your own
+agent session (not an API Key) because it's tenant configuration, not a
+public endpoint — do it from the console instead of by hand unless you
+specifically need to automate it.

@@ -1,7 +1,7 @@
 # Copiloto de IA
 
 El copiloto tiene tres modos, de menos a más autónomo, todos disponibles
-desde el mismo [detalle de un ticket](/guia/tickets#el-panel-de-propiedades).
+desde el mismo [detalle de un ticket](/es/guia/tickets#el-panel-de-propiedades).
 
 ## Resumir
 
@@ -14,7 +14,7 @@ no reemplaza el historial real.
 
 **Sugerir respuesta** redacta un borrador basado en el contenido del
 ticket y, cuando encuentra algo relevante, en artículos publicados de la
-[base de conocimiento](/guia/base-de-conocimiento) (búsqueda por
+[base de conocimiento](/es/guia/base-de-conocimiento) (búsqueda por
 similitud semántica, no coincidencia exacta de palabras). El borrador
 aparece directamente en el cuadro de respuesta — el agente lo edita o lo
 manda tal cual, nunca se envía solo. Si usó algún artículo, aparece
@@ -42,7 +42,7 @@ Desde **Operaciones → Actividad del Agente de IA** se configura:
 Cada llamada —auto-ejecutada o pendiente— queda registrada en un mismo
 historial de auditoría, con la herramienta usada, los argumentos, el
 resultado, y de dónde vino la llamada (el copiloto interno o un agente
-externo vía [servidor MCP](/api/mcp-server) — comparten exactamente el
+externo vía [servidor MCP](/es/api/mcp-server) — comparten exactamente el
 mismo catálogo y las mismas reglas, no hay un camino separado con menos
 control para integraciones externas).
 
@@ -60,5 +60,5 @@ Si ni el tenant ni el despliegue tienen una clave de IA configurada, estos
 tres botones responden con un error claro en vez de fallar
 silenciosamente o bloquear el resto de la app — el resto de Seredina
 funciona igual de bien sin IA configurada. Ver
-[Variables de entorno](/despliegue/variables-de-entorno#copiloto-de-ia-opcional)
+[Variables de entorno](/es/despliegue/variables-de-entorno#copiloto-de-ia-opcional)
 para configurar un proveedor a nivel de despliegue.

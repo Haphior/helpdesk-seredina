@@ -4,7 +4,7 @@ Seredina se despliega como un conjunto de contenedores Docker. La misma
 instalación sirve tanto para uso autoalojado (un solo tenant) como para
 operar tu propio servicio cloud multi-tenant — el cambio es una sola
 variable de entorno, no un fork ni una imagen distinta. Ver
-[Modo cloud](/despliegue/modo-cloud) para esa diferencia.
+[Modo cloud](/es/despliegue/modo-cloud) para esa diferencia.
 
 ## Requisitos
 
@@ -51,7 +51,7 @@ el `ENCRYPTION_KEY` anterior.
 | `api` | La API Fastify — toda la lógica de negocio |
 | `worker` | Procesamiento en segundo plano: descubrimiento agentless, correo entrante/saliente, webhooks, notificaciones, escalamiento de SLA |
 | `web` | La consola de agentes (React) |
-| `mcp-server-http` | Opcional, gated por perfil (`--profile mcp`) — servidor MCP en modo HTTP para agentes de IA externos, ver [Servidor MCP](/api/mcp-server) |
+| `mcp-server-http` | Opcional, gated por perfil (`--profile mcp`) — servidor MCP en modo HTTP para agentes de IA externos, ver [Servidor MCP](/es/api/mcp-server) |
 
 ## Si un contenedor no arranca
 
@@ -62,8 +62,8 @@ está mal formado en un solo mensaje — no se cae en la primera variable
 faltante para forzarte a un ciclo de arreglar-reiniciar-descubrir-la-
 siguiente.
 
-Ver también [Variables de entorno](/despliegue/variables-de-entorno) para
-la referencia completa y [Solución de problemas](/despliegue/solucion-de-problemas)
+Ver también [Variables de entorno](/es/despliegue/variables-de-entorno) para
+la referencia completa y [Solución de problemas](/es/despliegue/solucion-de-problemas)
 para los casos más comunes.
 
 ## Desarrollo local (sin Docker para la app)

@@ -1,65 +1,63 @@
-# Autenticación
+# Authentication
 
-Seredina tiene dos mecanismos de autenticación completamente separados,
-para dos audiencias distintas — no los confundas entre sí.
+Seredina has two completely separate authentication mechanisms for two
+different audiences — don't mix them up.
 
-## API Keys — para integraciones (lo que necesitás vos)
+## API Keys — for integrations (what you want)
 
-Si estás integrando algo externo (un formulario de contacto, tu propio
-monitoreo, un script), **esto es lo que querés**. Las claves de API
-autentican contra los endpoints públicos del canal API y de ingesta de
-alertas (`/v1/tickets`, `/v1/alerts`, `/v1/alerts/grafana`) — nunca contra
-la consola de agentes.
+If you're integrating something external (a contact form, your own
+monitoring, a script), **this is what you want**. API Keys authenticate
+against the public API-channel and alert-ingestion endpoints
+(`/v1/tickets`, `/v1/alerts`, `/v1/alerts/grafana`) — never against the
+agent console.
 
-### Crear una clave
+### Creating a key
 
-Desde la consola: **Administración → Claves de API → Nueva clave**. El
-valor completo (con prefijo `sk_`) se muestra **una sola vez** al crearla
-— Seredina solo guarda su hash, nunca el valor en texto plano, así que si
-lo perdés hay que generar una clave nueva.
+From the console: **Administration → API Keys → New Key**. The full value
+(prefixed `sk_`) is shown **once** when created — Seredina only stores its
+hash, never the plaintext value, so if you lose it you'll need to
+generate a new one.
 
-### Usarla
+### Using it
 
 ```bash
-curl -X POST https://tu-instancia.example.com/v1/tickets \
+curl -X POST https://your-instance.example.com/v1/tickets \
   -H "Authorization: Bearer sk_..." \
   -H "Content-Type: application/json" \
   -d '{
-    "subject": "No puedo acceder a mi cuenta",
-    "body": "Intenté resetear la contraseña tres veces.",
-    "contactEmail": "cliente@example.com",
-    "contactName": "Ana Cliente"
+    "subject": "Cannot access my account",
+    "body": "Tried resetting the password three times.",
+    "contactEmail": "customer@example.com",
+    "contactName": "Ana Customer"
   }'
 ```
 
-La clave identifica el tenant automáticamente — no hace falta mandar un
-`tenantId` en el body, el servidor lo resuelve a partir del hash de la
-clave.
+The key identifies the tenant automatically — no need to send a
+`tenantId` in the body, the server resolves it from the key's hash.
 
-### Revocar una clave
+### Revoking a key
 
-Desde el mismo lugar donde la creaste — **Administración → Claves de
-API**. Una clave revocada deja de funcionar de inmediato; cualquier
-integración que la use empieza a recibir `401`.
+From the same place you created it — **Administration → API Keys**. A
+revoked key stops working immediately; any integration still using it
+starts getting `401`.
 
-## Sesión de agente (JWT) — para la consola web
+## Agent session (JWT) — for the web console
 
-Cuando un agente inicia sesión en la consola (`POST /auth/login`), recibe
-un token JWT de corta duración que el navegador guarda y manda en cada
-request subsecuente. **Este token es para la consola web, no para
-integraciones externas** — no está pensado para ser usado por un script de
-terceros, y sus permisos dependen del rol del agente (ver
-[Administración](/guia/administracion) en la guía de usuario para roles y
-permisos).
+When an agent logs in (`POST /auth/login`), they receive a short-lived
+JWT token the browser stores and sends on every following request. **This
+token is for the web console, not for external integrations** — it isn't
+meant to be used by a third-party script, and its permissions depend on
+the agent's role (see [Administration](/guide/administration) in the user
+guide for roles and permissions).
 
-## Próximos pasos
+## Next steps
 
-- [API REST](/api/rest-api) — los endpoints públicos que una API Key puede
-  llamar, en detalle.
-- [Webhooks salientes](/api/webhooks) — la dirección contraria: Seredina
-  notificándote a vos cuando algo pasa.
-- [Servidor MCP](/api/mcp-server) — para conectar tu propio agente de IA
-  (Claude Desktop, un flujo de n8n, un script) contra el mismo catálogo de
-  herramientas que usa el copiloto.
-- [Widget embebible](/api/widget) — un `<script>` que convierte cualquier
-  sitio web en un canal de chat hacia Seredina.
+- [REST API](/api/rest-api) — the public endpoints an API Key can call,
+  in detail.
+- [Outbound Webhooks](/api/webhooks) — the other direction: Seredina
+  notifying you when something happens.
+- [MCP Server](/api/mcp-server) — connect your own AI agent (Claude
+  Desktop, an n8n flow, a script) against the same tool catalog the
+  copilot uses.
+- [Embeddable Widget](/api/widget) — a `<script>` tag that turns any
+  website into a chat channel into Seredina.
