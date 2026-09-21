@@ -1368,9 +1368,17 @@ real Chromium browser via Playwright serving the test host page from a
 different origin/port than the API: bubble → pre-chat form → conversation
 start → follow-up → page-reload resumption from `localStorage` → an agent
 reply posted through the real ticket API appearing in the widget within
-one poll cycle. Zero console errors. WhatsApp remains unbuilt (Meta Business
-verification + template-message approval is a much heavier lift than a
-self-issued token).
+one poll cycle. Zero console errors. WhatsApp remains unbuilt. Re-scoped
+2026-09-21 to match Telegram's own bring-your-own-credential shape (below) rather
+than a Seredina-operated integration: a tenant does their own Meta Business
+verification and WhatsApp Business Platform setup (their business, their
+verification, not this project's), then pastes the resulting access token +
+phone number ID into Seredina, same pattern as a Telegram bot token. Real,
+disclosed extra scope beyond that credential exchange: WhatsApp requires a
+Meta-approved message template for the first outbound message in any 24-hour
+window (unlike Telegram, which has no such restriction) — a genuinely bigger
+lift than Telegram's own integration, not a blocker on this project's side, but
+not a small one either.
 
 **Telegram channel ✅ (this pass).** A tenant connects their own bot (created via
 `@BotFather`, no OAuth app registration needed — unlike Slack/Teams below, this had
@@ -1384,11 +1392,22 @@ independent values (an opaque `webhookId` routing the call, Telegram's own
 `Authorization` header the way Grafana's does. See `docs/adr/0044-telegram-channel.md`
 — including a real bug (a customer's own follow-up message would have echoed back
 to them) found live in dev before it shipped, not by the automated suite first.
-- **Slack and Microsoft Teams notifications** (a new ticket/an SLA breach
-  posts to a channel an agent already has open, one-click "Connect Slack"
-  using the existing `Webhook` delivery mechanism under the hood, OAuth
-  instead of a tenant hand-rolling their own receiver) — needs a real
-  Slack/Microsoft OAuth app registration, not started.
+**Slack and Microsoft Teams notifications — re-scoped 2026-09-21 to bring-your-
+own, not a Seredina-operated OAuth app.** A single shared OAuth app registered
+by this project would mean this project's own name goes through Slack's/
+Microsoft's app-review process, and its approval, rate limits, and any future
+review requirements become an ongoing maintenance burden with real cost/risk for
+an unfunded open-source project — the same reasoning that keeps a signed agent
+installer out of Phase 5. Both platforms already support a much simpler,
+zero-review path that fits this project's existing shape better: Slack's
+"Incoming Webhooks" and Microsoft Teams' own "Incoming Webhook" connector are
+both a tenant-side, workspace-internal setup (a few clicks in their own
+Slack/Teams admin, no app-store submission) that hands back a plain webhook URL
+— a tenant pastes that URL into Seredina, same "bring your own" pattern as a
+Telegram bot token or an AI provider key (`TenantAiSettings`), and it reuses the
+*existing* generic `Webhook` delivery mechanism (Phase 2 ✅) as-is, not a new
+OAuth flow. Not started, but no longer blocked on anything this project needs
+to register.
 
 **Grafana Alerting integration ✅ (this pass) — one of the "one or two
 monitoring tools" named integrations.** `POST /v1/alerts/grafana`
@@ -1490,33 +1509,44 @@ under multiple worker replicas remains a known, disclosed limitation (ADR
 sandbox can't orchestrate multiple replicas behind a load balancer). See
 `docs/adr/0038-multi-replica-hardening.md`.
 
-## Phase 5 — Endpoint agents (Windows/Linux/macOS)
+## Phase 5 — Endpoint agents (Windows/Linux/macOS) ✅ done, inventory-only by design
 
 Deeper than Phase 1's agentless discovery (a best-effort TCP+SNMP network scan
 that only ever reads what's reachable from outside a device) — a real lightweight
 background agent installed *on* a device: full hardware/software inventory, OS
-patch level, disk-encryption/AV status, and — opt-in, higher trust — remote script
-execution and software/patch deployment. Sequenced after Phase 4 deliberately:
+patch level, disk-encryption/AV status. Sequenced after Phase 4 deliberately:
 letting a fleet of real, privileged endpoints phone home safely is much
 lower-stakes once the multi-tenant cloud hardening above already exists, than
 bolting it onto an earlier phase.
 
-**Tier 1 (inventory-only) ✅ (this pass).** `apps/agent`, a real Node.js reference
-agent (zero dependencies, no build step, no signed installer — researched and
-confirmed this is the real pattern GLPI-Agent itself uses, not a shortcut) reports
-hardware/software inventory, OS version, disk encryption, and antivirus status from
-a genuinely real device. Per-device enrollment via a short-lived, single-use token
-minting a permanent per-device credential (same exact-match-hash shape as `ApiKey`)
-— a single compromised device can be revoked without touching any other device.
-New `Device`/`DeviceEnrollmentToken` models plus new inventory columns directly on
-the existing `Asset` model (a new `discoverySource: 'AGENT'` value, following the
-same source-specific-nullable-column shape agentless discovery's `snmpSysDescr`
-already established). Tiers 2/3 (remote execution, software deployment) remain
-designed-for but not built — the safest-default posture the roadmap itself called
-for, mirroring `AutonomyPolicy`'s own tiering from Phase 3. Signed installers need
-a real code-signing certificate and a Windows/macOS CI runner, neither available in
-this sandbox — named as concrete next-step work, not silently skipped. See
+**Tier 1 (inventory-only) ✅ (this pass) — and, per the user's explicit call,
+the intended permanent shape of this feature, not a stepping stone.** `apps/agent`,
+a real Node.js reference agent (zero dependencies, no build step, unsigned —
+researched and confirmed this is the real pattern GLPI-Agent itself uses, not a
+shortcut) reports hardware/software inventory, OS version, disk encryption, and
+antivirus status from a genuinely real device. Per-device enrollment via a
+short-lived, single-use token minting a permanent per-device credential (same
+exact-match-hash shape as `ApiKey`) — a single compromised device can be revoked
+without touching any other device. New `Device`/`DeviceEnrollmentToken` models plus
+new inventory columns directly on the existing `Asset` model (a new
+`discoverySource: 'AGENT'` value, following the same source-specific-nullable-
+column shape agentless discovery's `snmpSysDescr` already established). See
 `docs/adr/0047-endpoint-agents-v1.md`.
+
+**Remote execution/deployment (tiers 2/3) and a signed installer are deliberately
+NOT planned, not just "not yet built."** Both carry real, ongoing costs an
+unfunded open-source project has no way to absorb responsibly: a code-signing
+certificate (Windows OV/EV, ~$70-400/year, business identity verification) and an
+Apple Developer Program membership (~$99/year) are recurring expenses with no
+revenue behind them; remote script/software execution on a customer's real machine
+is also the single biggest security/liability surface in this whole codebase,
+demanding an ongoing audit/maintenance commitment no solo maintainer can
+responsibly staff. The unsigned Node.js script, downloaded and run directly, IS the
+long-term answer for this project, not a placeholder for something fancier later —
+matches how plenty of real open-source infrastructure ships (most CLI tools and
+many agents are distributed exactly this way, checksummed rather than
+code-signed). Revisit only if a funded fork, a sponsor, or a paid hosted-cloud
+tier one day makes the ongoing cost/liability sustainable — not speculatively.
 
 **Explicitly desktop/server only — not Android/iOS in this phase.** Real mobile
 MDM means enrolling as an Android Enterprise or Apple MDM device-policy
@@ -1592,8 +1622,35 @@ these real users actually want:
   Microsoft Intune), effectively a separate product — revisit only if there's
   real demand, not preemptively.
 
+**Console internationalization (i18n), added 2026-09-21.** The admin console and
+self-service portal are English-only today — real value for a self-hosted, open-
+source tool whose adopter base skews international (unlike a hosted SaaS with one
+default locale, a self-hosted operator's own staff and customers may not read
+English at all). Concretely: extract every user-facing string in `apps/web` into a
+translation resource, ship a real second locale at launch (not just English with
+scaffolding around it — a locale nobody can select yet proves nothing), and shape
+the file format so a community contributor can add a new language by editing one
+file and opening a PR, no build tooling or paid localization vendor required —
+deliberately a cost-free way to grow, unlike the OAuth-app/code-signing items
+above. Framework choice (react-i18next vs. a lighter homegrown key→string map) and
+which second locale ships first are open questions for whoever picks this up.
+
+**AI-assisted initial setup, added 2026-09-21.** Phase 2's first-run product tour
+(✅, `getOnboardingChecklist`) is a static checklist — customize a status, set an
+SLA policy, create a macro, invite a teammate. This item asks whether Seredina's
+own AI copilot (Phase 3, already answering questions grounded in a tenant's real
+data) could instead *do* some of that setup conversationally — e.g. a new admin
+describes their team's workflow in plain language and the AI proposes concrete
+ticket statuses/SLA policies/macros for them to review and accept, rather than
+clicking through each settings page cold. Not scoped yet: how much should be
+AI-proposed vs. human-configured, whether this reuses the existing `AiAgentRun`
+approval-gate shape (Phase 3) for "AI-proposed config, human approves" the same
+way a mutating tool call already works, and whether it's worth the added AI-cost-
+per-signup for a self-hosted operator who may have no AI provider configured at
+all (Phase 4's BYOK is opt-in, not guaranteed set up before first use).
+
 **Other**: mobile apps, voice/telephony, BPMN-style workflow automation, SSO/SAML,
-per-tenant data residency, console i18n.
+per-tenant data residency.
 
 **Extensibility, decided 2026-09-16: integrations, not a plugin platform —
 in either deployment mode.** A self-hosted-only native plugin loader was
