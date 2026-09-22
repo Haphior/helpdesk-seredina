@@ -138,7 +138,10 @@ function WidgetCard({
   const { t } = useTranslation();
   const label = t(`dashboard.widgets.${pref.widgetType}`);
   return (
-    <Card className={`group ${!pref.visible ? 'opacity-50' : ''}`}>
+    <Card
+      className={`group ${!pref.visible ? 'opacity-50' : ''}`}
+      data-tour={pref.widgetType === 'onboarding_checklist' ? 'getting-started-widget' : undefined}
+    >
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-[13.5px] font-semibold text-slate-700">{label}</h2>
         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">

@@ -376,3 +376,13 @@ export function GlobeIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function HelpIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="M7.6 7.8a2.4 2.4 0 1 1 3.4 2.6c-.7.35-1 .8-1 1.5v.4" />
+      <circle cx="10" cy="14.4" r="0.15" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}

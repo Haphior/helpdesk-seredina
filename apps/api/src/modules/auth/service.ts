@@ -152,12 +152,20 @@ export async function getMe(tenantId: string, userId: string) {
         name: true,
         role: { select: { key: true } },
         tenant: { select: { name: true, slug: true } },
+        tourCompletedAt: true,
       },
     });
     if (!user) throw new Error('user not found');
     const { tenant, ...rest } = user;
     return { ...rest, tenantName: tenant.name, tenantSlug: tenant.slug };
   });
+}
+
+/** Idempotent -- called once when the user finishes or explicitly skips the guided tour. */
+export async function completeTour(tenantId: string, userId: string) {
+  return withTenantTx(prisma, tenantId, (tx) =>
+    tx.user.update({ where: { id: userId }, data: { tourCompletedAt: new Date() }, select: { tourCompletedAt: true } }),
+  );
 }
 
 /**

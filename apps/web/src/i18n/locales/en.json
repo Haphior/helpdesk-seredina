@@ -282,5 +282,47 @@
       "autonomousFailed": "Failed to run the autonomous agent",
       "applyMacroFailed": "Failed to apply macro"
     }
+  },
+  "tour": {
+    "stepCount": "Step {{current}} of {{total}}",
+    "skip": "Skip tour",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Done",
+    "replay": "Replay the guided tour",
+    "steps": {
+      "welcome": {
+        "title": "Welcome to Seredina!",
+        "body": "A quick look at where everything lives. You can skip this tour at any time."
+      },
+      "dashboard": {
+        "title": "Your dashboard",
+        "body": "This is where you land every time you log in — widgets for ticket volume, SLA, and more, which you can hide or reorder."
+      },
+      "checklist": {
+        "title": "Get started",
+        "body": "This checklist walks you through setting up your organization: customizing ticket statuses, an SLA policy, a macro, and inviting your team."
+      },
+      "tickets": {
+        "title": "Tickets",
+        "body": "Everything that comes in — by email, the API, or a monitoring alert — ends up as a ticket here."
+      },
+      "processes": {
+        "title": "Processes",
+        "body": "Reusable checklists on top of a ticket: onboarding, changes, releases."
+      },
+      "knowledgeBase": {
+        "title": "Knowledge Base",
+        "body": "Articles your team relies on — publish one and your customers can read it too."
+      },
+      "language": {
+        "title": "Language",
+        "body": "Switch the console's language whenever you like — it's your own preference, not the whole team's."
+      },
+      "done": {
+        "title": "You're all set!",
+        "body": "You can watch this tour again anytime with the help icon right below."
+      }
+    }
   }
 }

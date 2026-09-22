@@ -282,5 +282,47 @@
       "autonomousFailed": "No se pudo ejecutar el agente autónomo",
       "applyMacroFailed": "No se pudo aplicar la macro"
     }
+  },
+  "tour": {
+    "stepCount": "Paso {{current}} de {{total}}",
+    "skip": "Saltar tour",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "finish": "Listo",
+    "replay": "Ver el tour guiado otra vez",
+    "steps": {
+      "welcome": {
+        "title": "¡Bienvenido a Seredina!",
+        "body": "Un vistazo rápido a dónde está todo. Podés saltar este tour cuando quieras."
+      },
+      "dashboard": {
+        "title": "Tu panel",
+        "body": "Acá aterrizás cada vez que entrás — widgets de volumen de tickets, SLA y más, que podés ocultar o reordenar."
+      },
+      "checklist": {
+        "title": "Primeros pasos",
+        "body": "Esta lista te guía para configurar tu organización: personalizar estados de tickets, una política de SLA, una macro, e invitar a tu equipo."
+      },
+      "tickets": {
+        "title": "Tickets",
+        "body": "Todo lo que llega — por correo, la API, o una alerta de monitoreo — termina siendo un ticket acá."
+      },
+      "processes": {
+        "title": "Procesos",
+        "body": "Checklists reutilizables sobre un ticket: onboarding, cambios, releases."
+      },
+      "knowledgeBase": {
+        "title": "Base de conocimiento",
+        "body": "Artículos que usa tu equipo — publicá uno y tus clientes también van a poder leerlo."
+      },
+      "language": {
+        "title": "Idioma",
+        "body": "Cambiá el idioma de la consola cuando quieras — es tu propia preferencia, no la de todo el equipo."
+      },
+      "done": {
+        "title": "¡Listo!",
+        "body": "Podés volver a ver este tour cuando quieras con el ícono de ayuda, justo abajo."
+      }
+    }
   }
 }

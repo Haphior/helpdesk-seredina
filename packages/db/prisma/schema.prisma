@@ -133,6 +133,12 @@ model User {
   role         Role?    @relation(fields: [roleId], references: [id])
   createdAt    DateTime @default(now()) @map("created_at")
 
+  // Null = hasn't seen the guided tour yet -- same "no row/no value = default"
+  // shape used elsewhere (TenantAiSettings, DashboardWidget). Set once on
+  // finishing or skipping it; the tour can still be replayed manually
+  // afterward from the sidebar, which doesn't touch this field.
+  tourCompletedAt DateTime? @map("tour_completed_at")
+
   // Account lockout after repeated failed logins -- see modules/auth/service.ts's
   // login(). failedLoginAttempts resets to 0 on a successful login or once a
   // lockout is applied; lockedUntil null means not currently locked.

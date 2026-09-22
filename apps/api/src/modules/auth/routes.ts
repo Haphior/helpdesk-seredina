@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
 import { PERMISSIONS } from '@seredina/shared';
 import {
+  completeTour,
   createRole,
   createUser,
   deleteRole,
@@ -120,6 +121,14 @@ export default async function authRoutes(app: FastifyInstance) {
     const { sub, tenantId } = request.user;
     const me = await getMe(tenantId, sub);
     return reply.send(me);
+  });
+
+  // No permission gate beyond being logged in -- every user marks their own
+  // tour done/skipped, never someone else's.
+  app.post('/auth/complete-tour', { preHandler: app.authenticate }, async (request, reply) => {
+    const { sub, tenantId } = request.user;
+    const result = await completeTour(tenantId, sub);
+    return reply.send(result);
   });
 
   // Gated on tickets:read, not users:manage -- any agent needs this to populate an

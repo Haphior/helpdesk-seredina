@@ -1,11 +1,12 @@
 import { useEffect, useState, type ComponentType, type SVGProps } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { apiGet } from '../lib/api';
 import type { Permission } from '../lib/types';
 import { ThemeProvider } from '../theme/ThemeContext';
 import { Avatar } from './Avatar';
+import { GuidedTour } from './GuidedTour';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { NotificationBell } from './NotificationBell';
 import {
@@ -21,6 +22,7 @@ import {
   ClockIcon,
   DashboardIcon,
   DownloadIcon,
+  HelpIcon,
   KeyIcon,
   LayersIcon,
   LogoutIcon,
@@ -44,6 +46,7 @@ interface Me {
   email: string;
   role: { key: string } | null;
   tenantName: string;
+  tourCompletedAt: string | null;
 }
 
 // Grouped, not one flat list -- past ~8 items a sidebar needs chunking to stay
@@ -118,13 +121,29 @@ const navGroups: {
 export function Layout() {
   const { t } = useTranslation();
   const { logout, hasPermission } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [me, setMe] = useState<Me | null>(null);
+  const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
     apiGet<Me>('/auth/me')
       .then(setMe)
       .catch(() => setMe(null));
   }, []);
+
+  // Auto-runs once, for a user who's never seen it, on first landing at
+  // /dashboard (where a fresh login/registration always redirects to) --
+  // one of the tour's own steps points at the Dashboard's "Get started"
+  // widget, so running it from any other page would just show that step's
+  // fallback centered card instead of the real thing. Replaying it later
+  // (the help button below) always navigates to /dashboard first for the
+  // same reason.
+  useEffect(() => {
+    if (me && !me.tourCompletedAt && location.pathname === '/dashboard') {
+      setShowTour(true);
+    }
+  }, [me, location.pathname]);
 
   return (
     <ThemeProvider>
@@ -155,6 +174,7 @@ export function Layout() {
                     <NavLink
                       key={item.to}
                       to={item.to}
+                      data-tour={`nav-${item.itemKey}`}
                       className={({ isActive }) =>
                         `flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium ${
                           isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'
@@ -171,8 +191,21 @@ export function Layout() {
           })}
         </nav>
 
-        <div className="border-t border-slate-100 px-4 py-2.5">
-          <LanguageSwitcher />
+        <div className="flex items-center gap-2 border-t border-slate-100 px-4 py-2.5">
+          <div className="flex-1" data-tour="language-switcher">
+            <LanguageSwitcher />
+          </div>
+          <button
+            onClick={() => {
+              if (location.pathname !== '/dashboard') navigate('/dashboard');
+              setShowTour(true);
+            }}
+            aria-label={t('tour.replay')}
+            title={t('tour.replay')}
+            className="flex-shrink-0 text-slate-400 hover:text-slate-700"
+          >
+            <HelpIcon width={16} height={16} />
+          </button>
         </div>
         <div className="flex items-center gap-2.5 border-t border-slate-100 px-4 py-3.5">
           <Avatar name={me?.name ?? '?'} size={28} />
@@ -188,6 +221,9 @@ export function Layout() {
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
+      {showTour && location.pathname === '/dashboard' && (
+        <GuidedTour onClose={() => setShowTour(false)} />
+      )}
     </div>
     </ThemeProvider>
   );
