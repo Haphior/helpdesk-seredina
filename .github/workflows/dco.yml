@@ -4,6 +4,12 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
 
+# Least-privilege default for the job's GITHUB_TOKEN: this workflow only
+# reads git history to check for a Signed-off-by trailer, it never writes
+# anything.
+permissions:
+  contents: read
+
 # A from-scratch check, not a marketplace GitHub App (dcoapp/app etc.) --
 # this project doesn't run third-party code inside itself anywhere else
 # (see docs/ROADMAP.md's "integrations, not a plugin platform" decision),

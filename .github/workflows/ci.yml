@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
 
+# Least-privilege default for the job's GITHUB_TOKEN: this workflow only
+# checks out code and runs tests against disposable service containers, it
+# never pushes, comments, or touches packages/Pages.
+permissions:
+  contents: read
+
 # Mirrors infra/docker/migrate-entrypoint.sh's real bootstrap sequence
 # (prisma migrate deploy -> create/alter app_tenant -> apply RLS policies ->
 # seed permissions) rather than reinventing it, so CI can never silently
