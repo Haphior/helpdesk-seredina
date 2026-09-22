@@ -315,6 +315,15 @@ model Ticket {
 
   @@unique([tenantId, number])
   @@index([tenantId, channel, externalId])
+  // listTickets' default ORDER BY createdAt DESC (tickets/service.ts) had no
+  // index covering the sort, only the tenant filter -- Postgres filtered via
+  // the (tenantId, channel, externalId) index's leading column, then sorted
+  // the matches in memory. Invisible at today's per-tenant ticket volumes
+  // (EXPLAIN ANALYZE: 0.09ms at ~100 rows) but the in-memory sort cost grows
+  // with each tenant's own ticket count, not the table's total size (RLS
+  // already isolates that) -- a B-tree index serves DESC via backward scan,
+  // no separate descending index needed.
+  @@index([tenantId, createdAt])
   @@map("tickets")
 }
 
