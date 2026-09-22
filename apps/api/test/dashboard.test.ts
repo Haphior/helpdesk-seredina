@@ -2,6 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { prisma, withTenantTx } from '@seredina/db';
 import { getDashboardPrefs, getOnboardingChecklist, upsertDashboardPref, WIDGET_TYPES } from '../src/modules/dashboard/service';
+
+// The original 7 widgets default to visible so an existing dashboard never
+// silently changes shape; the ones added by the dashboard-builder pass
+// default to hidden -- they belong in the "Add widget" catalog, not
+// unasked-for on every dashboard. Keep this list in sync with
+// dashboard/service.ts's own DEFAULT_VISIBLE map.
+const DEFAULT_HIDDEN_WIDGETS = ['channel_breakdown', 'my_open_tickets', 'unassigned_open_tickets', 'quick_links'];
 import { createMacro } from '../src/modules/macros/service';
 import { upsertSlaPolicy } from '../src/modules/sla/service';
 import { createTicketStatus, seedDefaultTicketStatuses } from '../src/modules/tickets/service';
@@ -23,12 +30,36 @@ describe.skipIf(!hasDb)('dashboard widget prefs', () => {
     });
   });
 
-  it('with no rows at all, returns every widget type visible, at its default order', async () => {
+  it('with no rows at all, returns every widget at its default visibility/order/size', async () => {
     const prefs = await getDashboardPrefs(tenantId, userId);
     expect(prefs).toHaveLength(WIDGET_TYPES.length);
-    expect(prefs.every((p) => p.visible)).toBe(true);
+    // the original 7 default visible; the dashboard-builder additions default hidden
+    for (const p of prefs) {
+      expect(p.visible).toBe(!DEFAULT_HIDDEN_WIDGETS.includes(p.widgetType));
+      expect(p.size).toBe('normal');
+    }
     // default order matches the WIDGET_TYPES catalog order
     expect(prefs.map((p) => p.widgetType)).toEqual([...WIDGET_TYPES]);
+  });
+
+  it('adding a default-hidden widget makes it visible and keeps the rest untouched', async () => {
+    await upsertDashboardPref(tenantId, userId, { widgetType: 'my_open_tickets', visible: true });
+    const prefs = await getDashboardPrefs(tenantId, userId);
+    expect(prefs.find((p) => p.widgetType === 'my_open_tickets')?.visible).toBe(true);
+    expect(prefs.find((p) => p.widgetType === 'unassigned_open_tickets')?.visible).toBe(false);
+  });
+
+  it('resizing a widget persists and defaults everything else to normal', async () => {
+    await upsertDashboardPref(tenantId, userId, { widgetType: 'ticket_volume', size: 'wide' });
+    const prefs = await getDashboardPrefs(tenantId, userId);
+    expect(prefs.find((p) => p.widgetType === 'ticket_volume')?.size).toBe('wide');
+    expect(prefs.find((p) => p.widgetType === 'priority_breakdown')?.size).toBe('normal');
+  });
+
+  it('rejects an unknown widget size', async () => {
+    await expect(upsertDashboardPref(tenantId, userId, { widgetType: 'ticket_volume', size: 'huge' })).rejects.toThrow(
+      'unknown widget size',
+    );
   });
 
   it('hiding one widget only affects that widget, not the others', async () => {

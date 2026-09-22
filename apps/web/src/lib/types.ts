@@ -357,7 +357,13 @@ export type WidgetType =
   | 'sla_compliance'
   | 'csat_score'
   | 'agent_workload'
-  | 'recent_activity';
+  | 'recent_activity'
+  | 'channel_breakdown'
+  | 'my_open_tickets'
+  | 'unassigned_open_tickets'
+  | 'quick_links';
+
+export type WidgetSize = 'normal' | 'wide';
 
 export interface OnboardingChecklistItem {
   key: string;
@@ -375,6 +381,7 @@ export interface DashboardPref {
   widgetType: WidgetType;
   visible: boolean;
   sortOrder: number;
+  size: WidgetSize;
 }
 
 export interface TicketVolumePoint {

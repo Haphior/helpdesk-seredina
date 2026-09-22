@@ -91,7 +91,7 @@
   },
   "dashboard": {
     "title": "Panel",
-    "subtitle": "Oculta o reordena los widgets con los controles que aparecen al pasar el cursor — se guarda por persona, no por tenant.",
+    "subtitle": "Oculta, redimensiona, reordena o agregá widgets — se guarda por persona, no por tenant.",
     "loading": "Cargando…",
     "loadFailed": "No se pudo cargar el panel",
     "hidden": "Oculto",
@@ -106,7 +106,11 @@
       "sla_compliance": "Cumplimiento de SLA",
       "csat_score": "Satisfacción del cliente",
       "agent_workload": "Carga de trabajo de agentes",
-      "recent_activity": "Actividad reciente"
+      "recent_activity": "Actividad reciente",
+      "channel_breakdown": "Tickets por canal",
+      "my_open_tickets": "Mis tickets abiertos",
+      "unassigned_open_tickets": "Tickets sin asignar",
+      "quick_links": "Accesos rápidos"
     },
     "sla": {
       "empty": "No hay tickets resueltos con una meta de SLA en los últimos 90 días.",
@@ -127,6 +131,28 @@
     },
     "recentActivity": {
       "empty": "Aún no hay tickets."
+    },
+    "myOpenTickets": {
+      "empty": "No tenés tickets abiertos asignados."
+    },
+    "unassignedTickets": {
+      "empty": "No hay tickets sin asignar — buen trabajo."
+    },
+    "channelBreakdown": {
+      "empty": "No hay tickets en los últimos 30 días.",
+      "period": "últimos 30 días"
+    },
+    "quickLinks": {
+      "newTicket": "Nuevo ticket"
+    },
+    "addWidget": "Agregar widget",
+    "resizeToNormal": "Achicar el widget {{widget}}",
+    "resizeToWide": "Agrandar el widget {{widget}}",
+    "dragToReorder": "Arrastrar para reordenar",
+    "addWidgetModal": {
+      "title": "Agregar un widget",
+      "empty": "Ya agregaste todos los widgets disponibles.",
+      "add": "Agregar"
     }
   },
   "common": {

@@ -143,3 +143,31 @@ export async function getRecentActivity(tenantId: string, limit = 6) {
     }),
   );
 }
+
+/** For the "my open tickets" dashboard widget -- everything assigned to the caller, not closed. */
+export async function getMyOpenTickets(tenantId: string, userId: string, limit = 6) {
+  return withTenantTx(prisma, tenantId, (tx) =>
+    tx.ticket.findMany({
+      where: { assigneeId: userId, status: { category: { not: 'CLOSED' } } },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      include: { status: true, contact: true },
+    }),
+  );
+}
+
+/**
+ * For the "unassigned tickets" dashboard widget -- surfaces the actual
+ * tickets (agent_workload's own `unassigned` field is already a count, this
+ * is the "which ones" a team lead would click through to triage).
+ */
+export async function getUnassignedOpenTickets(tenantId: string, limit = 6) {
+  return withTenantTx(prisma, tenantId, (tx) =>
+    tx.ticket.findMany({
+      where: { assigneeId: null, status: { category: { not: 'CLOSED' } } },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      include: { status: true, contact: true },
+    }),
+  );
+}

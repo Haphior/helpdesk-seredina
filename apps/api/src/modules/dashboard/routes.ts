@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { getDashboardPrefs, getOnboardingChecklist, upsertDashboardPref, WIDGET_TYPES } from './service';
+import { getDashboardPrefs, getOnboardingChecklist, upsertDashboardPref, WIDGET_SIZES, WIDGET_TYPES } from './service';
 
 const upsertSchema = z.object({
   widgetType: z.enum(WIDGET_TYPES),
   visible: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
+  size: z.enum(WIDGET_SIZES).optional(),
 });
 
 /** Per-user preferences over which team-wide widgets show and in what order -- gated tickets:read like the reporting data itself, not tickets:manage_all, since this is personal UI state, not tenant configuration. */

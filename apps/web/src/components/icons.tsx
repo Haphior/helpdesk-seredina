@@ -386,3 +386,40 @@ export function HelpIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function PlusIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M10 3.5v13M3.5 10h13" />
+    </Icon>
+  );
+}
+
+export function DragHandleIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="7" cy="5.5" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="13" cy="5.5" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="7" cy="10" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="13" cy="10" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="7" cy="14.5" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="13" cy="14.5" r="0.9" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}
+
+export function ExpandIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M3.5 8V3.5H8M12 3.5h4.5V8M16.5 12v4.5H12M8 16.5H3.5V12" />
+    </Icon>
+  );
+}
+
+export function ShrinkIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M7.5 3.5V7.5H3.5M12.5 3.5V7.5H16.5M16.5 12.5H12.5V16.5M3.5 12.5H7.5V16.5" />
+    </Icon>
+  );
+}

@@ -1075,6 +1075,10 @@ model DashboardWidget {
   widgetType String   @map("widget_type")
   sortOrder  Int      @default(0) @map("sort_order")
   visible    Boolean  @default(true)
+  // 'normal' | 'wide' (spans both grid columns) -- validated at the service
+  // layer against WidgetSize, same "fixed string set, not a DB enum" posture
+  // as widgetType above.
+  size       String   @default("normal")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@unique([userId, widgetType])

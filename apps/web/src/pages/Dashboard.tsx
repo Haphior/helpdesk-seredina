@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiGet, apiPut, ApiError } from '../lib/api';
+import { useAuth } from '../auth/AuthContext';
 import type {
   AgentWorkloadReport,
   CsatSummary,
@@ -10,12 +11,24 @@ import type {
   SlaComplianceReport,
   Ticket,
   TicketVolumePoint,
+  WidgetSize,
   WidgetType,
 } from '../lib/types';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon, EyeIcon, EyeOffIcon } from '../components/icons';
+import { Modal } from '../components/Modal';
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  DragHandleIcon,
+  EyeIcon,
+  EyeOffIcon,
+  ExpandIcon,
+  PlusIcon,
+  ShrinkIcon,
+} from '../components/icons';
 import { PRIORITY_TONE, STATUS_CATEGORY_TONE } from '../lib/format';
 
 interface DashboardData {
@@ -26,6 +39,9 @@ interface DashboardData {
   csat: CsatSummary;
   workload: AgentWorkloadReport;
   recent: Ticket[];
+  channels: Record<string, number>;
+  myOpen: Ticket[];
+  unassigned: Ticket[];
 }
 
 export function Dashboard() {
@@ -33,6 +49,8 @@ export function Dashboard() {
   const [prefs, setPrefs] = useState<DashboardPref[] | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [addWidgetOpen, setAddWidgetOpen] = useState(false);
+  const [dragging, setDragging] = useState<WidgetType | null>(null);
 
   function load() {
     setError(null);
@@ -45,10 +63,24 @@ export function Dashboard() {
       apiGet<CsatSummary>('/reporting/csat-summary'),
       apiGet<AgentWorkloadReport>('/reporting/agent-workload'),
       apiGet<{ tickets: Ticket[] }>('/reporting/recent-activity'),
+      apiGet<{ breakdown: Record<string, number> }>('/reporting/channel-breakdown'),
+      apiGet<{ tickets: Ticket[] }>('/reporting/my-open-tickets'),
+      apiGet<{ tickets: Ticket[] }>('/reporting/unassigned-open-tickets'),
     ])
-      .then(([p, ob, v, pr, s, c, w, r]) => {
+      .then(([p, ob, v, pr, s, c, w, r, ch, mine, unassigned]) => {
         setPrefs(p.widgets);
-        setData({ onboarding: ob, volume: v.volume, priority: pr.breakdown, sla: s, csat: c, workload: w, recent: r.tickets });
+        setData({
+          onboarding: ob,
+          volume: v.volume,
+          priority: pr.breakdown,
+          sla: s,
+          csat: c,
+          workload: w,
+          recent: r.tickets,
+          channels: ch.breakdown,
+          myOpen: mine.tickets,
+          unassigned: unassigned.tickets,
+        });
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : t('dashboard.loadFailed')));
   }
@@ -62,6 +94,16 @@ export function Dashboard() {
       await apiPut('/dashboard-widgets', { widgetType, visible });
     } catch {
       load(); // revert to server truth on failure
+    }
+  }
+
+  async function setSize(widgetType: WidgetType, size: WidgetSize) {
+    if (!prefs) return;
+    setPrefs(prefs.map((p) => (p.widgetType === widgetType ? { ...p, size } : p)));
+    try {
+      await apiPut('/dashboard-widgets', { widgetType, size });
+    } catch {
+      load();
     }
   }
 
@@ -89,10 +131,49 @@ export function Dashboard() {
     }
   }
 
+  // Drag-and-drop reorder: drops recompute every sortOrder as the dropped
+  // item's new list index, then persist only the ones that actually moved
+  // (a middle drag can shift every widget between the old and new spot by
+  // one, but the endpoints usually don't need a write).
+  async function reorderTo(widgetType: WidgetType, targetIndex: number) {
+    if (!prefs) return;
+    const from = prefs.findIndex((p) => p.widgetType === widgetType);
+    if (from < 0 || from === targetIndex) return;
+
+    const reordered = [...prefs];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    const changed: { widgetType: WidgetType; sortOrder: number }[] = [];
+    const next = reordered.map((p, i) => {
+      if (p.sortOrder !== i) changed.push({ widgetType: p.widgetType, sortOrder: i });
+      return { ...p, sortOrder: i };
+    });
+    setPrefs(next);
+
+    try {
+      await Promise.all(changed.map((c) => apiPut('/dashboard-widgets', c)));
+    } catch {
+      load();
+    }
+  }
+
+  const hiddenPrefs = prefs?.filter((p) => !p.visible) ?? [];
+
   return (
     <div className="px-8 py-7">
-      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">{t('dashboard.title')}</h1>
-      <p className="mb-5 text-[13.5px] text-slate-500">{t('dashboard.subtitle')}</p>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">{t('dashboard.title')}</h1>
+          <p className="text-[13.5px] text-slate-500">{t('dashboard.subtitle')}</p>
+        </div>
+        {prefs && (
+          <Button variant="secondary" size="sm" onClick={() => setAddWidgetOpen(true)}>
+            <PlusIcon width={13} height={13} />
+            {t('dashboard.addWidget')}
+          </Button>
+        )}
+      </div>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
       {(!prefs || !data) && !error && <p className="text-sm text-slate-500">{t('dashboard.loading')}</p>}
@@ -105,16 +186,67 @@ export function Dashboard() {
               pref={pref}
               canMoveUp={i > 0}
               canMoveDown={i < prefs.length - 1}
+              isDragging={dragging === pref.widgetType}
               onToggle={() => setVisible(pref.widgetType, !pref.visible)}
               onMoveUp={() => move(pref.widgetType, -1)}
               onMoveDown={() => move(pref.widgetType, 1)}
+              onResize={() => setSize(pref.widgetType, pref.size === 'wide' ? 'normal' : 'wide')}
+              onDragStart={() => setDragging(pref.widgetType)}
+              onDragEnd={() => setDragging(null)}
+              onDropOn={() => {
+                if (dragging && dragging !== pref.widgetType) reorderTo(dragging, i);
+                setDragging(null);
+              }}
             >
               {pref.visible && renderWidget(pref.widgetType, data)}
             </WidgetCard>
           ))}
         </div>
       )}
+
+      {addWidgetOpen && (
+        <AddWidgetModal
+          hidden={hiddenPrefs}
+          onAdd={(widgetType) => {
+            setVisible(widgetType, true);
+            setAddWidgetOpen(false);
+          }}
+          onClose={() => setAddWidgetOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+function AddWidgetModal({
+  hidden,
+  onAdd,
+  onClose,
+}: {
+  hidden: DashboardPref[];
+  onAdd: (widgetType: WidgetType) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Modal title={t('dashboard.addWidgetModal.title')} onClose={onClose}>
+      {hidden.length === 0 ? (
+        <p className="text-[13px] text-slate-500">{t('dashboard.addWidgetModal.empty')}</p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {hidden.map((p) => (
+            <button
+              key={p.widgetType}
+              onClick={() => onAdd(p.widgetType)}
+              className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-[13px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50"
+            >
+              {t(`dashboard.widgets.${p.widgetType}`)}
+              <span className="text-[12px] font-semibold text-indigo-600">{t('dashboard.addWidgetModal.add')}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -122,29 +254,67 @@ function WidgetCard({
   pref,
   canMoveUp,
   canMoveDown,
+  isDragging,
   onToggle,
   onMoveUp,
   onMoveDown,
+  onResize,
+  onDragStart,
+  onDragEnd,
+  onDropOn,
   children,
 }: {
   pref: DashboardPref;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  isDragging: boolean;
   onToggle: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onResize: () => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDropOn: () => void;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
   const label = t(`dashboard.widgets.${pref.widgetType}`);
   return (
     <Card
-      className={`group ${!pref.visible ? 'opacity-50' : ''}`}
+      className={`group ${!pref.visible ? 'opacity-50' : ''} ${pref.size === 'wide' ? 'md:col-span-2' : ''} ${
+        isDragging ? 'opacity-40' : ''
+      }`}
       data-tour={pref.widgetType === 'onboarding_checklist' ? 'getting-started-widget' : undefined}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDropOn();
+      }}
     >
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[13.5px] font-semibold text-slate-700">{label}</h2>
+        <div className="flex items-center gap-1.5">
+          <span
+            draggable
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            aria-label={t('dashboard.dragToReorder')}
+            title={t('dashboard.dragToReorder')}
+            className="cursor-grab text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+          >
+            <DragHandleIcon width={13} height={13} />
+          </span>
+          <h2 className="text-[13.5px] font-semibold text-slate-700">{label}</h2>
+        </div>
         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <Button
+            iconOnly
+            variant="ghost"
+            size="sm"
+            aria-label={pref.size === 'wide' ? t('dashboard.resizeToNormal', { widget: label }) : t('dashboard.resizeToWide', { widget: label })}
+            onClick={onResize}
+          >
+            {pref.size === 'wide' ? <ShrinkIcon width={13} height={13} /> : <ExpandIcon width={13} height={13} />}
+          </Button>
           <Button
             iconOnly
             variant="ghost"
@@ -196,7 +366,15 @@ function renderWidget(type: WidgetType, data: DashboardData) {
     case 'agent_workload':
       return <AgentWorkloadWidget report={data.workload} />;
     case 'recent_activity':
-      return <RecentActivityWidget tickets={data.recent} />;
+      return <TicketListWidget tickets={data.recent} emptyKey="dashboard.recentActivity.empty" />;
+    case 'channel_breakdown':
+      return <ChannelBreakdownWidget channels={data.channels} />;
+    case 'my_open_tickets':
+      return <TicketListWidget tickets={data.myOpen} emptyKey="dashboard.myOpenTickets.empty" />;
+    case 'unassigned_open_tickets':
+      return <TicketListWidget tickets={data.unassigned} emptyKey="dashboard.unassignedTickets.empty" />;
+    case 'quick_links':
+      return <QuickLinksWidget />;
   }
 }
 
@@ -379,19 +557,79 @@ function OnboardingChecklistWidget({ checklist }: { checklist: OnboardingCheckli
   );
 }
 
-function RecentActivityWidget({ tickets }: { tickets: Ticket[] }) {
+// Shared by recent activity / my open tickets / unassigned tickets -- same
+// ticket-row shape, only the source list and the empty-state copy differ.
+function TicketListWidget({ tickets, emptyKey }: { tickets: Ticket[]; emptyKey: string }) {
   const { t } = useTranslation();
-  if (tickets.length === 0) return <p className="text-xs text-slate-400">{t('dashboard.recentActivity.empty')}</p>;
+  if (tickets.length === 0) return <p className="text-xs text-slate-400">{t(emptyKey)}</p>;
   return (
     <div className="flex flex-col gap-2">
-      {tickets.map((t) => (
-        <Link key={t.id} to={`/tickets/${t.id}`} className="flex items-center justify-between gap-2 rounded-lg px-1.5 py-1 hover:bg-slate-50">
+      {tickets.map((ticket) => (
+        <Link
+          key={ticket.id}
+          to={`/tickets/${ticket.id}`}
+          className="flex items-center justify-between gap-2 rounded-lg px-1.5 py-1 hover:bg-slate-50"
+        >
           <span className="truncate text-[12.5px] text-slate-700">
-            <span className="text-slate-400">#{t.number}</span> {t.subject}
+            <span className="text-slate-400">#{ticket.number}</span> {ticket.subject}
           </span>
-          <Badge tone={STATUS_CATEGORY_TONE[t.status.category]} dot>
-            {t.status.label}
+          <Badge tone={STATUS_CATEGORY_TONE[ticket.status.category]} dot>
+            {ticket.status.label}
           </Badge>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+const CHANNEL_COLORS: Record<string, string> = {
+  email: 'bg-indigo-400',
+  api: 'bg-emerald-400',
+  alert: 'bg-rose-400',
+  widget: 'bg-amber-400',
+  catalog: 'bg-sky-400',
+  agent: 'bg-violet-400',
+};
+
+function ChannelBreakdownWidget({ channels }: { channels: Record<string, number> }) {
+  const { t } = useTranslation();
+  const entries = Object.entries(channels);
+  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+  if (total === 0) {
+    return <p className="text-xs text-slate-400">{t('dashboard.channelBreakdown.empty')}</p>;
+  }
+  const max = Math.max(1, ...entries.map(([, count]) => count));
+  return (
+    <div>
+      <div className="mb-2 flex flex-col gap-2">
+        {entries.map(([channel, count]) => (
+          <div key={channel} className="flex items-center gap-2.5">
+            <span className="w-16 truncate text-[12.5px] capitalize text-slate-600">{channel}</span>
+            <ProgressBar value={count} max={max} colorClassName={CHANNEL_COLORS[channel] ?? 'bg-slate-400'} />
+            <span className="w-6 text-right text-[12.5px] font-medium text-slate-600">{count}</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px] text-slate-400">{t('dashboard.channelBreakdown.period')}</p>
+    </div>
+  );
+}
+
+function QuickLinksWidget() {
+  const { t } = useTranslation();
+  const { hasPermission } = useAuth();
+  const links: { to: string; label: string; permission?: Parameters<typeof hasPermission>[0] }[] = [
+    { to: '/tickets', label: t('dashboard.quickLinks.newTicket') },
+    { to: '/knowledge-base', label: t('nav.items.knowledgeBase') },
+    { to: '/ticket-statuses', label: t('nav.items.ticketStatuses'), permission: 'tickets:manage_all' },
+    { to: '/users', label: t('nav.items.users'), permission: 'users:manage' },
+  ];
+  const visible = links.filter((l) => !l.permission || hasPermission(l.permission));
+  return (
+    <div className="flex flex-col gap-1">
+      {visible.map((l) => (
+        <Link key={l.to} to={l.to} className="rounded-lg px-1.5 py-1.5 text-[13px] font-medium text-indigo-600 hover:bg-indigo-50">
+          {l.label} →
         </Link>
       ))}
     </div>

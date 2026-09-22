@@ -4,10 +4,12 @@ import {
   getAgentWorkload,
   getChannelBreakdown,
   getCsatSummary,
+  getMyOpenTickets,
   getPriorityBreakdown,
   getRecentActivity,
   getSlaCompliance,
   getTicketVolume,
+  getUnassignedOpenTickets,
 } from './service';
 
 /** Read-only aggregate views -- any agent can see team-wide stats, same as the rest of this codebase's read/write split (tickets:read here, never tickets:manage_all). */
@@ -42,4 +44,16 @@ export default async function reportingRoutes(app: FastifyInstance) {
     const days = Number((request.query as { days?: string }).days ?? 90);
     return reply.send(await getCsatSummary(request.user.tenantId, days));
   });
+
+  app.get('/reporting/my-open-tickets', { preHandler: [app.authenticate, requirePermission('tickets:read')] }, async (request, reply) => {
+    return reply.send({ tickets: await getMyOpenTickets(request.user.tenantId, request.user.sub) });
+  });
+
+  app.get(
+    '/reporting/unassigned-open-tickets',
+    { preHandler: [app.authenticate, requirePermission('tickets:read')] },
+    async (request, reply) => {
+      return reply.send({ tickets: await getUnassignedOpenTickets(request.user.tenantId) });
+    },
+  );
 }

@@ -91,7 +91,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "Hide or reorder widgets with the controls that appear on hover — it's saved per person, not tenant-wide.",
+    "subtitle": "Hide, resize, reorder, or add widgets — it's saved per person, not tenant-wide.",
     "loading": "Loading…",
     "loadFailed": "Failed to load dashboard",
     "hidden": "Hidden",
@@ -106,7 +106,11 @@
       "sla_compliance": "SLA compliance",
       "csat_score": "Customer satisfaction",
       "agent_workload": "Agent workload",
-      "recent_activity": "Recent activity"
+      "recent_activity": "Recent activity",
+      "channel_breakdown": "Tickets by channel",
+      "my_open_tickets": "My open tickets",
+      "unassigned_open_tickets": "Unassigned tickets",
+      "quick_links": "Quick links"
     },
     "sla": {
       "empty": "No resolved tickets with an SLA target in the last 90 days.",
@@ -127,6 +131,28 @@
     },
     "recentActivity": {
       "empty": "No tickets yet."
+    },
+    "myOpenTickets": {
+      "empty": "No open tickets assigned to you."
+    },
+    "unassignedTickets": {
+      "empty": "No unassigned tickets — nice work."
+    },
+    "channelBreakdown": {
+      "empty": "No tickets in the last 30 days.",
+      "period": "last 30 days"
+    },
+    "quickLinks": {
+      "newTicket": "New ticket"
+    },
+    "addWidget": "Add widget",
+    "resizeToNormal": "Shrink {{widget}} widget",
+    "resizeToWide": "Widen {{widget}} widget",
+    "dragToReorder": "Drag to reorder",
+    "addWidgetModal": {
+      "title": "Add a widget",
+      "empty": "You've already added every available widget.",
+      "add": "Add"
     }
   },
   "common": {
