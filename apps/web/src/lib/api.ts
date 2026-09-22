@@ -75,7 +75,8 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   return body as T;
 }
 
-export const apiGet = <T,>(path: string) => apiFetch<T>(path);
+export const apiGet = <T,>(path: string, options?: { headers?: Record<string, string> }) =>
+  apiFetch<T>(path, options?.headers ? { headers: options.headers } : undefined);
 export const apiPost = <T,>(path: string, data?: unknown) =>
   apiFetch<T>(path, { method: 'POST', body: data === undefined ? undefined : JSON.stringify(data) });
 export const apiPatch = <T,>(path: string, data: unknown) =>

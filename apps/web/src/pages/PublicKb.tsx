@@ -7,26 +7,52 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
 import { SearchIcon } from '../components/icons';
+import { kbAccessHeaders, setStoredKbAccessCode } from '../lib/kbAccessCode';
+import { KbAccessGate } from '../components/KbAccessGate';
 
 export function PublicKb() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const [articles, setArticles] = useState<PublicKbArticleSummary[] | null>(null);
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [codeRequired, setCodeRequired] = useState(false);
 
   function load(query = q) {
     if (!tenantSlug) return;
+    setError(null);
     apiGet<{ articles: PublicKbArticleSummary[] }>(
       `/public/${tenantSlug}/kb-articles${query ? `?q=${encodeURIComponent(query)}` : ''}`,
+      { headers: kbAccessHeaders(tenantSlug) },
     )
-      .then((res) => setArticles(res.articles))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load the help center'));
+      .then((res) => {
+        setCodeRequired(false);
+        setArticles(res.articles);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          setCodeRequired(true);
+          return;
+        }
+        setError(err instanceof ApiError ? err.message : 'Failed to load the help center');
+      });
   }
 
   useEffect(() => {
     load('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantSlug]);
+
+  if (codeRequired && tenantSlug) {
+    return (
+      <KbAccessGate
+        tenantSlug={tenantSlug}
+        onUnlocked={(code) => {
+          setStoredKbAccessCode(tenantSlug, code);
+          load('');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10">

@@ -81,6 +81,7 @@ model Tenant {
   aiAgentRuns           AiAgentRun[]
   aiSettings            TenantAiSettings?
   uiSettings            TenantUiSettings?
+  kbSettings            TenantKbSettings?
   telegramChannel       TelegramChannel?
   csatResponses         CsatResponse[]
 
@@ -1427,4 +1428,23 @@ model TenantUiSettings {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("tenant_ui_settings")
+}
+
+// "No row = default" shape again -- portalEnabled defaults true (matches the
+// public KB portal's original, only-ever behavior, so an existing tenant with
+// published articles doesn't silently lose its portal on upgrade) and
+// hashedAccessCode null means no gate. bcrypt, not sha256 (contrast
+// ApiKey.hashedKey) -- this is a short, human-chosen, human-typed passphrase
+// shared with real customers, not a high-entropy generated token, so it needs
+// a slow hash. See docs/adr/0051-kb-portal-access-control.md.
+model TenantKbSettings {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @unique @map("tenant_id") @db.Uuid
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  portalEnabled    Boolean  @default(true) @map("portal_enabled")
+  hashedAccessCode String?  @map("hashed_access_code")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@map("tenant_kb_settings")
 }

@@ -7,6 +7,15 @@ contain breaking changes).
 
 ## [Unreleased]
 
+### Added
+
+- **Knowledge base portal access control**: the public self-service KB portal
+  can now be disabled entirely (internal-only KB) or gated behind a single
+  shared access code, from a new "Portal settings" panel on the console's
+  Knowledge Base page. Previously any published article was reachable by
+  anyone with the link, with no way to turn that off. See
+  `docs/adr/0051-kb-portal-access-control.md`.
+
 ## [0.1.0-alpha.1] - 2026-09-22
 
 First public alpha. All of Phases 0-5 from `docs/ROADMAP.md` are in, plus a

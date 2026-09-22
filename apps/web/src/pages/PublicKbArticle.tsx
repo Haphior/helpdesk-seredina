@@ -6,18 +6,45 @@ import { PortalBrand } from '../components/PortalBrand';
 import { Card } from '../components/Card';
 import { BackArrowIcon } from '../components/icons';
 import { formatDateTime } from '../lib/format';
+import { kbAccessHeaders, setStoredKbAccessCode } from '../lib/kbAccessCode';
+import { KbAccessGate } from '../components/KbAccessGate';
 
 export function PublicKbArticlePage() {
   const { tenantSlug, slug } = useParams<{ tenantSlug: string; slug: string }>();
   const [article, setArticle] = useState<PublicKbArticle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [codeRequired, setCodeRequired] = useState(false);
 
-  useEffect(() => {
+  function load() {
     if (!tenantSlug || !slug) return;
-    apiGet<PublicKbArticle>(`/public/${tenantSlug}/kb-articles/${slug}`)
-      .then(setArticle)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Article not found'));
-  }, [tenantSlug, slug]);
+    setError(null);
+    apiGet<PublicKbArticle>(`/public/${tenantSlug}/kb-articles/${slug}`, { headers: kbAccessHeaders(tenantSlug) })
+      .then((a) => {
+        setCodeRequired(false);
+        setArticle(a);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          setCodeRequired(true);
+          return;
+        }
+        setError(err instanceof ApiError ? err.message : 'Article not found');
+      });
+  }
+
+  useEffect(load, [tenantSlug, slug]);
+
+  if (codeRequired && tenantSlug) {
+    return (
+      <KbAccessGate
+        tenantSlug={tenantSlug}
+        onUnlocked={(code) => {
+          setStoredKbAccessCode(tenantSlug, code);
+          load();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10">

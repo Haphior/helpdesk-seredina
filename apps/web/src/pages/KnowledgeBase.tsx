@@ -8,11 +8,16 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Textarea } from '../components/Textarea';
 import { Card } from '../components/Card';
-import { SearchIcon } from '../components/icons';
+import { SearchIcon, ShieldIcon } from '../components/icons';
 import { formatDateTime } from '../lib/format';
 
 interface Me {
   tenantSlug: string;
+}
+
+interface KbPortalSettings {
+  portalEnabled: boolean;
+  hasAccessCode: boolean;
 }
 
 const PAGE_SIZE = 50;
@@ -20,6 +25,7 @@ const PAGE_SIZE = 50;
 export function KnowledgeBase() {
   const { hasPermission } = useAuth();
   const canWrite = hasPermission('tickets:write');
+  const canManagePortal = hasPermission('tickets:manage_all');
   const [articles, setArticles] = useState<KbArticle[] | null>(null);
   const [total, setTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -27,6 +33,7 @@ export function KnowledgeBase() {
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<KbArticle | 'new' | null>(null);
+  const [portalSettingsOpen, setPortalSettingsOpen] = useState(false);
 
   function load(query = q, offset = 0) {
     if (offset > 0) setLoadingMore(true);
@@ -64,7 +71,15 @@ export function KnowledgeBase() {
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Knowledge Base</h1>
-        {canWrite && <Button onClick={() => setEditing('new')}>New article</Button>}
+        <div className="flex items-center gap-2">
+          {canManagePortal && (
+            <Button variant="secondary" onClick={() => setPortalSettingsOpen(true)}>
+              <ShieldIcon width={14} height={14} />
+              Portal settings
+            </Button>
+          )}
+          {canWrite && <Button onClick={() => setEditing('new')}>New article</Button>}
+        </div>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
         Published articles are visible to anyone at{' '}
@@ -135,7 +150,109 @@ export function KnowledgeBase() {
       {editing && canWrite && (
         <ArticleModal article={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => load()} />
       )}
+
+      {portalSettingsOpen && canManagePortal && <PortalSettingsModal onClose={() => setPortalSettingsOpen(false)} />}
     </div>
+  );
+}
+
+function PortalSettingsModal({ onClose }: { onClose: () => void }) {
+  const [settings, setSettings] = useState<KbPortalSettings | null>(null);
+  const [portalEnabled, setPortalEnabled] = useState(true);
+  const [accessCode, setAccessCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    apiGet<KbPortalSettings>('/kb-settings')
+      .then((s) => {
+        setSettings(s);
+        setPortalEnabled(s.portalEnabled);
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load portal settings'));
+  }, []);
+
+  async function save() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const body: { portalEnabled: boolean; accessCode?: string } = { portalEnabled };
+      if (accessCode.trim()) body.accessCode = accessCode.trim();
+      const updated = await apiPatch<KbPortalSettings>('/kb-settings', body);
+      setSettings(updated);
+      setAccessCode('');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to save portal settings');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function clearAccessCode() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const updated = await apiPatch<KbPortalSettings>('/kb-settings', { accessCode: null });
+      setSettings(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to remove the access code');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Public portal settings" onClose={onClose}>
+      {!settings && !error && <p className="text-sm text-slate-500">Loading…</p>}
+      {settings && (
+        <div className="space-y-4">
+          <label className="flex items-start gap-2 text-[13px] text-slate-600">
+            <input
+              type="checkbox"
+              checked={portalEnabled}
+              onChange={(e) => setPortalEnabled(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
+            />
+            <span>
+              Public portal enabled — turn off if you don't want a public-facing knowledge base at all; published
+              articles stay visible to your agents in the console either way.
+            </span>
+          </label>
+
+          <div>
+            {settings.hasAccessCode ? (
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+                <span className="text-[13px] text-slate-600">An access code is set — visitors must enter it before browsing.</span>
+                <Button variant="dangerOutline" size="sm" onClick={clearAccessCode} isLoading={submitting}>
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <Input
+                label="Access code (optional)"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
+                placeholder="Leave empty for no code"
+              />
+            )}
+            <p className="mt-1.5 text-[12px] text-slate-400">
+              Not a login — a single shared code you hand out to whoever should be able to browse the portal.
+            </p>
+          </div>
+
+          {error && <p className="text-sm text-rose-600">{error}</p>}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Close
+            </Button>
+            <Button onClick={save} isLoading={submitting}>
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }
 

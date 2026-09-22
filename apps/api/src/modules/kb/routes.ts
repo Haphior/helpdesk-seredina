@@ -1,15 +1,18 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
 import { resolveTenantIdBySlug } from '../tenants/service';
 import {
+  checkKbPortalAccess,
   createKbArticle,
   deleteKbArticle,
   getKbArticle,
+  getKbPortalSettings,
   getPublishedKbArticleBySlug,
   listKbArticles,
   listPublishedKbArticles,
   updateKbArticle,
+  updateKbPortalSettings,
 } from './service';
 import { searchKnowledgeBase } from './embeddings';
 
@@ -35,6 +38,16 @@ const semanticSearchQuerySchema = z.object({
   q: z.string().min(1).max(500),
   limit: z.coerce.number().int().min(1).max(20).optional(),
 });
+
+const updatePortalSettingsSchema = z.object({
+  portalEnabled: z.boolean().optional(),
+  accessCode: z.string().min(4).max(200).nullable().optional(),
+});
+
+function sendPortalAccessError(reply: FastifyReply, reason: 'disabled' | 'code_required' | 'code_invalid') {
+  if (reason === 'disabled') return reply.code(404).send({ error: 'not found' });
+  return reply.code(401).send({ error: reason }); // 'code_required' | 'code_invalid' -- PublicKb.tsx/PublicKbArticlePage.tsx key off this
+}
 
 export default async function kbRoutes(app: FastifyInstance) {
   // Internal browsing -- tickets:read, same tier as custom field definitions:
@@ -115,19 +128,44 @@ export default async function kbRoutes(app: FastifyInstance) {
     },
   );
 
-  // The self-service portal: deliberately no auth at all -- a contact browsing
-  // published help articles has no Seredina account to log into (Contacts never
-  // authenticate; only Users/agents do). tenantSlug resolves which tenant's
-  // portal this is, the same resolveTenantIdBySlug() login/register already use
-  // to go from "no tenant context yet" to one -- see modules/tenants/service.ts.
-  // Both handlers 404 identically for "no such tenant" and "no such article":
-  // a public endpoint should never let an unauthenticated caller distinguish
-  // "wrong slug" from "wrong article slug" by response shape.
+  // Tenant-wide config, same tier as /ai-settings: whether the public portal
+  // below is reachable at all, and whether it's gated behind a shared access
+  // code. hasAccessCode only, never the code itself -- same "never returns the
+  // secret back" posture as TenantAiSettingsView.hasApiKey.
+  app.get('/kb-settings', { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] }, async (request, reply) => {
+    return reply.send(await getKbPortalSettings(request.user.tenantId));
+  });
+
+  app.patch('/kb-settings', { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] }, async (request, reply) => {
+    const parsed = updatePortalSettingsSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    return reply.send(await updateKbPortalSettings(request.user.tenantId, parsed.data));
+  });
+
+  // The self-service portal: deliberately no user-account auth -- a contact
+  // browsing published help articles has no Seredina account to log into
+  // (Contacts never authenticate; only Users/agents do). tenantSlug resolves
+  // which tenant's portal this is, the same resolveTenantIdBySlug()
+  // login/register already use to go from "no tenant context yet" to one --
+  // see modules/tenants/service.ts. Both handlers 404 identically for "no such
+  // tenant" and "no such article": a public endpoint should never let an
+  // unauthenticated caller distinguish "wrong slug" from "wrong article slug"
+  // by response shape.
+  //
+  // Two more gates sit in front of the article data itself, per
+  // docs/adr/0051-kb-portal-access-control.md: the whole portal can be turned
+  // off (portalEnabled), or gated behind a shared access code (never a login --
+  // see kb-settings above) passed as X-Kb-Access-Code. A disabled portal 404s
+  // the same as a missing tenant (nothing to reveal); a code gate 401s with a
+  // distinguishable reason, since a tenant choosing to gate its own portal
+  // isn't a secret the way tenant existence at login is.
   app.get('/public/:tenantSlug/kb-articles', async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string };
     const { q } = searchQuerySchema.parse(request.query);
     const tenantId = await resolveTenantIdBySlug(tenantSlug);
     if (!tenantId) return reply.code(404).send({ error: 'not found' });
+    const access = await checkKbPortalAccess(tenantId, request.headers['x-kb-access-code'] as string | undefined);
+    if (!access.ok) return sendPortalAccessError(reply, access.reason);
     const articles = await listPublishedKbArticles(tenantId, q);
     return reply.send({ articles });
   });
@@ -136,6 +174,8 @@ export default async function kbRoutes(app: FastifyInstance) {
     const { tenantSlug, slug } = request.params as { tenantSlug: string; slug: string };
     const tenantId = await resolveTenantIdBySlug(tenantSlug);
     if (!tenantId) return reply.code(404).send({ error: 'not found' });
+    const access = await checkKbPortalAccess(tenantId, request.headers['x-kb-access-code'] as string | undefined);
+    if (!access.ok) return sendPortalAccessError(reply, access.reason);
     try {
       const article = await getPublishedKbArticleBySlug(tenantId, slug);
       return reply.send(article);

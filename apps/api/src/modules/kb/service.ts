@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { prisma, withTenantTx, type Prisma } from '@seredina/db';
 import { embedKbArticleQueue } from '../../lib/queue';
 
@@ -149,4 +150,62 @@ export async function getPublishedKbArticleBySlug(tenantId: string, slug: string
     if (!article || !article.published) throw new Error('article not found');
     return { id: article.id, title: article.title, slug: article.slug, body: article.body, updatedAt: article.updatedAt };
   });
+}
+
+// --- Public portal access control -- gates the /public/:tenantSlug/kb-* routes
+// themselves (before any article is ever fetched), separate from the per-article
+// published flag above. See docs/adr/0051-kb-portal-access-control.md for why:
+// "published" alone left the portal permanently, unconditionally open to anyone
+// with a link, with no way to turn it off or gate it for a tenant that doesn't
+// want a fully public help center.
+
+export interface KbPortalSettingsView {
+  portalEnabled: boolean;
+  hasAccessCode: boolean;
+}
+
+// portalEnabled defaults true with no row -- matches the portal's only-ever
+// behavior before this setting existed, so an upgrading tenant with published
+// articles doesn't silently lose its portal.
+const DEFAULT_PORTAL_SETTINGS: KbPortalSettingsView = { portalEnabled: true, hasAccessCode: false };
+
+export async function getKbPortalSettings(tenantId: string): Promise<KbPortalSettingsView> {
+  return withTenantTx(prisma, tenantId, async (tx) => {
+    const row = await tx.tenantKbSettings.findUnique({ where: { tenantId } });
+    if (!row) return DEFAULT_PORTAL_SETTINGS;
+    return { portalEnabled: row.portalEnabled, hasAccessCode: Boolean(row.hashedAccessCode) };
+  });
+}
+
+export interface UpdateKbPortalSettingsInput {
+  portalEnabled?: boolean;
+  /** Plaintext -- only present when setting/replacing the code. `null` clears it (explicit act, same posture as clearing an AI provider key); `undefined` leaves whatever's stored alone. */
+  accessCode?: string | null;
+}
+
+export async function updateKbPortalSettings(tenantId: string, input: UpdateKbPortalSettingsInput): Promise<KbPortalSettingsView> {
+  const hashedAccessCode =
+    input.accessCode === undefined ? undefined : input.accessCode === null ? null : await bcrypt.hash(input.accessCode, 12);
+
+  const row = await withTenantTx(prisma, tenantId, (tx) =>
+    tx.tenantKbSettings.upsert({
+      where: { tenantId },
+      create: { tenantId, portalEnabled: input.portalEnabled ?? true, hashedAccessCode: hashedAccessCode ?? null },
+      update: { portalEnabled: input.portalEnabled, hashedAccessCode },
+    }),
+  );
+  return { portalEnabled: row.portalEnabled, hasAccessCode: Boolean(row.hashedAccessCode) };
+}
+
+export type KbPortalAccessResult = { ok: true } | { ok: false; reason: 'disabled' | 'code_required' | 'code_invalid' };
+
+/** Checked by every /public/:tenantSlug/kb-* route before touching article data -- see routes.ts. */
+export async function checkKbPortalAccess(tenantId: string, providedCode?: string): Promise<KbPortalAccessResult> {
+  const row = await withTenantTx(prisma, tenantId, (tx) => tx.tenantKbSettings.findUnique({ where: { tenantId } }));
+  if (row && !row.portalEnabled) return { ok: false, reason: 'disabled' };
+  if (row?.hashedAccessCode) {
+    if (!providedCode) return { ok: false, reason: 'code_required' };
+    if (!(await bcrypt.compare(providedCode, row.hashedAccessCode))) return { ok: false, reason: 'code_invalid' };
+  }
+  return { ok: true };
 }
