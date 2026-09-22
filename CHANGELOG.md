@@ -20,6 +20,24 @@ contain breaking changes).
   configuring process templates. See
   `docs/adr/0052-process-ticket-creation-and-reorder.md`.
 - `JWT_EXPIRES_IN` env var for the console session length (default `8h`).
+- **Agent-based discovery** (`docs/adr/0052-agent-based-discovery.md`):
+  - Reinstalling the agent on the same machine reuses its existing record
+    (matched by a hashed OS machine id) instead of creating a duplicate; the
+    old install's credential stops working.
+  - **Passive network discovery**: each check-in reports the agent's ARP
+    table, and the devices in it become assets (source `AGENT_NEIGHBOR`),
+    identified by MAC — a DHCP lease change now moves the IP on the same
+    record instead of creating a new one. Enrolling a machine that was already
+    discovered this way adopts that record.
+
+### Changed
+
+- **Network scans from the server are self-hosted only.** In cloud mode the
+  API refuses them (403), the worker won't run them, and the Assets page hides
+  the form — the worker there sits on the provider's network, not the
+  tenant's. `infra/docker-compose.yml` now passes `SEREDINA_MODE` to `worker`.
+- `POST /v1/devices/checkin` returns `200 { neighbors: { created, updated } }`
+  instead of `204`.
 
 ### Security
 

@@ -26,3 +26,17 @@ node src/index.mjs run --interval 3600
 ```
 
 Requires Node.js 18+ on the target machine.
+
+## What it reports
+
+Besides hardware/software inventory, since
+[`docs/adr/0052-agent-based-discovery.md`](../../docs/adr/0052-agent-based-discovery.md):
+
+- **A machine fingerprint** at enrollment — a SHA-256 of the OS's own machine
+  id (`/etc/machine-id`, Windows `MachineGuid`, macOS `IOPlatformUUID`), hashed
+  locally so the raw id never leaves the machine. Reinstalling the agent on the
+  same machine reuses its existing record instead of creating a duplicate.
+- **Its own primary MAC address**, and on every check-in **its ARP cache** — the
+  devices it has recently talked to on the local network. That's passive
+  discovery: printers, routers and other machines show up in the CMDB without
+  the agent (or the server) scanning anything.

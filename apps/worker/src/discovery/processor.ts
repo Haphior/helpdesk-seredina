@@ -9,6 +9,19 @@ import { scanHost, type HostScanResult } from './scanHost';
 const SCAN_CONCURRENCY = 32;
 
 export async function runDiscoveryJob(tenantId: string, discoveryJobId: string, cidrRange: string): Promise<void> {
+  // Defense in depth behind the API's own check (modules/discovery/service.ts):
+  // outside self-hosted mode this worker sits on our network, not the tenant's,
+  // so never scan -- even a job that was queued before the API check existed.
+  if (process.env.SEREDINA_MODE !== 'self_hosted') {
+    await withTenantTx(prisma, tenantId, (tx) =>
+      tx.discoveryJob.update({
+        where: { id: discoveryJobId },
+        data: { status: 'FAILED', errorMessage: 'network scans are only available in self-hosted mode', completedAt: new Date() },
+      }),
+    );
+    return;
+  }
+
   await withTenantTx(prisma, tenantId, (tx) =>
     tx.discoveryJob.update({ where: { id: discoveryJobId }, data: { status: 'RUNNING', startedAt: new Date() } }),
   );

@@ -24,6 +24,14 @@ Row-Level Security de Postgres (ver la
 si te interesa el detalle técnico). Esto es lo que necesitás si vas a
 operar Seredina como tu propio servicio para múltiples clientes.
 
+El modo cloud también desactiva los **escaneos de red desde el servidor**
+(Activos → "Scan a network range"). En modo self-hosted el worker está en
+tu propia red, así que escanearla es útil; en modo cloud estaría en la red
+del proveedor, así que la opción se oculta y la API la rechaza. Los tenants
+en cloud descubren equipos con el [agente](https://github.com/Haphior/helpdesk-seredina/tree/main/apps/agent):
+cada agente enrolado informa su propio inventario y los dispositivos que ve
+en su tabla ARP, sin escanear nada.
+
 ## Lo que el modo cloud *no* incluye todavía
 
 Sé directo sobre esto en vez de dar a entender que es un interruptor

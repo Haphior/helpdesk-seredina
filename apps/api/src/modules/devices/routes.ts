@@ -3,10 +3,16 @@ import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
 import { checkIn, createEnrollmentToken, enrollDevice, listDevices, revokeDevice } from './service';
 
+// Format only -- neighbors.ts's normalizeMac() does the real validation
+// (multicast/broadcast/all-zero rejected there, not here).
+const macSchema = z.string().regex(/^[0-9A-Fa-f]{2}([:-]?[0-9A-Fa-f]{2}){5}$/);
+
 const enrollSchema = z.object({
   hostname: z.string().min(1).max(200),
   platform: z.enum(['linux', 'darwin', 'win32']),
   agentVersion: z.string().max(50).optional(),
+  machineFingerprint: z.string().regex(/^[0-9a-f]{64}$/, 'machineFingerprint must be a lowercase sha256 hex digest').optional(),
+  macAddress: macSchema.optional(),
 });
 
 const checkInSchema = z.object({
@@ -17,6 +23,10 @@ const checkInSchema = z.object({
   diskEncrypted: z.boolean().optional(),
   antivirusStatus: z.string().max(100).optional(),
   installedPackages: z.array(z.object({ name: z.string(), version: z.string().optional() })).max(2000).optional(),
+  macAddress: macSchema.optional(),
+  // IPv4 only: an agent's ARP table. Capped well above any real LAN segment's
+  // neighbor count, so one device can't flood the CMDB.
+  neighbors: z.array(z.object({ ip: z.string().ip({ version: 'v4' }), mac: macSchema })).max(512).optional(),
 });
 
 export default async function deviceRoutes(app: FastifyInstance) {
@@ -68,8 +78,8 @@ export default async function deviceRoutes(app: FastifyInstance) {
     const parsed = checkInSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     try {
-      await checkIn(request.deviceHashedCredential!, parsed.data);
-      return reply.code(204).send();
+      const neighbors = await checkIn(request.deviceHashedCredential!, parsed.data);
+      return reply.code(200).send({ neighbors });
     } catch (err) {
       return reply.code(403).send({ error: (err as Error).message });
     }
