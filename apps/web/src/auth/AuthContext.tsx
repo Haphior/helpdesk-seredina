@@ -6,6 +6,7 @@ interface TokenPayload {
   sub: string;
   tenantId: string;
   permissions: Permission[];
+  exp?: number;
 }
 
 interface AuthContextValue {
@@ -31,7 +32,11 @@ function decodeToken(token: string): TokenPayload | null {
   try {
     const [, payloadSegment] = token.split('.');
     const json = atob(payloadSegment.replace(/-/g, '+').replace(/_/g, '/'));
-    return JSON.parse(json) as TokenPayload;
+    const payload = JSON.parse(json) as TokenPayload;
+    // An expired token is as good as none -- treat it as logged out up front
+    // rather than rendering the app only for every request to 401.
+    if (payload.exp !== undefined && payload.exp * 1000 <= Date.now()) return null;
+    return payload;
   } catch {
     return null;
   }

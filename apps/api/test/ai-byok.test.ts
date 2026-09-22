@@ -79,4 +79,35 @@ describe.skipIf(!hasDb)('Tenant AI settings (BYOK)', () => {
     await clearTenantAiSettings(tenantId);
     expect(await getAiAdapter(tenantId)).toBeInstanceOf(AnthropicAdapter);
   });
+
+  describe('tenant-supplied Ollama baseUrl (SSRF)', () => {
+    it('cloud mode refuses to save a baseUrl pointing at a private/metadata address', async () => {
+      delete process.env.SEREDINA_MODE;
+      await expect(
+        updateTenantAiSettings(tenantId, { provider: 'ollama', baseUrl: 'http://169.254.169.254/latest/meta-data' }),
+      ).rejects.toThrow('baseUrl is not allowed');
+      await expect(updateTenantAiSettings(tenantId, { provider: 'ollama', baseUrl: 'http://localhost:11434/v1' })).rejects.toThrow(
+        'baseUrl is not allowed',
+      );
+    });
+
+    it('self-hosted mode still allows a local Ollama', async () => {
+      process.env.SEREDINA_MODE = 'self_hosted';
+      const settings = await updateTenantAiSettings(tenantId, { provider: 'ollama', baseUrl: 'http://localhost:11434/v1' });
+      expect(settings.baseUrl).toBe('http://localhost:11434/v1');
+    });
+
+    it('cloud mode re-checks at request time, so a private baseUrl already stored is never fetched', async () => {
+      delete process.env.SEREDINA_MODE;
+      // Planted directly, as if saved before this check existed.
+      await withTenantTx(prisma, tenantId, (tx) =>
+        tx.tenantAiSettings.create({ data: { tenantId, provider: 'ollama', baseUrl: 'http://127.0.0.1:1/v1' } }),
+      );
+      const adapter = await getAiAdapter(tenantId);
+      const error = await adapter!.complete({ messages: [{ role: 'user', content: 'hi' }] }).catch((err: Error) => err);
+      expect(error).toBeInstanceOf(Error);
+      const causeMessage = String((error as Error & { cause?: Error }).cause?.message ?? (error as Error).message);
+      expect(causeMessage).toContain('private/reserved');
+    });
+  });
 });

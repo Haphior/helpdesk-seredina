@@ -1,7 +1,6 @@
 import { createHmac } from 'node:crypto';
-import { lookup } from 'node:dns/promises';
 import { prisma, withTenantTx } from '@seredina/db';
-import { CHAT_WEBHOOK_EVENTS, decryptSecret, isPrivateOrReservedIp, type ChatWebhookEvent, type WebhookDeliveryJobPayload } from '@seredina/shared';
+import { CHAT_WEBHOOK_EVENTS, decryptSecret, ssrfSafeFetch, type ChatWebhookEvent, type WebhookDeliveryJobPayload } from '@seredina/shared';
 import { formatChatMessage } from './chatMessage';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
@@ -33,14 +32,6 @@ export async function deliverWebhook(payload: WebhookDeliveryJobPayload): Promis
     throw new Error(`refusing to deliver to non-https URL: ${webhook.url}`);
   }
 
-  // Best-effort SSRF guard, not DNS-rebinding-proof -- see
-  // packages/shared/src/ssrf.ts and docs/adr/0009-outbound-webhooks.md for the
-  // honest scope of what this does and doesn't cover.
-  const resolved = await lookup(url.hostname);
-  if (isPrivateOrReservedIp(resolved.address, resolved.family as 4 | 6)) {
-    throw new Error(`refusing to deliver to a private/reserved address: ${resolved.address}`);
-  }
-
   // 'slack'/'teams' post the plain {"text": "..."} shape both platforms'
   // current real webhook mechanisms accept (Slack Incoming Webhooks, Teams
   // Workflows -- confirmed against Teams' own live docs, not assumed) and skip
@@ -66,7 +57,10 @@ export async function deliverWebhook(payload: WebhookDeliveryJobPayload): Promis
   const timeout = setTimeout(() => controller.abort(), DELIVERY_TIMEOUT_MS);
 
   try {
-    const response = await fetch(webhook.url, { method: 'POST', headers, body, signal: controller.signal });
+    // ssrfSafeFetch checks every resolved address and never follows a
+    // redirect, so a 3xx lands here as !ok -- see packages/shared/src/ssrf.ts
+    // for the honest scope of what this does and doesn't cover.
+    const response = await ssrfSafeFetch(webhook.url, { method: 'POST', headers, body, signal: controller.signal });
     if (!response.ok) {
       throw new Error(`webhook endpoint responded ${response.status}`);
     }

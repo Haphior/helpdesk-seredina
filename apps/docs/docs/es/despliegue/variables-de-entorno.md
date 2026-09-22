@@ -21,6 +21,7 @@ resto tiene un valor por defecto razonable o es opcional.
 | Variable | Requerida | Descripción |
 |---|---|---|
 | `JWT_SECRET` | Sí (secreto generado) | Firma los tokens de sesión. |
+| `JWT_EXPIRES_IN` | No | Cuánto dura una sesión de la consola antes de tener que volver a iniciar sesión (`8h` por defecto; acepta valores como `30m`, `12h`, `1d`). Desactivar un usuario o cambiar su rol surte efecto de inmediato de todos modos. |
 | `ENCRYPTION_KEY` | Sí (secreto generado) | Cifra en reposo (AES-256-GCM) las contraseñas IMAP/SMTP de los canales de correo, y otros secretos por tenant. **Debe tener exactamente 64 caracteres hexadecimales** (`openssl rand -hex 32`). |
 
 ::: warning Perder este `ENCRYPTION_KEY` es irreversible

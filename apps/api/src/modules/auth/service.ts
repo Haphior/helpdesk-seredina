@@ -90,6 +90,13 @@ export interface LoginInput {
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
+// Compared against when there's no real hash to check (unknown email, locked or
+// inactive account), so every login attempt pays the same bcrypt cost. Without
+// it, "no such user" answers in ~1ms while a wrong password takes ~200ms, and
+// the identical 'invalid credentials' message stops mattering -- response time
+// alone enumerates which emails have accounts.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync('seredina-login-timing-equalizer', 12);
+
 export async function login(input: LoginInput): Promise<AuthResult> {
   const tenantId = await resolveTenantIdBySlug(input.tenantSlug);
   if (!tenantId) {
@@ -107,11 +114,8 @@ export async function login(input: LoginInput): Promise<AuthResult> {
       include: { role: { include: { permissions: { include: { permission: true } } } } },
     });
 
-    if (!user) return null;
-
-    if (!user.isActive) return null;
-
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
+    if (!user || !user.isActive || (user.lockedUntil && user.lockedUntil > new Date())) {
+      await bcrypt.compare(input.password, DUMMY_PASSWORD_HASH);
       return null;
     }
 
@@ -141,6 +145,39 @@ export async function login(input: LoginInput): Promise<AuthResult> {
   if (!result) throw new Error('invalid credentials');
   return result;
 }
+
+/**
+ * Called by the JWT plugin's authenticate() on every request: the user's
+ * CURRENT permissions, or null if they no longer exist or were deactivated.
+ * The permissions baked into the token at login are never trusted for
+ * authorization -- they'd keep a demoted or deactivated user's old access
+ * alive until the token expired.
+ */
+export async function getActiveUserPermissions(tenantId: string, userId: string): Promise<Permission[] | null> {
+  const user = await withTenantTx(prisma, tenantId, (tx) =>
+    tx.user.findUnique({
+      where: { id: userId },
+      select: { isActive: true, role: { select: { permissions: { select: { permission: { select: { key: true } } } } } } },
+    }),
+  );
+  if (!user || !user.isActive) return null;
+  return (user.role?.permissions.map((rp) => rp.permission.key) ?? []) as Permission[];
+}
+
+/**
+ * users:manage is not a license to hand out more access than the caller has --
+ * otherwise a custom role with users:manage but not roles:manage (e.g. an HR
+ * role) could assign 'admin' to itself or mint a new admin account. Throws if
+ * the role carries any permission the caller lacks.
+ */
+function assertCanAssignRole(rolePermissionKeys: string[], callerPermissions: readonly Permission[]) {
+  const missing = rolePermissionKeys.filter((key) => !callerPermissions.includes(key as Permission));
+  if (missing.length > 0) {
+    throw new Error(`cannot assign a role with permissions you don't have: ${missing.join(', ')}`);
+  }
+}
+
+const ROLE_WITH_PERMISSION_KEYS = { permissions: { select: { permission: { select: { key: true } } } } } as const;
 
 export async function getMe(tenantId: string, userId: string) {
   return withTenantTx(prisma, tenantId, async (tx) => {
@@ -318,10 +355,14 @@ export interface CreateUserInput {
  * built), so an admin sets the initial password directly and shares it out of band;
  * see ROADMAP for that as a deferred follow-up once the email channel exists.
  */
-export async function createUser(tenantId: string, input: CreateUserInput) {
+export async function createUser(tenantId: string, input: CreateUserInput, callerPermissions: readonly Permission[]) {
   return withTenantTx(prisma, tenantId, async (tx) => {
-    const role = await tx.role.findUnique({ where: { tenantId_key: { tenantId, key: input.roleKey } } });
+    const role = await tx.role.findUnique({
+      where: { tenantId_key: { tenantId, key: input.roleKey } },
+      include: ROLE_WITH_PERMISSION_KEYS,
+    });
     if (!role) throw new Error('role not found');
+    assertCanAssignRole(role.permissions.map((rp) => rp.permission.key), callerPermissions);
 
     const passwordHash = await bcrypt.hash(input.password, 12);
     return tx.user.create({
@@ -338,14 +379,21 @@ export interface UpdateUserInput {
 }
 
 /**
- * `callerId`, when passed, blocks a self-deactivation -- a lone admin
+ * `caller`, when passed, blocks a self-deactivation -- a lone admin
  * deactivating their own account with nobody else able to log in and
- * reactivate them would be a real footgun. Optional because not every caller
- * of updateUser is a self-service admin action (there is none today, but a
- * future system-initiated update -- e.g. a bulk offboarding job -- shouldn't
- * be forced to invent a caller id it doesn't have).
+ * reactivate them would be a real footgun -- and a role change to a role with
+ * more permissions than the caller holds (see assertCanAssignRole). Optional
+ * because not every caller of updateUser is a self-service admin action
+ * (there is none today, but a future system-initiated update -- e.g. a bulk
+ * offboarding job -- shouldn't be forced to invent a caller it doesn't have).
  */
-export async function updateUser(tenantId: string, userId: string, input: UpdateUserInput, callerId?: string) {
+export async function updateUser(
+  tenantId: string,
+  userId: string,
+  input: UpdateUserInput,
+  caller?: { id: string; permissions: readonly Permission[] },
+) {
+  const callerId = caller?.id;
   if (input.isActive === false && userId === callerId) {
     throw new Error('you cannot deactivate your own account');
   }
@@ -355,8 +403,12 @@ export async function updateUser(tenantId: string, userId: string, input: Update
 
     let roleId: string | undefined;
     if (input.roleKey) {
-      const role = await tx.role.findUnique({ where: { tenantId_key: { tenantId, key: input.roleKey } } });
+      const role = await tx.role.findUnique({
+        where: { tenantId_key: { tenantId, key: input.roleKey } },
+        include: ROLE_WITH_PERMISSION_KEYS,
+      });
       if (!role) throw new Error('role not found');
+      if (caller) assertCanAssignRole(role.permissions.map((rp) => rp.permission.key), caller.permissions);
       roleId = role.id;
     }
 

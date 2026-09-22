@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { prisma, withTenantTx } from '@seredina/db';
+import { PERMISSIONS } from '@seredina/shared';
 import { createUser, listUsers, login, resetUserPassword, unlockUser, updateUser } from '../src/modules/auth/service';
 import { createApiKey, deleteApiKey, listApiKeys } from '../src/modules/apikeys/service';
 
@@ -26,7 +27,7 @@ describe.skipIf(!hasDb)('Administration (review pass)', () => {
 
   describe('user deactivation', () => {
     it('a deactivated user can no longer log in, and reactivating restores access', async () => {
-      const user = await createUser(tenantId, { email: 'agent@example.com', name: 'Agent', password: 'password123', roleKey: 'admin' });
+      const user = await createUser(tenantId, { email: 'agent@example.com', name: 'Agent', password: 'password123', roleKey: 'admin' }, PERMISSIONS);
 
       const before = await login({ tenantSlug, email: 'agent@example.com', password: 'password123' });
       expect(before.userId).toBe(user.id);
@@ -42,7 +43,7 @@ describe.skipIf(!hasDb)('Administration (review pass)', () => {
     });
 
     it('rejects a self-deactivation', async () => {
-      await expect(updateUser(tenantId, adminId, { isActive: false }, adminId)).rejects.toThrow(
+      await expect(updateUser(tenantId, adminId, { isActive: false }, { id: adminId, permissions: PERMISSIONS })).rejects.toThrow(
         'you cannot deactivate your own account',
       );
     });
@@ -57,7 +58,7 @@ describe.skipIf(!hasDb)('Administration (review pass)', () => {
 
   describe('account lockout + unlock', () => {
     it('unlockUser clears a lockout early, restoring login before the timeout would', async () => {
-      const user = await createUser(tenantId, { email: 'locked@example.com', name: 'Locked', password: 'realpassword1', roleKey: 'admin' });
+      const user = await createUser(tenantId, { email: 'locked@example.com', name: 'Locked', password: 'realpassword1', roleKey: 'admin' }, PERMISSIONS);
 
       for (let i = 0; i < 5; i++) {
         await login({ tenantSlug, email: 'locked@example.com', password: 'wrong-password' }).catch(() => {});
@@ -80,7 +81,7 @@ describe.skipIf(!hasDb)('Administration (review pass)', () => {
 
   describe('admin password reset', () => {
     it('resetUserPassword changes the password and clears any lockout', async () => {
-      const user = await createUser(tenantId, { email: 'reset@example.com', name: 'Reset Me', password: 'oldpassword1', roleKey: 'admin' });
+      const user = await createUser(tenantId, { email: 'reset@example.com', name: 'Reset Me', password: 'oldpassword1', roleKey: 'admin' }, PERMISSIONS);
 
       await resetUserPassword(tenantId, user.id, 'brandnewpassword1');
 

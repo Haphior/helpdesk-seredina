@@ -19,6 +19,31 @@ contain breaking changes).
   the same action, plus drag-to-reorder and a duplicate-step button when
   configuring process templates. See
   `docs/adr/0052-process-ticket-creation-and-reorder.md`.
+- `JWT_EXPIRES_IN` env var for the console session length (default `8h`).
+
+### Security
+
+- **Console sessions now expire and are revoked immediately.** Login tokens
+  previously never expired, and their permissions were a snapshot from login
+  time -- a deactivated or demoted user kept their old access indefinitely.
+  Tokens now expire (`JWT_EXPIRES_IN`, default `8h`), tokens issued before
+  this release are rejected (everyone signs in once more), and every request
+  re-checks that the user is still active and uses their *current* role's
+  permissions.
+- **No privilege escalation through `users:manage`.** A user can no longer
+  create a user with, or assign, a role that has permissions they don't have
+  themselves (e.g. a custom role with `users:manage` promoting itself to
+  `admin`).
+- **Outbound SSRF hardening.** Webhook delivery no longer follows redirects
+  (a public URL answering `307` to `169.254.169.254` bypassed the check),
+  checks every address a hostname resolves to, and blocks IPv4 addresses
+  hidden in IPv6 forms (`::ffff:127.0.0.1`, NAT64, 6to4) plus the remaining
+  reserved ranges (CGNAT, multicast, ...). In cloud mode, a tenant's own
+  Ollama `baseUrl` gets the same protection, both when saved and on every
+  request.
+- Login takes the same time whether or not the email exists, so response
+  timing no longer reveals which accounts exist; the Telegram webhook secret
+  is compared in constant time.
 
 ## [0.1.0-alpha.1] - 2026-09-22
 

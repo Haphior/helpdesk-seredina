@@ -21,6 +21,7 @@ secret"; everything else has a sensible default or is optional.
 | Variable | Required | Description |
 |---|---|---|
 | `JWT_SECRET` | Yes (generated secret) | Signs session tokens. |
+| `JWT_EXPIRES_IN` | No | How long a console login lasts before the user has to sign in again (`8h` by default; accepts values like `30m`, `12h`, `1d`). Deactivating a user or changing their role takes effect immediately regardless. |
 | `ENCRYPTION_KEY` | Yes (generated secret) | Encrypts email channel IMAP/SMTP passwords at rest (AES-256-GCM), plus other per-tenant secrets. **Must be exactly 64 hex characters** (`openssl rand -hex 32`). |
 
 ::: warning Losing this `ENCRYPTION_KEY` is irreversible

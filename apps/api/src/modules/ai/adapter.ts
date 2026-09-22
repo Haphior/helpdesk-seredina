@@ -1,5 +1,6 @@
 import { AnthropicAdapter, OllamaAdapter, OpenAIAdapter, type LlmProviderAdapter } from '@seredina/ai-adapters';
-import { getResolvedTenantAiConfig, type AiProvider } from './settings';
+import { ssrfSafeFetch } from '@seredina/shared';
+import { getResolvedTenantAiConfig, tenantBaseUrlNeedsSsrfGuard, type AiProvider } from './settings';
 
 const VALID_PROVIDERS = ['anthropic', 'openai', 'ollama'] as const;
 
@@ -7,7 +8,13 @@ function isValidProvider(value: string): value is AiProvider {
   return (VALID_PROVIDERS as readonly string[]).includes(value);
 }
 
-function buildAdapter(provider: AiProvider, apiKey: string | undefined, model: string | undefined, baseUrl: string | undefined): LlmProviderAdapter | null {
+function buildAdapter(
+  provider: AiProvider,
+  apiKey: string | undefined,
+  model: string | undefined,
+  baseUrl: string | undefined,
+  { tenantConfigured = false }: { tenantConfigured?: boolean } = {},
+): LlmProviderAdapter | null {
   switch (provider) {
     case 'anthropic':
       return apiKey ? new AnthropicAdapter({ apiKey, model }) : null;
@@ -16,7 +23,11 @@ function buildAdapter(provider: AiProvider, apiKey: string | undefined, model: s
     case 'ollama':
       // No API key check -- Ollama's own "required but unused" placeholder
       // is baked into OllamaAdapter itself, not conditioned on config here.
-      return new OllamaAdapter({ baseURL: baseUrl, model });
+      return new OllamaAdapter({
+        baseURL: baseUrl,
+        model,
+        fetch: tenantConfigured && tenantBaseUrlNeedsSsrfGuard() ? ssrfSafeFetch : undefined,
+      });
   }
 }
 
@@ -63,7 +74,9 @@ function deploymentWideAdapter(): LlmProviderAdapter | null {
 export async function getAiAdapter(tenantId: string): Promise<LlmProviderAdapter | null> {
   const tenantConfig = await getResolvedTenantAiConfig(tenantId);
   if (tenantConfig) {
-    return buildAdapter(tenantConfig.provider, tenantConfig.apiKey, tenantConfig.model, tenantConfig.baseUrl);
+    return buildAdapter(tenantConfig.provider, tenantConfig.apiKey, tenantConfig.model, tenantConfig.baseUrl, {
+      tenantConfigured: true,
+    });
   }
   return deploymentWideAdapter();
 }
