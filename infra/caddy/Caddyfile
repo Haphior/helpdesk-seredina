@@ -1,0 +1,28 @@
+# The optional HTTPS entry point (docs/adr/0054-server-address-and-tls.md),
+# started with the `proxy` compose profile. Everything -- the console and the
+# API under /api -- goes to the web container; this only terminates TLS.
+#
+# Configured from .env by scripts/configure-address.sh:
+#   SEREDINA_SITE  the address, e.g. helpdesk.example.com or 192.168.1.20
+#                  (prefixed with http:// when TLS_MODE=off)
+#   TLS_MODE       acme | custom | internal | off -- picks the snippet in ./tls/
+{
+	# Nothing reconfigures Caddy at runtime; don't expose its admin API.
+	admin off
+	# TLS_MODE=internal: the CA is handed to agents by fingerprint and to
+	# browsers by the operator -- installing it into the container's own
+	# trust store would do nothing useful.
+	skip_install_trust
+}
+
+{$SEREDINA_SITE} {
+	import /etc/caddy/tls/{$TLS_MODE}.caddy
+
+	encode zstd gzip
+
+	reverse_proxy web:80 {
+		# Stream responses as they come -- live updates (GET /api/events) are
+		# a long-lived Server-Sent Events stream.
+		flush_interval -1
+	}
+}

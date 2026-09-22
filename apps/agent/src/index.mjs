@@ -5,6 +5,7 @@
 //
 // Usage:
 //   node src/index.mjs enroll --url <api-url> --token <enrollment-token>
+//                             [--ca-sha256 <fingerprint> | --ca <ca-file.pem>]
 //   node src/index.mjs checkin
 //   node src/index.mjs run [--interval <seconds>]
 
@@ -13,11 +14,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import https from 'node:https';
+import { createHash } from 'node:crypto';
 import { collectInventory } from './inventory.mjs';
 import { collectNeighbors, machineFingerprint, primaryMacAddress } from './network.mjs';
 
 const CONFIG_DIR = path.join(os.homedir(), '.seredina-agent');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'credentials.json');
+// The pinned CA for a server whose certificate isn't publicly trusted
+// (docs/adr/0054-server-address-and-tls.md). When present, it is the ONLY CA
+// this agent trusts for that server -- Node's `ca` option replaces the
+// default roots rather than adding to them.
+const CA_PATH = path.join(CONFIG_DIR, 'ca.pem');
 const DEFAULT_INTERVAL_SECONDS = 60 * 60; // 1 hour -- inventory doesn't change minute to minute, unlike e.g. email polling
 
 function parseArgs(argv) {
@@ -31,14 +38,20 @@ function parseArgs(argv) {
   return args;
 }
 
-function request(urlString, { method = 'GET', headers = {}, body } = {}) {
+// `ca`: trust only this CA. `insecure`: skip certificate verification -- used
+// for exactly one thing, fetching the CA file whose sha256 the caller then
+// checks against the fingerprint an admin copied from the console. `raw`:
+// resolve with the exact body text instead of parsed JSON.
+function request(urlString, { method = 'GET', headers = {}, body, ca, insecure = false, raw = false } = {}) {
   return new Promise((resolve, reject) => {
     const url = new URL(urlString);
     const lib = url.protocol === 'https:' ? https : http;
     const payload = body ? JSON.stringify(body) : undefined;
+    const tls = url.protocol === 'https:' ? { ...(ca ? { ca } : {}), ...(insecure ? { rejectUnauthorized: false } : {}) } : {};
     const req = lib.request(
       url,
       {
+        ...tls,
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -53,6 +66,11 @@ function request(urlString, { method = 'GET', headers = {}, body } = {}) {
         });
         res.on('end', () => {
           const status = res.statusCode ?? 0;
+          if (raw) {
+            if (status >= 200 && status < 300) resolve(data);
+            else reject(new Error(`HTTP ${status}`));
+            return;
+          }
           let parsed = null;
           try {
             parsed = data ? JSON.parse(data) : null;
@@ -70,15 +88,59 @@ function request(urlString, { method = 'GET', headers = {}, body } = {}) {
   });
 }
 
+function normalizeServerUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`"${value}" is not a valid server address -- expected e.g. https://helpdesk.example.com/api`);
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('the server address must start with https:// (or http://)');
+  if (url.protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) {
+    console.warn('Warning: this server address uses http://, so the agent credential and inventory travel unencrypted. Use https:// outside a test setup.');
+  }
+  return url.toString().replace(/\/$/, '');
+}
+
+/**
+ * Resolves which CA to pin, if any: a local file (--ca), or the server's own
+ * CA (--ca-sha256). The download is done WITHOUT certificate verification --
+ * there's nothing to verify it against yet -- which is exactly why its sha256
+ * must match the fingerprint shown in the console before it's trusted.
+ */
+async function resolveCa(url, args) {
+  if (args.ca) {
+    const pem = fs.readFileSync(args.ca, 'utf8');
+    if (!pem.includes('BEGIN CERTIFICATE')) throw new Error(`${args.ca} doesn't contain a PEM certificate`);
+    return pem;
+  }
+  if (args['ca-sha256']) {
+    const expected = args['ca-sha256'].toLowerCase().replace(/[^0-9a-f]/g, '');
+    const pem = await request(`${url}/v1/devices/ca.pem`, { insecure: true, raw: true });
+    const actual = createHash('sha256').update(pem, 'utf8').digest('hex');
+    if (actual !== expected) {
+      throw new Error(
+        "the server's CA certificate doesn't match the fingerprint from the console. Nothing was saved. " +
+          'Check that --url points at the right server; if the certificate was just changed, generate a new enrollment command.',
+      );
+    }
+    return pem;
+  }
+  return undefined;
+}
+
 async function cmdEnroll(args) {
-  const { url, token } = args;
-  if (!url || !token) {
-    console.error('Usage: node src/index.mjs enroll --url <api-url> --token <enrollment-token>');
+  const { token } = args;
+  if (!args.url || !token) {
+    console.error('Usage: node src/index.mjs enroll --url <api-url> --token <enrollment-token> [--ca-sha256 <fingerprint> | --ca <ca-file.pem>]');
     process.exitCode = 1;
     return;
   }
+  const url = normalizeServerUrl(args.url);
+  const ca = await resolveCa(url, args);
 
   const result = await request(`${url}/v1/devices/enroll`, {
+    ca,
     method: 'POST',
     body: {
       enrollmentToken: token,
@@ -91,7 +153,9 @@ async function cmdEnroll(args) {
     },
   });
 
-  fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  if (ca) fs.writeFileSync(CA_PATH, ca, { mode: 0o600 });
+  else fs.rmSync(CA_PATH, { force: true }); // re-enrolling against a publicly trusted server drops an old pin
   // mode 0o600: the credential is a real, permanent, per-device bearer secret
   // (docs/adr/0047-endpoint-agents-v1.md) -- readable only by the user running
   // the agent, same posture as an SSH private key.
@@ -105,7 +169,9 @@ function loadConfig() {
     process.exitCode = 1;
     return null;
   }
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  if (fs.existsSync(CA_PATH)) config.ca = fs.readFileSync(CA_PATH, 'utf8');
+  return config;
 }
 
 async function cmdCheckin() {
@@ -116,6 +182,7 @@ async function cmdCheckin() {
   const neighbors = collectNeighbors();
   const result = await request(`${config.url}/v1/devices/checkin`, {
     method: 'POST',
+    ca: config.ca,
     headers: { Authorization: `Bearer ${config.credential}` },
     body: { ...inventory, macAddress: primaryMacAddress(), neighbors },
   });

@@ -1,0 +1,6 @@
+# Caddy's own private CA, generated on first start and kept in the caddy_data
+# volume. Works for an IP address or an internal-only name. Browsers will warn
+# until the CA (see the deployment docs) is trusted; agents pin it by
+# fingerprint from the Devices page, so they need nothing extra.
+tls internal
+header Strict-Transport-Security "max-age=31536000"

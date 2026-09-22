@@ -49,6 +49,20 @@ import liveRoutes from './modules/live/routes';
 
 initErrorTracking();
 
+/**
+ * Behind the web container's nginx (and optionally Caddy -- see
+ * docs/adr/0054-server-address-and-tls.md) every request would otherwise come
+ * from the proxy's own IP, so per-IP rate limits (e.g. login's 10/min) would
+ * be one bucket shared by every user. TRUST_PROXY names which hops may set
+ * X-Forwarded-For: a comma list of IPs/CIDRs or proxy-addr's named ranges
+ * (loopback, uniquelocal, ...), or `true` for any. Unset keeps the old
+ * behavior: trust nothing.
+ */
+function parseTrustProxy(value: string | undefined): boolean | string {
+  if (!value) return false;
+  return value === 'true' ? true : value;
+}
+
 export function buildApp() {
   // Explicit, not the framework default by omission -- Fastify's implicit 1 MiB
   // applied either way, but this makes it a decision instead of an accident.
@@ -61,6 +75,7 @@ export function buildApp() {
   const app = Fastify({
     logger: { level: 'info', redact: ['req.headers.authorization', 'req.headers.cookie'] },
     bodyLimit: 1024 * 1024,
+    trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   });
   attachErrorTracking(app);
 

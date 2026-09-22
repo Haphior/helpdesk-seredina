@@ -10,15 +10,15 @@ variable de entorno, no un fork ni una imagen distinta. Ver
 
 - Docker y Docker Compose (el plugin `docker compose`, no el binario viejo
   `docker-compose` v1).
-- Un dominio o IP accesible si vas a exponer la instancia más allá de tu
-  propia máquina — Seredina no gestiona TLS por sí sola, así que un proxy
-  reverso (Caddy, nginx, Traefik) delante de `WEB_PORT`/`API_PORT` es tu
-  responsabilidad. Las actualizaciones en vivo de la consola usan un stream
-  de larga duración, `GET /events`, en la API: la API ya envía
-  `X-Accel-Buffering: no` para nginx, pero asegúrate de que tu proxy no
-  haga buffer de esa ruta ni corte conexiones inactivas en menos de ~60
-  segundos (la API manda un latido cada 25). Si no logra conectarse, la
-  consola vuelve a refrescar como antes.
+- Un dominio o IP alcanzable si vas a exponer la instancia más allá de tu
+  propia máquina. Seredina puede servirla con HTTPS por sí misma — ver
+  [Tu dirección y HTTPS](#tu-direccion-y-https) — o puedes mantener tu
+  propio proxy inverso (nginx, Traefik, …) delante de `WEB_PORT`. Si usas el
+  tuyo, ten en cuenta que las actualizaciones en vivo de la consola usan un
+  stream de larga duración, `GET /api/events`: no debe hacer buffer de esa
+  ruta ni cortar conexiones inactivas en menos de ~60 segundos (la API
+  manda un latido cada 25). Si no logra conectarse, la consola vuelve a
+  refrescar como antes.
 
 ## Instalación en tres comandos
 
@@ -46,6 +46,61 @@ invalida cualquier contraseña de canal de correo ya guardada, cifrada con
 el `ENCRYPTION_KEY` anterior.
 :::
 
+## Tu dirección y HTTPS
+
+De fábrica Seredina responde en `http://localhost:8080`. Para servirla en tu
+propio dominio o IP, con HTTPS, ejecuta:
+
+```bash
+./scripts/configure-address.sh
+docker compose -f infra/docker-compose.yml up -d --build
+```
+
+El script pregunta la dirección (un dominio como `helpdesk.ejemplo.cl`, o la
+IP del servidor) y cómo obtener el certificado:
+
+| Modo | Úsalo cuando | Qué necesitas |
+|---|---|---|
+| `acme` | El servidor es accesible desde internet | Un dominio apuntando al servidor y los puertos 80 y 443 abiertos. Let's Encrypt emite y renueva el certificado solo. |
+| `custom` | Tienes un certificado de la CA de tu empresa o de un proveedor | Los archivos del certificado (cadena completa) y de la clave. El script verifica que la clave corresponda, que el certificado cubra tu dirección y que lo haya firmado la CA que le indiques. |
+| `internal` | Una red interna, o una dirección IP | Nada: se genera una CA privada en el primer arranque. |
+| `off` | Un laboratorio, o el TLS ya termina delante de este servidor | Nada. Las contraseñas viajan sin cifrar. |
+
+También funciona sin preguntas, por ejemplo
+`./scripts/configure-address.sh --address 192.168.1.20 --tls internal`
+(`--help` muestra todas las opciones), y puedes volver a ejecutarlo cuando
+quieras para cambiar la dirección o el modo.
+
+Qué cambia:
+
+- Arranca el servicio `proxy` (Caddy) en los puertos 80 y 443. Lo que llegue
+  por HTTP se redirige a HTTPS.
+- La consola y la API comparten la misma dirección: la API queda en
+  `https://<dirección>/api`. Esa es también la dirección que usan desde ahora
+  los agentes, el widget embebible y las integraciones de monitoreo.
+- Los puertos de la web (8080) y de la API (4000) pasan a escuchar solo en el
+  propio servidor, así que desde la red solo se entra por HTTPS. Usa
+  `--keep-direct-ports` para dejarlos abiertos mientras migras.
+
+**Agentes.** La página Dispositivos pone la dirección correcta en cada
+comando de enrolamiento. Con `custom` (CA de empresa o autofirmado) o
+`internal`, el comando incluye además la huella de la CA: el agente la
+descarga, la compara con esa huella y desde ahí confía solo en esa CA. No
+hay que copiar nada al equipo. Un agente enrolado con la dirección antigua
+`http://<ip>:4000` necesita el comando nuevo; al reenrolarlo conserva su
+registro.
+
+**Navegadores con `internal`.** Los navegadores muestran una advertencia
+hasta que confíen en la CA generada. Expórtala e instálala en los equipos de
+tu equipo (o por directiva de grupo):
+
+```bash
+docker compose -f infra/docker-compose.yml cp proxy:/data/caddy/pki/authorities/local/root.crt ./seredina-root-ca.crt
+```
+
+Los certificados y la CA interna viven en el volumen `caddy_data`: respáldalo
+junto con lo demás, o habrá que reenrolar los agentes con una CA nueva.
+
 ## Qué levanta el `docker compose`
 
 | Servicio | Qué hace |
@@ -55,7 +110,8 @@ el `ENCRYPTION_KEY` anterior.
 | `migrate` | Aplica el esquema, crea el rol `app_tenant`, aplica las políticas RLS, y termina — no queda corriendo |
 | `api` | La API Fastify — toda la lógica de negocio |
 | `worker` | Procesamiento en segundo plano: descubrimiento agentless, correo entrante/saliente, webhooks, notificaciones, escalamiento de SLA |
-| `web` | La consola de agentes (React) |
+| `web` | La consola de agentes (React), y la API bajo `/api` en la misma dirección |
+| `proxy` | Opcional (`COMPOSE_PROFILES=proxy`, lo configura `configure-address.sh`) — HTTPS delante de todo, ver [arriba](#tu-direccion-y-https) |
 | `mcp-server-http` | Opcional, gated por perfil (`--profile mcp`) — servidor MCP en modo HTTP para agentes de IA externos, ver [Servidor MCP](/es/api/mcp-server) |
 
 ## Si un contenedor no arranca

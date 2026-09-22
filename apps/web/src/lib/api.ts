@@ -1,7 +1,13 @@
 // Exported so pages that need to *display* the API's own base URL (e.g. the
 // Monitoring Integrations setup page's webhook URL for a tenant to paste
 // into Grafana) don't hardcode a second copy of this fallback.
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+//
+// Unset (the default since docs/adr/0054-server-address-and-tls.md), the API
+// is reached at /api on whatever address the console itself was opened at --
+// the web container's nginx proxies it -- so the same build works at any
+// domain or IP, over HTTP or HTTPS. VITE_API_URL is only for pointing the
+// console at an API on a different origin.
+export const API_URL = (import.meta.env.VITE_API_URL || `${window.location.origin}/api`).replace(/\/$/, '');
 const TOKEN_KEY = 'seredina_token';
 
 export class ApiError extends Error {

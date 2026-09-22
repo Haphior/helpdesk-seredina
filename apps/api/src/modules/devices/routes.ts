@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
 import { checkIn, createEnrollmentToken, enrollDevice, listDevices, revokeDevice } from './service';
+import { getAgentSetup, readAgentCaCert } from './agentSetup';
 
 // Format only -- neighbors.ts's normalizeMac() does the real validation
 // (multicast/broadcast/all-zero rejected there, not here).
@@ -39,6 +40,24 @@ export default async function deviceRoutes(app: FastifyInstance) {
       return reply.code(201).send(result);
     },
   );
+
+  // Feeds the Devices page's enrollment command: the address agents should
+  // use and, for a non-public certificate, the CA fingerprint the agent pins.
+  app.get(
+    '/devices/agent-setup',
+    { preHandler: [app.authenticate, requirePermission('assets:manage')] },
+    async (_request, reply) => reply.send(await getAgentSetup()),
+  );
+
+  // No auth: a CA certificate is public by design, and an agent needs it
+  // BEFORE it can verify this server. The agent doesn't trust this download on
+  // its own -- it checks it against the sha256 an admin copied from the
+  // console (see apps/agent's --ca-sha256).
+  app.get('/v1/devices/ca.pem', async (_request, reply) => {
+    const pem = await readAgentCaCert();
+    if (!pem) return reply.code(404).send({ error: 'no custom CA configured' });
+    return reply.type('application/x-pem-file').send(pem);
+  });
 
   app.get('/devices', { preHandler: [app.authenticate, requirePermission('assets:read')] }, async (request, reply) => {
     const devices = await listDevices(request.user.tenantId);

@@ -61,8 +61,17 @@ del despliegue.
 | `API_PORT` | No | Puerto de la API (`4000` por defecto). |
 | `WEB_PORT` | No | Puerto de la consola web (`8080` por defecto). |
 | `WEB_ORIGIN` | Sí | Debe ser como el navegador llega a la consola (nunca el hostname interno de compose). También la usa `api` para construir enlaces públicos propios (por ejemplo, un link de encuesta CSAT) — sin definir, esa funcionalidad puntual simplemente no hace nada. |
-| `VITE_API_URL` | Sí | Cómo el navegador llega a la API. |
-| `API_PUBLIC_URL` | Solo si usás Telegram | URL HTTPS real, accesible desde internet, de tu API — Telegram la llama directamente para entregar mensajes, así que nunca puede ser `localhost` ni un hostname interno de compose. |
+| `VITE_API_URL` | No | Déjala vacía: la consola llega a la API en `/api` de su propia dirección. Defínela solo para apuntar la consola a una API en otro origen (queda fija al compilar). |
+| `API_PUBLIC_URL` | Solo si usás Telegram | URL HTTPS real, accesible desde internet, de tu API — Telegram la llama directamente para entregar mensajes, así que nunca puede ser `localhost` ni un hostname interno de compose. También es la dirección que la página Dispositivos pone en los comandos de enrolamiento de agentes. `configure-address.sh` la define como `https://<dirección>/api`. |
+| `SEREDINA_SITE` | Con el perfil `proxy` | La dirección que sirve el proxy HTTPS: un dominio o IP (`http://…` si `TLS_MODE=off`). La define `scripts/configure-address.sh`. |
+| `TLS_MODE` | Con el perfil `proxy` | `acme` (Let's Encrypt), `custom` (`certs/cert.pem` + `certs/key.pem`), `internal` (CA generada) u `off`. |
+| `ACME_EMAIL` | Con `TLS_MODE=acme` | Recibe avisos de vencimiento si la renovación llegara a fallar. |
+| `HTTP_PORT` / `HTTPS_PORT` | No | Puertos del proxy (`80` / `443`). |
+| `TLS_CA_FILE` | No | Certificado de CA que fijan los agentes, para un certificado que no es de confianza pública. El script la define en `internal` y `custom`; la página Dispositivos muestra su huella. La API se niega a entregar un archivo que contenga una clave privada. |
+| `WEB_BIND` / `API_BIND` | No | En qué interfaz escuchan los puertos de la web y la API (`0.0.0.0`). El script pone `127.0.0.1` cuando el proxy está delante, para que desde la red solo se entre por HTTPS. |
+| `DB_BIND` | No | Postgres y Redis escuchan solo en `127.0.0.1`. Redis no tiene contraseña: no lo expongas. |
+| `TRUST_PROXY` | No | Qué saltos pueden fijar `X-Forwarded-For`, para que los límites por IP vean al cliente real detrás de los proxies. Compose usa `loopback,uniquelocal`. |
+| `COMPOSE_PROFILES` | No | `proxy` arranca el proxy HTTPS; agrega `mcp` para el servidor MCP. |
 
 ## Otras opcionales
 

@@ -9,6 +9,19 @@ contain breaking changes).
 
 ### Added
 
+- **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
+  `scripts/configure-address.sh` asks for the server's domain or IP and how
+  to get a certificate: Let's Encrypt (automatic), your own certificate or
+  company CA, a generated internal CA (for an IP or internal network), or
+  none. It then starts an optional HTTPS proxy (Caddy) in front of
+  everything. The console and API now share one address, with the API under
+  `/api`, so the web build no longer needs the API URL baked in.
+- **Agents choose the server and trust your certificate**: the Devices page
+  has a "Server address for agents" field. When the certificate isn't
+  publicly trusted, the enrollment command pins the server's CA by
+  fingerprint: the agent downloads it, checks it, and trusts only that CA.
+  `--ca <file>` works too.
+
 - **Live console updates** (`docs/adr/0053-live-updates.md`): the ticket
   queue, ticket detail and notification bell now update as things happen —
   a new ticket slides into the queue, a customer's reply or a colleague's
@@ -43,6 +56,16 @@ contain breaking changes).
 
 ### Changed
 
+- The console reaches the API at `/api` on its own address by default
+  (`VITE_API_URL` now defaults to empty). Existing `.env` files that set it
+  keep working.
+- With the HTTPS proxy enabled, the web (8080) and API (4000) ports only
+  listen on the server itself, so HTTPS is the only way in from the network.
+  Agents enrolled at `http://<ip>:4000` need a new enrollment command, and
+  keep their record when re-enrolled.
+- The embeddable widget works when served under a path
+  (`https://<address>/api/widget.js`).
+
 - **Network scans from the server are self-hosted only.** In cloud mode the
   API refuses them (403), the worker won't run them, and the Assets page hides
   the form — the worker there sits on the provider's network, not the
@@ -51,6 +74,14 @@ contain breaking changes).
   instead of `204`.
 
 ### Security
+
+- **Postgres and Redis are no longer published on every network
+  interface.** Redis has no password, so anyone who could reach the server
+  could read and write its queues. Both now listen on `127.0.0.1` only
+  (`DB_BIND`).
+- The API honors `X-Forwarded-For` from the proxies in front of it
+  (`TRUST_PROXY`), so per-IP rate limits see the real client instead of
+  one shared proxy address.
 
 - **Console sessions now expire and are revoked immediately.** Login tokens
   previously never expired, and their permissions were a snapshot from login

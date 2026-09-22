@@ -5,6 +5,8 @@ apps/docs/docs/.vitepress/cache/
 .env
 .env.*
 !.env.example
+# TLS certificates and keys for the `proxy` compose profile (docs/adr/0054).
+certs/
 *.log
 .DS_Store
 coverage/

@@ -1,0 +1,3 @@
+# No TLS: plain HTTP on port 80. For a lab or a network where TLS terminates
+# somewhere else in front of this server -- never for real use over an
+# untrusted network, since passwords and agent credentials travel in clear.
