@@ -6,6 +6,7 @@
 <p align="center"><b>Open-source ITSM that meets you in the middle.</b></p>
 <p align="center">
   <a href="https://github.com/Haphior/helpdesk-seredina/actions/workflows/ci.yml"><img src="https://github.com/Haphior/helpdesk-seredina/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://github.com/Haphior/helpdesk-seredina/releases"><img src="https://img.shields.io/github/v/release/Haphior/helpdesk-seredina?include_prereleases&label=release" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
 </p>
 
@@ -30,7 +31,8 @@ an MCP server, cloud hardening, Slack/Teams/Telegram/Zabbix integrations, and a
 real endpoint agent for hardware/software inventory), plus a first pass of
 console internationalization (English + Spanish) — see
 [docs/ROADMAP.md](docs/ROADMAP.md) for the full breakdown of what's shipped,
-what's disclosed-but-deferred, and what's still backlog.
+what's disclosed-but-deferred, and what's still backlog. See
+[CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Stack
 
