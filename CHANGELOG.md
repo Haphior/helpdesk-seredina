@@ -15,6 +15,10 @@ contain breaking changes).
   Knowledge Base page. Previously any published article was reachable by
   anyone with the link, with no way to turn that off. See
   `docs/adr/0051-kb-portal-access-control.md`.
+- **Create a ticket directly from a process step**, assigned to a user in
+  the same action, plus drag-to-reorder and a duplicate-step button when
+  configuring process templates. See
+  `docs/adr/0052-process-ticket-creation-and-reorder.md`.
 
 ## [0.1.0-alpha.1] - 2026-09-22
 

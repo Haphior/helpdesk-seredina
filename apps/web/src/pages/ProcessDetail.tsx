@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { apiGet, apiPatch, ApiError } from '../lib/api';
-import type { ProcessInstance, ProcessStepStatus, UserSummary } from '../lib/types';
+import { apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
+import type { ProcessInstance, ProcessStepStatus, Ticket, TicketPriority, UserSummary } from '../lib/types';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { Textarea } from '../components/Textarea';
 import { Select } from '../components/Select';
 import { Card } from '../components/Card';
-import { BackArrowIcon, LockIcon } from '../components/icons';
+import { Modal } from '../components/Modal';
+import { BackArrowIcon, LockIcon, TicketIcon } from '../components/icons';
 import { formatDateTime, RISK_TONE } from '../lib/format';
 
 const INSTANCE_STATUS_TONE = { IN_PROGRESS: 'sky', COMPLETED: 'emerald', CANCELLED: 'slate' } as const;
@@ -17,6 +21,8 @@ export function ProcessDetail() {
   const [instance, setInstance] = useState<ProcessInstance | null>(null);
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [creatingTicketFor, setCreatingTicketFor] = useState<string | null>(null);
+  const [linkingTicketFor, setLinkingTicketFor] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -190,10 +196,191 @@ export function ProcessDetail() {
                 {step.assignee && <Avatar name={step.assignee.name} size={20} />}
                 {step.completedAt && <span className="text-[11.5px] text-slate-400">{formatDateTime(step.completedAt)}</span>}
               </div>
+
+              <div className="mt-2.5 border-t border-slate-100 pt-2.5">
+                {step.ticket ? (
+                  <Link
+                    to={`/tickets/${step.ticket.id}`}
+                    className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-indigo-600 hover:underline"
+                  >
+                    <TicketIcon width={13} height={13} />#{step.ticket.number} {step.ticket.subject}
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3 text-[12.5px]">
+                    <button onClick={() => setCreatingTicketFor(step.id)} className="font-medium text-indigo-600 hover:underline">
+                      + Create ticket
+                    </button>
+                    <button onClick={() => setLinkingTicketFor(step.id)} className="font-medium text-slate-400 hover:text-slate-600">
+                      Link existing ticket
+                    </button>
+                  </div>
+                )}
+              </div>
             </Card>
           );
         })}
       </div>
+
+      {creatingTicketFor && (
+        <CreateTicketForStepModal
+          stepId={creatingTicketFor}
+          defaultAssigneeId={instance.steps.find((s) => s.id === creatingTicketFor)?.assigneeId ?? ''}
+          users={users}
+          onClose={() => setCreatingTicketFor(null)}
+          onCreated={load}
+        />
+      )}
+
+      {linkingTicketFor && (
+        <LinkTicketModal stepId={linkingTicketFor} onClose={() => setLinkingTicketFor(null)} onLinked={load} />
+      )}
     </div>
+  );
+}
+
+function CreateTicketForStepModal({
+  stepId,
+  defaultAssigneeId,
+  users,
+  onClose,
+  onCreated,
+}: {
+  stepId: string;
+  defaultAssigneeId: string;
+  users: UserSummary[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [priority, setPriority] = useState<TicketPriority>('NORMAL');
+  const [assigneeId, setAssigneeId] = useState(defaultAssigneeId);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await apiPost(`/process-steps/${stepId}/create-ticket`, {
+        subject,
+        body,
+        contactName,
+        contactEmail,
+        priority,
+        assigneeId: assigneeId || undefined,
+      });
+      onCreated();
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to create ticket');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Create a ticket for this step" onClose={onClose}>
+      <form onSubmit={onSubmit} className="space-y-3">
+        <Input label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
+        <Textarea label="Description" value={body} onChange={(e) => setBody(e.target.value)} rows={4} required />
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input label="Requester name" value={contactName} onChange={(e) => setContactName(e.target.value)} required />
+          </div>
+          <div className="flex-1">
+            <Input label="Requester email" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Select label="Priority" value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)}>
+              <option value="LOW">Low</option>
+              <option value="NORMAL">Normal</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
+            </Select>
+          </div>
+          <div className="flex-1">
+            <Select label="Assignee" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+              <option value="">Unassigned</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" isLoading={submitting}>
+            {submitting ? 'Creating…' : 'Create ticket'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function LinkTicketModal({ stepId, onClose, onLinked }: { stepId: string; onClose: () => void; onLinked: () => void }) {
+  const [candidates, setCandidates] = useState<Ticket[]>([]);
+  const [ticketId, setTicketId] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    apiGet<{ tickets: Ticket[] }>('/tickets')
+      .then((res) => setCandidates(res.tickets.filter((tk) => !tk.mergedIntoId)))
+      .catch(() => {});
+  }, []);
+
+  async function onSubmit() {
+    if (!ticketId) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      await apiPatch(`/process-steps/${stepId}`, { ticketId });
+      onLinked();
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to link ticket');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Link an existing ticket" onClose={onClose}>
+      <div className="space-y-3">
+        <Select label="Ticket" value={ticketId} onChange={(e) => setTicketId(e.target.value)}>
+          <option value="">Choose a ticket…</option>
+          {candidates.map((tk) => (
+            <option key={tk.id} value={tk.id}>
+              #{tk.number} {tk.subject}
+            </option>
+          ))}
+        </Select>
+
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={onSubmit} disabled={!ticketId} isLoading={submitting}>
+            {submitting ? 'Linking…' : 'Link ticket'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

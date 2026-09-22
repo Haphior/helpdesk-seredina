@@ -3,11 +3,13 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { prisma, withTenantTx } from '@seredina/db';
 import {
   createProcessTemplate,
+  createTicketForProcessStep,
   deleteProcessTemplate,
   getProcessInstance,
   startProcessInstance,
   updateProcessStep,
 } from '../src/modules/processes/service';
+import { seedDefaultTicketStatuses } from '../src/modules/tickets/service';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 
@@ -209,6 +211,92 @@ describe.skipIf(!hasDb)('IT processes', () => {
         releaseVersion: 'v9.9.9',
       });
       expect(instance.releaseVersion).toBeNull();
+    });
+  });
+
+  describe('creating a ticket from a process step', () => {
+    // Its own tenant, seeded with real ticket statuses -- createTicketForProcessStep
+    // goes through createTicketFromApi, which needs an "open" status to exist.
+    let ticketTenantId: string;
+    let agentUserId: string;
+
+    beforeAll(async () => {
+      ticketTenantId = randomUUID();
+      await withTenantTx(prisma, ticketTenantId, async (tx) => {
+        await tx.tenant.create({ data: { id: ticketTenantId, slug: `proc-ticket-${ticketTenantId.slice(0, 8)}`, name: 'Process Ticket Test' } });
+        await seedDefaultTicketStatuses(tx, ticketTenantId);
+        const agent = await tx.user.create({ data: { tenantId: ticketTenantId, email: 'agent@example.com', name: 'Agent', passwordHash: 'x' } });
+        agentUserId = agent.id;
+      });
+    });
+
+    it('spawns a real ticket, links it to the step, and assigns both', async () => {
+      const template = await createProcessTemplate(ticketTenantId, {
+        name: 'Laptop Provisioning',
+        steps: [{ label: 'Order laptop' }],
+      });
+      const instance = await startProcessInstance(ticketTenantId, template.id, 'New hire laptop');
+      const stepId = instance.steps[0].id;
+
+      const ticket = await createTicketForProcessStep(ticketTenantId, stepId, {
+        subject: 'Order a laptop for the new hire',
+        body: 'Standard-issue laptop, ship to the office.',
+        contactName: 'New Hire',
+        contactEmail: 'new-hire@example.com',
+        assigneeId: agentUserId,
+      });
+      expect(ticket.subject).toBe('Order a laptop for the new hire');
+      expect(ticket.assigneeId).toBe(agentUserId);
+      expect(ticket.channel).toBe('agent');
+
+      const step = await getProcessInstance(ticketTenantId, instance.id);
+      expect(step.steps[0].ticketId).toBe(ticket.id);
+      expect(step.steps[0].assigneeId).toBe(agentUserId);
+    });
+
+    it('rejects spawning a second ticket for a step that already has one linked', async () => {
+      const template = await createProcessTemplate(ticketTenantId, {
+        name: 'Single Ticket Step',
+        steps: [{ label: 'Do the thing' }],
+      });
+      const instance = await startProcessInstance(ticketTenantId, template.id, 'test instance');
+      const stepId = instance.steps[0].id;
+
+      await createTicketForProcessStep(ticketTenantId, stepId, {
+        subject: 'First ticket',
+        body: 'body',
+        contactName: 'Contact',
+        contactEmail: 'contact@example.com',
+      });
+
+      await expect(
+        createTicketForProcessStep(ticketTenantId, stepId, {
+          subject: 'Second ticket',
+          body: 'body',
+          contactName: 'Contact',
+          contactEmail: 'contact@example.com',
+        }),
+      ).rejects.toThrow('this step already has a linked ticket');
+    });
+
+    it('leaves the step assignee untouched when no assignee is given for the new ticket', async () => {
+      const template = await createProcessTemplate(ticketTenantId, {
+        name: 'Pre-Assigned Step',
+        steps: [{ label: 'Do the thing' }],
+      });
+      const instance = await startProcessInstance(ticketTenantId, template.id, 'test instance');
+      const stepId = instance.steps[0].id;
+      await updateProcessStep(ticketTenantId, stepId, { assigneeId: agentUserId });
+
+      await createTicketForProcessStep(ticketTenantId, stepId, {
+        subject: 'Unassigned ticket',
+        body: 'body',
+        contactName: 'Contact',
+        contactEmail: 'contact@example.com',
+      });
+
+      const fetched = await getProcessInstance(ticketTenantId, instance.id);
+      expect(fetched.steps[0].assigneeId).toBe(agentUserId);
     });
   });
 });

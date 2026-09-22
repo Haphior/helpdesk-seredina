@@ -6,7 +6,9 @@ import {
   type ProcessInstanceStatus,
   type ProcessStepStatus,
   type ProcessTemplateKind,
+  type TicketPriority,
 } from '@seredina/db';
+import { createTicketFromApi } from '../tickets/service';
 
 export interface StepTemplateInput {
   label: string;
@@ -251,6 +253,34 @@ export async function startProcessInstance(tenantId: string, templateId: string,
       include: { steps: { orderBy: { sortOrder: 'asc' } } },
     });
   });
+}
+
+export interface CreateTicketForStepInput {
+  subject: string;
+  body: string;
+  contactName: string;
+  contactEmail: string;
+  priority?: TicketPriority;
+  assigneeId?: string;
+}
+
+/**
+ * Closes the gap docs/adr/0008-it-processes.md flagged as deferred: a step
+ * that needs real IT work previously could only link an *existing* ticket
+ * (via updateProcessStep below) -- this spawns a brand-new one, atomically
+ * assigned, and links it in one action. Reuses createTicketFromApi
+ * (channel: 'agent', the same path the console's own "New ticket" button
+ * goes through) rather than duplicating ticket-creation logic for a third
+ * internal channel.
+ */
+export async function createTicketForProcessStep(tenantId: string, stepId: string, input: CreateTicketForStepInput) {
+  const step = await withTenantTx(prisma, tenantId, (tx) => tx.processStepInstance.findUnique({ where: { id: stepId } }));
+  if (!step) throw new Error('process step not found');
+  if (step.ticketId) throw new Error('this step already has a linked ticket');
+
+  const ticket = await createTicketFromApi(tenantId, { ...input, channel: 'agent' });
+  await updateProcessStep(tenantId, stepId, { ticketId: ticket.id, ...(input.assigneeId ? { assigneeId: input.assigneeId } : {}) });
+  return ticket;
 }
 
 export interface UpdateStepInput {

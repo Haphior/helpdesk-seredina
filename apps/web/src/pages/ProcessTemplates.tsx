@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Select } from '../components/Select';
 import { Card } from '../components/Card';
+import { DragHandleIcon } from '../components/icons';
 
 interface StepDraft {
   label: string;
@@ -118,6 +119,7 @@ function TemplateModal({
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   useEffect(() => {
     apiGet<{ teams: Team[] }>('/teams')
@@ -133,8 +135,24 @@ function TemplateModal({
     setSteps((s) => [...s, { label: '', teamId: '', requiresApproval: false }]);
   }
 
+  function duplicateStep(index: number) {
+    setSteps((s) => [...s.slice(0, index + 1), { ...s[index] }, ...s.slice(index + 1)]);
+  }
+
   function removeStep(index: number) {
     setSteps((s) => s.filter((_, i) => i !== index));
+  }
+
+  // Native HTML5 drag-and-drop, same pattern as the dashboard-builder's widget
+  // reorder -- this app doesn't pull in a library for something this scoped.
+  function moveStep(from: number, to: number) {
+    if (from === to) return;
+    setSteps((s) => {
+      const next = [...s];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
   }
 
   async function onSubmit(e: FormEvent) {
@@ -205,7 +223,26 @@ function TemplateModal({
           <span className="mb-2 block text-xs font-medium uppercase text-slate-400">Steps, in order</span>
           <div className="space-y-2">
             {steps.map((step, i) => (
-              <div key={i} className="flex items-start gap-2 rounded-md border border-slate-200 p-2">
+              <div
+                key={i}
+                className={`flex items-start gap-2 rounded-md border border-slate-200 p-2 ${dragIndex === i ? 'opacity-40' : ''}`}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragIndex !== null) moveStep(dragIndex, i);
+                  setDragIndex(null);
+                }}
+              >
+                <span
+                  draggable
+                  onDragStart={() => setDragIndex(i)}
+                  onDragEnd={() => setDragIndex(null)}
+                  aria-label="Drag to reorder"
+                  title="Drag to reorder"
+                  className="mt-1.5 cursor-grab text-slate-300 hover:text-slate-400 active:cursor-grabbing"
+                >
+                  <DragHandleIcon width={13} height={13} />
+                </span>
                 <span className="mt-2 text-xs text-slate-400">{i + 1}.</span>
                 <div className="flex-1 space-y-1.5">
                   <Input
@@ -242,11 +279,16 @@ function TemplateModal({
                     </label>
                   </div>
                 </div>
-                {steps.length > 1 && (
-                  <button type="button" onClick={() => removeStep(i)} className="mt-1 text-xs text-slate-400 hover:text-rose-600">
-                    remove
+                <div className="mt-1 flex flex-col items-end gap-1">
+                  <button type="button" onClick={() => duplicateStep(i)} className="text-xs text-slate-400 hover:text-indigo-600">
+                    duplicate
                   </button>
-                )}
+                  {steps.length > 1 && (
+                    <button type="button" onClick={() => removeStep(i)} className="text-xs text-slate-400 hover:text-rose-600">
+                      remove
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

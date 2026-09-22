@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
 import {
   createProcessTemplate,
+  createTicketForProcessStep,
   deleteProcessTemplate,
   getProcessInstance,
   listProcessInstances,
@@ -51,6 +52,15 @@ const updateStepSchema = z.object({
   status: STEP_STATUS.optional(),
   assigneeId: z.string().uuid().nullish(),
   ticketId: z.string().uuid().nullish(),
+});
+
+const createTicketForStepSchema = z.object({
+  subject: z.string().min(1).max(200),
+  body: z.string().min(1),
+  contactEmail: z.string().email(),
+  contactName: z.string().min(1),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).optional(),
+  assigneeId: z.string().uuid().optional(),
 });
 
 export default async function processRoutes(app: FastifyInstance) {
@@ -175,6 +185,25 @@ export default async function processRoutes(app: FastifyInstance) {
       try {
         const step = await updateProcessStep(request.user.tenantId, id, parsed.data);
         return reply.send(step);
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  // Spawns a brand-new ticket and links+assigns it to this step in one action --
+  // see createTicketForProcessStep's own comment for why this exists alongside
+  // the plain PATCH above (which only links an *existing* ticket id).
+  app.post(
+    '/process-steps/:id/create-ticket',
+    { preHandler: [app.authenticate, requirePermission('tickets:write')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = createTicketForStepSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const ticket = await createTicketForProcessStep(request.user.tenantId, id, parsed.data);
+        return reply.code(201).send(ticket);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
       }

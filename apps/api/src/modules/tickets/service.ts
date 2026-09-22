@@ -41,6 +41,11 @@ export interface CreateTicketFromApiInput {
   // comment in schema.prisma), to fold a follow-up message into the same open
   // ticket instead of starting a new one each time.
   externalId?: string;
+  // Optional, set only by callers that already know who should own this ticket
+  // at creation time (e.g. spawning one from a process step -- see
+  // modules/processes/service.ts's createTicketForProcessStep). Every other
+  // channel leaves this unset, so their behavior is unchanged.
+  assigneeId?: string;
 }
 
 /** The API channel: POST /v1/tickets, authenticated by ApiKey -- see plugins/apiKeyAuth.ts. */
@@ -76,6 +81,7 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
         widgetToken: input.widgetToken,
         externalId: input.externalId,
         customFields: input.customFields as Prisma.InputJsonValue | undefined,
+        assigneeId: input.assigneeId,
         createdAt,
         firstResponseDueAt: dueAts.firstResponseDueAt,
         resolutionDueAt: dueAts.resolutionDueAt,
@@ -91,6 +97,15 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
 
   await dispatchWebhookEvent(tenantId, 'ticket.created', { ticketId: ticket.id, number: ticket.number, subject: ticket.subject, channel: ticket.channel });
   await scheduleSlaBreachChecks(tenantId, ticket.id, { firstResponseDueAt: ticket.firstResponseDueAt, resolutionDueAt: ticket.resolutionDueAt });
+  // Same "only a genuine new assignee notifies" reasoning as updateTicket --
+  // trivially true here since a brand-new ticket has no prior assignee to match.
+  if (input.assigneeId) {
+    await notifyUser(tenantId, input.assigneeId, 'TICKET_ASSIGNED', {
+      ticketId: ticket.id,
+      body: `You were assigned to #${ticket.number}: ${ticket.subject}`,
+      subject: `[#${ticket.number}] Assigned to you: ${ticket.subject}`,
+    });
+  }
   return ticket;
 }
 
