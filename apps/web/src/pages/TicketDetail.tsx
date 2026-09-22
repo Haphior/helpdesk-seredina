@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, downloadFile, ApiError } from '../lib/api';
@@ -20,6 +20,8 @@ import type {
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
 import { SlaMilestoneCountdown } from '../components/SlaCountdown';
+import { TypingIndicator } from '../components/TypingIndicator';
+import { useAuth } from '../auth/AuthContext';
 import { Modal } from '../components/Modal';
 import { ChannelGlyph } from '../components/ChannelGlyph';
 import { BackArrowIcon, BoltIcon, ChevronDownIcon, ClockIcon, EyeIcon, LockIcon, PaperclipIcon, SparkleIcon } from '../components/icons';
@@ -27,6 +29,9 @@ import { PRIORITY_TONE, STATUS_CATEGORY_TONE, formatDateTime, isFirstResponseOve
 import { useTheme } from '../theme/ThemeContext';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
+
+// Well under TypingIndicator's TYPING_VISIBLE_MS, so a steady typist never flickers off.
+const TYPING_PING_MS = 2_500;
 
 export function TicketDetail() {
   const { t } = useTranslation();
@@ -118,11 +123,60 @@ export function TicketDetail() {
 
   // A customer's reply, a colleague's note or status change, an SLA breach:
   // shown as it happens instead of only on reload (docs/adr/0053-live-updates.md).
+  // "Ana is typing…" and the reply-collision warning (docs/adr/0056-sla-countdown.md).
+  const myUserId = useAuth().payload?.sub;
+  const [typingSeen, setTypingSeen] = useState<Record<string, number>>({});
+  const lastTypingPing = useRef(0);
+  // Message ids already on screen when the current draft was started -- any
+  // other one that shows up while drafting is new. Ids, not timestamps, so
+  // the browser's and the server's clocks never have to agree.
+  const draftKnownIds = useRef<Set<string> | null>(null);
+  const [collision, setCollision] = useState<{ key: 'collisionReply' | 'collisionNote' | 'collisionCustomer'; name: string } | null>(
+    null,
+  );
+
   useLiveEvents((event) => {
+    if (event.type === 'ticket.typing') {
+      if (event.ticketId === id && event.userId !== myUserId) {
+        setTypingSeen((seen) => ({ ...seen, [event.userId]: Date.now() }));
+      }
+      return;
+    }
+    if (event.type === 'message.created' && event.ticketId === id) setTypingSeen({}); // they sent it
     if (event.type === 'resync' || ('ticketId' in event && event.ticketId === id && event.type !== 'ticket.created')) {
       void loadTicket();
     }
   });
+
+  function onReplyChange(value: string) {
+    setReply(value);
+    if (!value.trim()) {
+      draftKnownIds.current = null;
+      setCollision(null);
+      return;
+    }
+    if (!draftKnownIds.current) draftKnownIds.current = new Set(ticket?.messages.map((m) => m.id) ?? []);
+    const now = Date.now();
+    if (id && now - lastTypingPing.current > TYPING_PING_MS) {
+      lastTypingPing.current = now;
+      apiPost(`/tickets/${id}/typing`).catch(() => {}); // best-effort, like presence
+    }
+  }
+
+  useEffect(() => {
+    const known = draftKnownIds.current;
+    if (!ticket || !known) return;
+    const arrived = ticket.messages.filter((m) => !known.has(m.id) && m.authorType !== 'SYSTEM' && m.authorUser?.id !== myUserId);
+    const latest = arrived[arrived.length - 1];
+    if (!latest) return;
+    if (latest.authorType === 'CONTACT') setCollision({ key: 'collisionCustomer', name: ticket.contact.name });
+    else setCollision({ key: latest.isPrivateNote ? 'collisionNote' : 'collisionReply', name: latest.authorUser?.name ?? 'AI' });
+  }, [ticket, myUserId]);
+
+  function dismissCollision() {
+    setCollision(null);
+    if (ticket) draftKnownIds.current = new Set(ticket.messages.map((m) => m.id));
+  }
 
   // Collision detection: "who else has this ticket open right now" -- a short-poll
   // heartbeat, not a WebSocket (see docs/adr/0019-collision-merge-bulk-actions.md).
@@ -200,6 +254,8 @@ export function TicketDetail() {
         await apiUpload(`/messages/${message.id}/attachments`, form);
       }
       setReply('');
+      draftKnownIds.current = null;
+      setCollision(null);
       setPendingFiles([]);
       setUsedArticles([]);
       await loadTicket();
@@ -248,7 +304,7 @@ export function TicketDetail() {
       const res = await apiPost<{ suggestion: string; usedArticles: { id: string; title: string; slug: string }[] }>(
         `/tickets/${id}/ai/suggest-reply`,
       );
-      setReply(res.suggestion);
+      onReplyChange(res.suggestion);
       setUsedArticles(res.usedArticles ?? []);
       loadAiUsage();
     } catch (err) {
@@ -532,10 +588,24 @@ export function TicketDetail() {
           })}
         </div>
 
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-1.5 pb-2.5 shadow-sm">
+        <div className="mt-3">
+          <TypingIndicator lastSeen={typingSeen} nameOf={(uid) => users.find((u) => u.id === uid)?.name ?? t('common.someone')} />
+        </div>
+        {collision && (
+          <div
+            role="alert"
+            className="mt-1 flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800"
+          >
+            <span>{t(`ticketDetail.${collision.key}`, { name: collision.name })}</span>
+            <button type="button" onClick={dismissCollision} className="shrink-0 font-semibold hover:underline">
+              {t('ticketDetail.collisionDismiss')}
+            </button>
+          </div>
+        )}
+        <div className="mt-1 rounded-xl border border-slate-200 bg-white p-1.5 pb-2.5 shadow-sm">
           <textarea
             value={reply}
-            onChange={(e) => setReply(e.target.value)}
+            onChange={(e) => onReplyChange(e.target.value)}
             placeholder={t('ticketDetail.replyPlaceholder')}
             rows={3}
             className="w-full resize-none rounded-lg border-0 px-2.5 py-2 text-[13.5px] focus:outline-none focus:ring-2 focus:ring-indigo-100"

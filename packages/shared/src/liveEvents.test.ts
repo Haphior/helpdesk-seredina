@@ -13,6 +13,15 @@ describe('parseLiveEvent', () => {
     });
   });
 
+  it('keeps both ids of a typing event, and nothing else', () => {
+    expect(parseLiveEvent(JSON.stringify({ type: 'ticket.typing', ticketId: 't1', userId: 'u1', body: 'draft text' }))).toEqual({
+      type: 'ticket.typing',
+      ticketId: 't1',
+      userId: 'u1',
+    });
+    expect(parseLiveEvent(JSON.stringify({ type: 'ticket.typing', ticketId: 't1' }))).toBeNull();
+  });
+
   it('rejects unknown types, missing ids, and non-JSON', () => {
     expect(parseLiveEvent(JSON.stringify({ type: 'admin.pwned', ticketId: 't1' }))).toBeNull();
     expect(parseLiveEvent(JSON.stringify({ type: 'ticket.updated' }))).toBeNull();

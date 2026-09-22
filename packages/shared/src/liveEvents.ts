@@ -13,6 +13,8 @@ export type LiveEvent =
   | { type: 'ticket.updated'; ticketId: string }
   | { type: 'message.created'; ticketId: string }
   | { type: 'sla.breached'; ticketId: string }
+  // Someone is composing on this ticket right now (docs/adr/0056-sla-countdown.md).
+  | { type: 'ticket.typing'; ticketId: string; userId: string }
   // Only ever delivered to that one user's own streams.
   | { type: 'notification.created'; userId: string };
 
@@ -31,22 +33,27 @@ export function tenantIdFromLiveChannel(channel: string): string | null {
   return channel.startsWith(CHANNEL_PREFIX) ? channel.slice(CHANNEL_PREFIX.length) : null;
 }
 
-const LIVE_EVENT_TYPES: ReadonlySet<string> = new Set<LiveEventType>([
-  'ticket.created',
-  'ticket.updated',
-  'message.created',
-  'sla.breached',
-  'notification.created',
-]);
+/** Every known type and the id fields it carries -- anything else on a message is dropped. */
+const ID_KEYS: Record<LiveEventType, string[]> = {
+  'ticket.created': ['ticketId'],
+  'ticket.updated': ['ticketId'],
+  'message.created': ['ticketId'],
+  'sla.breached': ['ticketId'],
+  'ticket.typing': ['ticketId', 'userId'],
+  'notification.created': ['userId'],
+};
 
 /** Parses a message off the Redis channel; null for anything malformed rather than trusting it. */
 export function parseLiveEvent(raw: string): LiveEvent | null {
   try {
     const value = JSON.parse(raw) as Record<string, unknown>;
-    if (!value || typeof value.type !== 'string' || !LIVE_EVENT_TYPES.has(value.type)) return null;
-    const idKey = value.type === 'notification.created' ? 'userId' : 'ticketId';
-    if (typeof value[idKey] !== 'string') return null;
-    return { type: value.type, [idKey]: value[idKey] } as LiveEvent;
+    if (!value || typeof value.type !== 'string' || !Object.hasOwn(ID_KEYS, value.type)) return null;
+    const event: Record<string, string> = { type: value.type };
+    for (const key of ID_KEYS[value.type as LiveEventType]) {
+      if (typeof value[key] !== 'string') return null;
+      event[key] = value[key] as string;
+    }
+    return event as unknown as LiveEvent;
   } catch {
     return null;
   }

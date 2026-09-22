@@ -8,6 +8,7 @@ import { prisma, withTenantTx } from '@seredina/db';
 import { PERMISSIONS, type LiveEvent } from '@seredina/shared';
 import jwtPlugin from '../src/plugins/jwt';
 import liveRoutes from '../src/modules/live/routes';
+import ticketRoutes from '../src/modules/tickets/routes';
 import { liveClientCount, MAX_STREAMS_PER_USER, publishLive } from '../src/lib/live';
 import { createRole, createUser, updateUser } from '../src/modules/auth/service';
 import { addMessage, createTicketFromApi } from '../src/modules/tickets/service';
@@ -100,6 +101,7 @@ describe.skipIf(!hasDb)('Live updates stream', () => {
     await app.register(cors, { origin: true });
     await app.register(jwtPlugin);
     await app.register(liveRoutes, { revalidateMs: 300 });
+    await app.register(ticketRoutes);
     await app.listen({ port: 0, host: '127.0.0.1' });
     baseUrl = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`;
 
@@ -227,5 +229,35 @@ describe.skipIf(!hasDb)('Live updates stream', () => {
     await streams[0].ended; // the oldest was closed to make room
     expect(liveClientCount(tenantB) - before).toBe(MAX_STREAMS_PER_USER);
     streams.forEach((s) => s.close());
+  });
+
+  it("typing on a ticket reaches colleagues as ids only, never another tenant, and needs tickets:write", async () => {
+    const colleague = await open(otherAgentA.token);
+    const otherTenant = await open(agentB.token);
+    await settle();
+
+    const ticketId = randomUUID();
+    const res = await app.inject({
+      method: 'POST',
+      url: `/tickets/${ticketId}/typing`,
+      headers: { authorization: `Bearer ${agentA.token}` },
+      payload: { body: 'my draft must never travel' },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(await colleague.next((e) => e.type === 'ticket.typing')).toEqual({ type: 'ticket.typing', ticketId, userId: agentA.id });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(otherTenant.events.some((e) => e.type === 'ticket.typing')).toBe(false);
+    expect(JSON.stringify(colleague.events)).not.toContain('draft');
+
+    const bad = await app.inject({ method: 'POST', url: '/tickets/not-a-uuid/typing', headers: { authorization: `Bearer ${agentA.token}` } });
+    expect(bad.statusCode).toBe(400);
+
+    const reader = await makeAgent(tenantA);
+    await updateUser(tenantA, reader.id, { roleKey: 'no_tickets' });
+    const denied = await app.inject({ method: 'POST', url: `/tickets/${ticketId}/typing`, headers: { authorization: `Bearer ${reader.token}` } });
+    expect(denied.statusCode).toBe(403);
+
+    colleague.close();
+    otherTenant.close();
   });
 });

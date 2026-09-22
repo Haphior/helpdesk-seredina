@@ -59,7 +59,7 @@ export function nextSla(ticket: SlaTicket, now: number): SlaState | null {
   return pending[0] ?? null;
 }
 
-/** "2d 4h", "3h 20m", "9m 05s" -- seconds only in the last 10 minutes, where they matter. */
+/** "2d 4h", "3h 20m", "9m 05s", "42s" -- seconds only in the last 10 minutes, where they matter. */
 export function formatDuration(ms: number): string {
   const total = Math.floor(Math.abs(ms) / 1000);
   const d = Math.floor(total / 86_400);
@@ -68,6 +68,7 @@ export function formatDuration(ms: number): string {
   const s = total % 60;
   if (d > 0) return `${d}d ${h}h`;
   if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
+  if (m === 0) return `${s}s`;
   if (total < 600) return `${m}m ${String(s).padStart(2, '0')}s`;
   return `${m}m`;
 }
