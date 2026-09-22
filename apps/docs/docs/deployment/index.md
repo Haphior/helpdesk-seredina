@@ -86,8 +86,8 @@ What it changes:
 
 **Agents.** The Devices page puts the right address in each enrollment
 command. With `custom` (company CA or self-signed) or `internal`, the command
-also carries the CA's fingerprint: the agent downloads the CA, checks it
-against that fingerprint, and from then on trusts only that CA. Nothing to
+also carries the CA itself: the agent trusts only that CA for this server,
+with verification always on. Nothing to
 copy to the device. An agent enrolled at the old `http://<ip>:4000` address
 needs the new command; re-enrolling keeps its existing record.
 

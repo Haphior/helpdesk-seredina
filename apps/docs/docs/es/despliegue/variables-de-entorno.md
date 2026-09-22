@@ -67,7 +67,7 @@ del despliegue.
 | `TLS_MODE` | Con el perfil `proxy` | `acme` (Let's Encrypt), `custom` (`certs/cert.pem` + `certs/key.pem`), `internal` (CA generada) u `off`. |
 | `ACME_EMAIL` | Con `TLS_MODE=acme` | Recibe avisos de vencimiento si la renovación llegara a fallar. |
 | `HTTP_PORT` / `HTTPS_PORT` | No | Puertos del proxy (`80` / `443`). |
-| `TLS_CA_FILE` | No | Certificado de CA que fijan los agentes, para un certificado que no es de confianza pública. El script la define en `internal` y `custom`; la página Dispositivos muestra su huella. La API se niega a entregar un archivo que contenga una clave privada. |
+| `TLS_CA_FILE` | No | Certificado de CA que fijan los agentes, para un certificado que no es de confianza pública. El script la define en `internal` y `custom`; la página Dispositivos la incluye en el comando de enrolamiento. Un archivo que contenga una clave privada se rechaza. |
 | `WEB_BIND` / `API_BIND` | No | En qué interfaz escuchan los puertos de la web y la API (`0.0.0.0`). El script pone `127.0.0.1` cuando el proxy está delante, para que desde la red solo se entre por HTTPS. |
 | `DB_BIND` | No | Postgres y Redis escuchan solo en `127.0.0.1`. Redis no tiene contraseña: no lo expongas. |
 | `TRUST_PROXY` | No | Qué saltos pueden fijar `X-Forwarded-For`, para que los límites por IP vean al cliente real detrás de los proxies. Compose usa `loopback,uniquelocal`. |

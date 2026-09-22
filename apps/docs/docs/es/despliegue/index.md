@@ -84,8 +84,8 @@ Qué cambia:
 
 **Agentes.** La página Dispositivos pone la dirección correcta en cada
 comando de enrolamiento. Con `custom` (CA de empresa o autofirmado) o
-`internal`, el comando incluye además la huella de la CA: el agente la
-descarga, la compara con esa huella y desde ahí confía solo en esa CA. No
+`internal`, el comando incluye además la propia CA: el agente confía solo en
+esa CA para este servidor, siempre con la verificación activa. No
 hay que copiar nada al equipo. Un agente enrolado con la dirección antigua
 `http://<ip>:4000` necesita el comando nuevo; al reenrolarlo conserva su
 registro.

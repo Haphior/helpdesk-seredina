@@ -21,10 +21,10 @@ node src/index.mjs checkin
 The enrollment command from the Devices page already carries the right
 server address. If the server's certificate isn't publicly trusted (a company
 CA, a self-signed certificate, or the proxy's generated `internal` CA), it
-also carries `--ca-sha256 <fingerprint>`: the agent downloads the server's CA,
-refuses it unless it matches that fingerprint, and from then on trusts only
-that CA for this server (stored next to the credential as `ca.pem`). With a CA
-file already on hand, `--ca <file.pem>` does the same without the download.
+also carries that CA (`--ca-pem <base64>`): the agent trusts only that CA for
+this server, stored next to the credential as `ca.pem`, and never turns
+certificate verification off. With a CA file already on hand, `--ca
+<file.pem>` does the same.
 See [`docs/adr/0054-server-address-and-tls.md`](../../docs/adr/0054-server-address-and-tls.md).
 
 To keep it checking in automatically (foreground only — see the ADR for why there's

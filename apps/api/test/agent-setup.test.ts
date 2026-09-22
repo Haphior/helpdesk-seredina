@@ -70,14 +70,13 @@ describe.skipIf(!hasDb)('Agent setup: server address and CA pinning', () => {
   const setup = (token = adminToken) =>
     app.inject({ method: 'GET', url: '/devices/agent-setup', headers: { authorization: `Bearer ${token}` } });
 
-  it('with no custom CA: no fingerprint, and the CA download is a 404', async () => {
+  it('with no custom CA: no CA and no fingerprint', async () => {
     delete process.env.TLS_CA_FILE;
     delete process.env.API_PUBLIC_URL;
-    expect((await setup()).json()).toEqual({ serverUrl: null, caCertSha256: null });
-    expect((await app.inject({ method: 'GET', url: '/v1/devices/ca.pem' })).statusCode).toBe(404);
+    expect((await setup()).json()).toEqual({ serverUrl: null, caCertPem: null, caCertSha256: null });
   });
 
-  it('serves the configured address and a fingerprint that matches the exact bytes of the CA download', async () => {
+  it('returns the configured address, the CA for the enrollment command, and its fingerprint', async () => {
     const caPath = join(dir, 'root.crt');
     writeFileSync(caPath, CERT);
     process.env.TLS_CA_FILE = caPath;
@@ -85,35 +84,35 @@ describe.skipIf(!hasDb)('Agent setup: server address and CA pinning', () => {
 
     const info = (await setup()).json();
     expect(info.serverUrl).toBe('https://helpdesk.example.com/api');
-
-    const download = await app.inject({ method: 'GET', url: '/v1/devices/ca.pem' }); // no auth: agents need it before they trust anything
-    expect(download.statusCode).toBe(200);
-    expect(download.headers['content-type']).toContain('application/x-pem-file');
-    expect(createHash('sha256').update(download.body, 'utf8').digest('hex')).toBe(info.caCertSha256);
+    expect(info.caCertPem).toBe(CERT);
+    expect(info.caCertSha256).toBe(createHash('sha256').update(CERT, 'utf8').digest('hex'));
   });
 
-  it('never serves a file that contains a private key, even if TLS_CA_FILE points at one', async () => {
+  it('there is no unauthenticated CA download anymore -- the CA travels in the command', async () => {
+    expect((await app.inject({ method: 'GET', url: '/v1/devices/ca.pem' })).statusCode).toBe(404);
+  });
+
+  it('never hands out a file that contains a private key, even if TLS_CA_FILE points at one', async () => {
     const mixed = join(dir, 'bundle.pem');
     writeFileSync(mixed, CERT + KEY);
     process.env.TLS_CA_FILE = mixed;
-    const download = await app.inject({ method: 'GET', url: '/v1/devices/ca.pem' });
-    expect(download.statusCode).toBe(404);
-    expect(download.body).not.toContain('PRIVATE KEY');
-    expect((await setup()).json().caCertSha256).toBeNull();
+    const res = await setup();
+    expect(res.body).not.toContain('PRIVATE KEY');
+    expect(res.json()).toMatchObject({ caCertPem: null, caCertSha256: null });
 
     const keyOnly = join(dir, 'key.pem');
     writeFileSync(keyOnly, KEY);
     process.env.TLS_CA_FILE = keyOnly;
-    expect((await app.inject({ method: 'GET', url: '/v1/devices/ca.pem' })).statusCode).toBe(404);
+    expect((await setup()).json().caCertPem).toBeNull();
   });
 
   it('ignores a missing or non-certificate file instead of failing', async () => {
     process.env.TLS_CA_FILE = join(dir, 'does-not-exist.pem');
-    expect((await app.inject({ method: 'GET', url: '/v1/devices/ca.pem' })).statusCode).toBe(404);
+    expect((await setup()).json().caCertPem).toBeNull();
     const junk = join(dir, 'junk.txt');
     writeFileSync(junk, 'hello');
     process.env.TLS_CA_FILE = junk;
-    expect((await app.inject({ method: 'GET', url: '/v1/devices/ca.pem' })).statusCode).toBe(404);
+    expect((await setup()).json().caCertPem).toBeNull();
   });
 
   it('the setup info is for people who can enroll devices (assets:manage)', async () => {

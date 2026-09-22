@@ -87,7 +87,7 @@ services:
       # addresses, so per-IP rate limits see the real client -- see index.ts.
       TRUST_PROXY: ${TRUST_PROXY:-loopback,uniquelocal}
       # A CA certificate agents should pin for a non-public server certificate
-      # (the Devices page shows its fingerprint). configure-address.sh sets it
+      # (the Devices page puts it in the enrollment command). configure-address.sh sets it
       # for the `internal` and `custom` TLS modes; empty = publicly trusted.
       TLS_CA_FILE: ${TLS_CA_FILE:-}
     volumes:

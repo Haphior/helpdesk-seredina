@@ -78,27 +78,32 @@ Found along the way: Postgres and Redis were published on every interface,
 and Redis has no password. Both now bind to `127.0.0.1` (`DB_BIND`); `worker`
 uses host networking and still reaches them at localhost.
 
-### Agents: server address plus CA pinning by fingerprint
+### Agents: server address, and the CA carried in the enrollment command
 
 - `GET /devices/agent-setup` (`assets:manage`) returns the address agents
-  should use (`API_PUBLIC_URL`) and, when `TLS_CA_FILE` is set, the SHA-256 of
-  the CA certificate.
-- `GET /v1/devices/ca.pem` (no auth — a CA certificate is public by design, and
-  the agent needs it before it can verify anything) serves that file. It
-  refuses any file that contains `PRIVATE KEY`, so a mistyped path can't turn it
-  into a key leak.
+  should use (`API_PUBLIC_URL`) and, when `TLS_CA_FILE` is set, that CA
+  certificate and its SHA-256 (shown for comparison). It refuses any file that
+  contains `PRIVATE KEY`, so a mistyped path can't leak a key into the console.
 - The Devices page shows an editable "Server address for agents" field,
   prefilled from `API_PUBLIC_URL`, for a device that reaches the server some
-  other way, such as a VPN. The enrollment command follows the field, and adds
-  `--ca-sha256 <fingerprint>` when a CA is configured.
-- The agent (`--ca-sha256`) downloads the CA without verification, since
-  there's nothing to verify it against yet. That is exactly why it refuses the
-  CA unless its SHA-256 matches the fingerprint the admin copied from the
-  authenticated console. From then on it passes that CA as Node's `ca` option,
-  which *replaces* the default roots: the agent trusts only that CA for this
-  server, and hostname verification stays on. `--ca <file>` does the same with
-  a local file. A mismatch saves nothing. The agent warns when a non-localhost
-  address uses `http://`.
+  other way, such as a VPN. The enrollment command follows the field and, when
+  a CA is configured, adds `--ca-pem <the CA, base64>`.
+- The agent passes that CA as Node's `ca` option, which *replaces* the default
+  roots: it trusts only that CA for this server, and hostname verification
+  stays on. `--ca <file>` does the same with a local file. It never turns
+  certificate verification off.
+
+**Why the CA travels in the command, not as a download.** The first version
+had the agent download the CA from an unauthenticated `GET /v1/devices/ca.pem`
+with verification off, then trust it only if its SHA-256 matched a fingerprint
+in the command. That was sound, since nothing was trusted before the hash
+check. But it meant code that disables certificate validation, which CodeQL
+rightly flags (`js/disabling-certificate-validation`), plus a public endpoint
+that needn't exist. Carrying the CA itself in the command removes both. The
+command gets longer (~1 KB for Caddy's EC root, a few KB for an RSA company
+CA), which is fine for a copy-button field and well within shell limits. It
+comes from the authenticated console, so it's as trustworthy as the enrollment
+token next to it.
 
 `TLS_CA_FILE` per mode: `internal` → Caddy's root in the `caddy_data` volume
 (mounted read-only into `api`); `custom` → `certs/ca.pem`, taken from `--ca` or
@@ -134,8 +139,9 @@ certificate is publicly trusted.
   - an email containing `&`;
   - an existing `mcp` profile, kept.
 - **Integration tests** (`apps/api/test/agent-setup.test.ts`):
-  - the fingerprint matches the exact downloaded bytes;
-  - a file containing a key is never served;
+  - the CA and its fingerprint are returned for the command, and the old
+    unauthenticated download no longer exists;
+  - a file containing a key is never handed out;
   - missing or junk files are ignored;
   - `assets:manage` is required.
 
@@ -144,11 +150,12 @@ Live, with the real Caddyfile (`internal` mode) → the real nginx server block
 
 - The console, built with no API URL, loaded over HTTPS and its live stream
   connected through both proxies.
-- The Devices page prefilled `https://…/api`; its fingerprint matched Caddy's
-  generated root CA; editing the address updated the command.
-- The agent enrolled and checked in with the pinned CA. Without the
-  fingerprint it failed ("unable to get local issuer certificate"); with a
-  wrong one it failed and saved nothing.
+- The Devices page prefilled `https://…/api`, and the CA in its command was
+  exactly Caddy's generated root CA; editing the address updated the command.
+- The agent enrolled and checked in with the pinned CA. It was refused
+  ("unable to get local issuer certificate") without the CA, and again with a
+  different CA pinned. Garbage in `--ca-pem` was rejected. Nothing was saved
+  after any failure.
 - A spoofed `X-Forwarded-For` sent through Caddy reached the API as the real
   client address. Sent to the nginx port directly, it was taken as given,
   which is why those ports bind to localhost.

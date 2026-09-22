@@ -5,7 +5,7 @@
 //
 // Usage:
 //   node src/index.mjs enroll --url <api-url> --token <enrollment-token>
-//                             [--ca-sha256 <fingerprint> | --ca <ca-file.pem>]
+//                             [--ca-pem <base64> | --ca <ca-file.pem>]
 //   node src/index.mjs checkin
 //   node src/index.mjs run [--interval <seconds>]
 
@@ -14,7 +14,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import https from 'node:https';
-import { createHash } from 'node:crypto';
 import { collectInventory } from './inventory.mjs';
 import { collectNeighbors, machineFingerprint, primaryMacAddress } from './network.mjs';
 
@@ -38,16 +37,14 @@ function parseArgs(argv) {
   return args;
 }
 
-// `ca`: trust only this CA. `insecure`: skip certificate verification -- used
-// for exactly one thing, fetching the CA file whose sha256 the caller then
-// checks against the fingerprint an admin copied from the console. `raw`:
-// resolve with the exact body text instead of parsed JSON.
-function request(urlString, { method = 'GET', headers = {}, body, ca, insecure = false, raw = false } = {}) {
+// `ca`: trust only this CA (Node's `ca` replaces the default roots). The
+// agent never turns certificate verification off.
+function request(urlString, { method = 'GET', headers = {}, body, ca } = {}) {
   return new Promise((resolve, reject) => {
     const url = new URL(urlString);
     const lib = url.protocol === 'https:' ? https : http;
     const payload = body ? JSON.stringify(body) : undefined;
-    const tls = url.protocol === 'https:' ? { ...(ca ? { ca } : {}), ...(insecure ? { rejectUnauthorized: false } : {}) } : {};
+    const tls = url.protocol === 'https:' && ca ? { ca } : {};
     const req = lib.request(
       url,
       {
@@ -66,11 +63,6 @@ function request(urlString, { method = 'GET', headers = {}, body, ca, insecure =
         });
         res.on('end', () => {
           const status = res.statusCode ?? 0;
-          if (raw) {
-            if (status >= 200 && status < 300) resolve(data);
-            else reject(new Error(`HTTP ${status}`));
-            return;
-          }
           let parsed = null;
           try {
             parsed = data ? JSON.parse(data) : null;
@@ -103,41 +95,36 @@ function normalizeServerUrl(value) {
 }
 
 /**
- * Resolves which CA to pin, if any: a local file (--ca), or the server's own
- * CA (--ca-sha256). The download is done WITHOUT certificate verification --
- * there's nothing to verify it against yet -- which is exactly why its sha256
- * must match the fingerprint shown in the console before it's trusted.
+ * Resolves which CA to pin, if any, for a server whose certificate isn't
+ * publicly trusted: the CA itself, base64-encoded in the enrollment command
+ * the admin copied from the console (--ca-pem), or a local file (--ca). It
+ * arrives with the command rather than being fetched from the server, so the
+ * agent never has to talk to a server it can't yet verify.
  */
-async function resolveCa(url, args) {
-  if (args.ca) {
-    const pem = fs.readFileSync(args.ca, 'utf8');
-    if (!pem.includes('BEGIN CERTIFICATE')) throw new Error(`${args.ca} doesn't contain a PEM certificate`);
-    return pem;
+function resolveCa(args) {
+  let pem;
+  if (args['ca-pem']) {
+    pem = Buffer.from(args['ca-pem'], 'base64').toString('utf8');
+  } else if (args.ca) {
+    pem = fs.readFileSync(args.ca, 'utf8');
+  } else {
+    return undefined;
   }
-  if (args['ca-sha256']) {
-    const expected = args['ca-sha256'].toLowerCase().replace(/[^0-9a-f]/g, '');
-    const pem = await request(`${url}/v1/devices/ca.pem`, { insecure: true, raw: true });
-    const actual = createHash('sha256').update(pem, 'utf8').digest('hex');
-    if (actual !== expected) {
-      throw new Error(
-        "the server's CA certificate doesn't match the fingerprint from the console. Nothing was saved. " +
-          'Check that --url points at the right server; if the certificate was just changed, generate a new enrollment command.',
-      );
-    }
-    return pem;
+  if (!pem.includes('-----BEGIN CERTIFICATE-----') || pem.includes('PRIVATE KEY')) {
+    throw new Error('the CA given is not a PEM certificate -- copy the enrollment command from the console again.');
   }
-  return undefined;
+  return pem;
 }
 
 async function cmdEnroll(args) {
   const { token } = args;
   if (!args.url || !token) {
-    console.error('Usage: node src/index.mjs enroll --url <api-url> --token <enrollment-token> [--ca-sha256 <fingerprint> | --ca <ca-file.pem>]');
+    console.error('Usage: node src/index.mjs enroll --url <api-url> --token <enrollment-token> [--ca-pem <base64> | --ca <ca-file.pem>]');
     process.exitCode = 1;
     return;
   }
   const url = normalizeServerUrl(args.url);
-  const ca = await resolveCa(url, args);
+  const ca = resolveCa(args);
 
   const result = await request(`${url}/v1/devices/enroll`, {
     ca,

@@ -18,8 +18,8 @@ contain breaking changes).
   `/api`, so the web build no longer needs the API URL baked in.
 - **Agents choose the server and trust your certificate**: the Devices page
   has a "Server address for agents" field. When the certificate isn't
-  publicly trusted, the enrollment command pins the server's CA by
-  fingerprint: the agent downloads it, checks it, and trusts only that CA.
+  publicly trusted, the enrollment command carries the server's CA, and the
+  agent trusts only that CA — certificate verification is never turned off.
   `--ca <file>` works too.
 
 - **Live console updates** (`docs/adr/0053-live-updates.md`): the ticket
