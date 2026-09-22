@@ -6,13 +6,48 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { CopyableCodeBlock } from '../components/Copyable';
+import { Input } from '../components/Input';
 import { formatDateTime } from '../lib/format';
+
+interface AgentSetup {
+  serverUrl: string | null;
+  caCertPem: string | null;
+  caCertSha256: string | null;
+}
+
+/**
+ * docs/adr/0054-server-address-and-tls.md: the address is whatever the
+ * operator configured (API_PUBLIC_URL), editable here for a device that
+ * reaches the server some other way (a VPN address, an internal DNS name).
+ * With a non-public certificate, the command carries the server's CA itself
+ * (base64, so it survives any shell), so the device trusts exactly that CA
+ * and never has to fetch it from a server it can't verify yet.
+ */
+function buildEnrollCommand(serverUrl: string, token: string, caCertPem: string | null): string {
+  const url = serverUrl.trim().replace(/\/$/, '');
+  return `node src/index.mjs enroll --url ${url} --token ${token}${caCertPem ? ` --ca-pem ${btoa(caCertPem)}` : ''}`;
+}
 
 export function Devices() {
   const [devices, setDevices] = useState<DeviceListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [enrollCommand, setEnrollCommand] = useState<string | null>(null);
+  const [enrollToken, setEnrollToken] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [agentSetup, setAgentSetup] = useState<AgentSetup | null>(null);
+  const [serverUrl, setServerUrl] = useState(API_URL);
+
+  useEffect(() => {
+    apiGet<AgentSetup>('/devices/agent-setup')
+      .then((setup) => {
+        setAgentSetup(setup);
+        if (setup.serverUrl) setServerUrl(setup.serverUrl);
+      })
+      .catch(() => {}); // without it, the console's own API address is a sane default
+  }, []);
+
+  const serverUrlValid = /^https?:\/\/[^\s/]+/i.test(serverUrl.trim());
+  const enrollCommand =
+    enrollToken && serverUrlValid ? buildEnrollCommand(serverUrl, enrollToken, agentSetup?.caCertPem ?? null) : null;
 
   function load() {
     apiGet<{ devices: DeviceListItem[] }>('/devices')
@@ -27,7 +62,7 @@ export function Devices() {
     setGenerating(true);
     try {
       const { token } = await apiPost<{ token: string; expiresAt: string }>('/devices/enrollment-tokens', {});
-      setEnrollCommand(`node agent.js enroll --url ${API_URL} --token ${token}`);
+      setEnrollToken(token);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to generate an enrollment token');
     } finally {
@@ -65,15 +100,45 @@ export function Devices() {
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
 
-      {enrollCommand && (
-        <Card className="mb-5 max-w-2xl !p-5">
-          <h2 className="mb-1 text-[15px] font-bold text-slate-800">Run this on the device</h2>
-          <p className="mb-3 text-[12.5px] text-slate-500">
-            Valid for 15 minutes, and works once. Requires Node.js on the device.
+      <Card className="mb-5 max-w-2xl !p-5">
+        <div className="mb-3">
+          <Input
+            id="agent-server-url"
+            label="Server address for agents"
+            value={serverUrl}
+            onChange={(e) => setServerUrl(e.target.value)}
+            placeholder="https://helpdesk.example.com/api"
+            aria-invalid={!serverUrlValid}
+          />
+          <p className="mt-1.5 text-[12.5px] text-slate-500">
+            {serverUrlValid
+              ? 'The address devices use to reach this server — change it if they connect another way, e.g. over a VPN.'
+              : 'Enter a full address starting with https:// (or http://).'}
           </p>
-          <CopyableCodeBlock label="Enrollment command" value={enrollCommand} />
-        </Card>
-      )}
+          {serverUrlValid && serverUrl.trim().startsWith('http://') && (
+            <p className="mt-1 text-[12.5px] text-amber-700">
+              Without https://, each device's credential and inventory travel unencrypted.
+            </p>
+          )}
+          {agentSetup?.caCertSha256 && (
+            <p className="mt-1 text-[12.5px] text-slate-500">
+              This server uses its own certificate authority. The command below includes it, so the agent trusts
+              exactly that CA (fingerprint <code className="text-[11.5px]">{agentSetup.caCertSha256?.slice(0, 16)}…</code>).
+            </p>
+          )}
+        </div>
+        {enrollCommand ? (
+          <>
+            <h2 className="mb-1 text-[15px] font-bold text-slate-800">Run this on the device</h2>
+            <p className="mb-3 text-[12.5px] text-slate-500">
+              Valid for 15 minutes, and works once. Requires Node.js on the device; run it from the agent's folder.
+            </p>
+            <CopyableCodeBlock label="Enrollment command" value={enrollCommand} />
+          </>
+        ) : (
+          <p className="text-[12.5px] text-slate-500">Generate an enrollment command to add a device.</p>
+        )}
+      </Card>
 
       {devices === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
       {devices?.length === 0 && <p className="text-sm text-slate-500">No devices enrolled yet.</p>}

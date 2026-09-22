@@ -8,8 +8,13 @@ sin API Key, funciona desde cualquier dominio.
 Un único `<script>` en cualquier página:
 
 ```html
-<script src="https://tu-instancia.example.com/widget.js" data-tenant="tu-organizacion"></script>
+<script src="https://tu-instancia.example.com/api/widget.js" data-tenant="tu-organizacion"></script>
 ```
+
+El `src` es la dirección de tu API más `/widget.js`: con el proxy HTTPS
+incluido es `https://<tu dirección>/api/widget.js`; en una instalación
+anterior que llega a la API por su propio puerto, `https://<host de la api>:4000/widget.js`.
+El widget se comunica con la misma dirección desde la que se cargó.
 
 `data-tenant` es el slug de tu organización (el mismo que usás para
 iniciar sesión). Eso es todo — no hace falta configurar CORS del lado del

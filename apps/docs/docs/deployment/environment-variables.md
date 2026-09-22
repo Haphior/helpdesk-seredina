@@ -59,8 +59,17 @@ used *exclusively*, never falling back to the deployment's global config.
 | `API_PORT` | No | The API's port (`4000` by default). |
 | `WEB_PORT` | No | The web console's port (`8080` by default). |
 | `WEB_ORIGIN` | Yes | Must match how the browser reaches the console (never the in-compose-network hostname). Also read by `api` to build its own public links (e.g. a CSAT survey link) — left unset, that one feature just silently no-ops. |
-| `VITE_API_URL` | Yes | How the browser reaches the API. |
-| `API_PUBLIC_URL` | Only if using Telegram | A real, internet-reachable HTTPS base URL for your API — Telegram calls it directly to deliver messages, so it can never be `localhost` or an internal compose hostname. |
+| `VITE_API_URL` | No | Leave empty: the console reaches the API at `/api` on its own address. Only set it to point the console at an API on a different origin (baked in at build time). |
+| `API_PUBLIC_URL` | Only if using Telegram | A real, internet-reachable HTTPS base URL for your API — Telegram calls it directly to deliver messages, so it can never be `localhost` or an internal compose hostname. Also the address the Devices page puts in agent enrollment commands. `configure-address.sh` sets it to `https://<address>/api`. |
+| `SEREDINA_SITE` | With the `proxy` profile | The address the HTTPS proxy serves: a domain or IP (`http://…` when `TLS_MODE=off`). Set by `scripts/configure-address.sh`. |
+| `TLS_MODE` | With the `proxy` profile | `acme` (Let's Encrypt), `custom` (`certs/cert.pem` + `certs/key.pem`), `internal` (generated CA), or `off`. |
+| `ACME_EMAIL` | With `TLS_MODE=acme` | Gets certificate expiry warnings if renewal ever fails. |
+| `HTTP_PORT` / `HTTPS_PORT` | No | The proxy's ports (`80` / `443`). |
+| `TLS_CA_FILE` | No | A CA certificate agents pin, for a certificate that isn't publicly trusted. Set by the script for `internal` and `custom`; the Devices page puts it in the enrollment command. A file that contains a private key is refused. |
+| `WEB_BIND` / `API_BIND` | No | Which interface the web and API ports listen on (`0.0.0.0`). The script sets `127.0.0.1` once the proxy is in front, so the network only gets in over HTTPS. |
+| `DB_BIND` | No | Postgres and Redis listen on `127.0.0.1` only. Redis has no password: don't expose it. |
+| `TRUST_PROXY` | No | Which hops may set `X-Forwarded-For`, so per-IP rate limits see the real client behind the proxies. Compose sets `loopback,uniquelocal`. |
+| `COMPOSE_PROFILES` | No | `proxy` starts the HTTPS proxy; add `mcp` for the MCP server. |
 
 ## Other optional variables
 

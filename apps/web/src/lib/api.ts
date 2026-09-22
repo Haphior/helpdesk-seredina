@@ -1,7 +1,13 @@
 // Exported so pages that need to *display* the API's own base URL (e.g. the
 // Monitoring Integrations setup page's webhook URL for a tenant to paste
 // into Grafana) don't hardcode a second copy of this fallback.
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
+//
+// Unset (the default since docs/adr/0054-server-address-and-tls.md), the API
+// is reached at /api on whatever address the console itself was opened at --
+// the web container's nginx proxies it -- so the same build works at any
+// domain or IP, over HTTP or HTTPS. VITE_API_URL is only for pointing the
+// console at an API on a different origin.
+export const API_URL = (import.meta.env.VITE_API_URL || `${window.location.origin}/api`).replace(/\/$/, '');
 const TOKEN_KEY = 'seredina_token';
 
 export class ApiError extends Error {
@@ -17,6 +23,12 @@ export function getToken(): string | null {
 export function setToken(token: string | null) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
+}
+
+/** The session itself is no longer valid (expired, user deactivated or deleted): drop it and go log in again. */
+export function endSession() {
+  setToken(null);
+  window.location.assign('/login');
 }
 
 // zod's .flatten() shape, returned as `{ error: ... }` by every route that does
@@ -75,8 +87,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     // from other 401s like a wrong KB access code. Drop the dead token and go
     // back to login instead of leaving every page erroring.
     if (res.status === 401 && token && extractErrorMessage(body, res.status) === 'unauthorized') {
-      setToken(null);
-      window.location.assign('/login');
+      endSession();
     }
     throw new ApiError(res.status, extractErrorMessage(body, res.status));
   }

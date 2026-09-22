@@ -228,6 +228,14 @@
       "request": "Request",
       "createTicket": "Create ticket",
       "createFailed": "Failed to create ticket"
+    },
+    "live": {
+      "live": "Live",
+      "liveHint": "Changes appear here as they happen",
+      "connecting": "Connecting…",
+      "connectingHint": "Connecting to live updates",
+      "offline": "Reconnecting…",
+      "offlineHint": "Live updates are paused; reload to see the latest"
     }
   },
   "ticketDetail": {

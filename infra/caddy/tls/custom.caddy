@@ -1,0 +1,4 @@
+# Your own certificate: certs/cert.pem (full chain) and certs/key.pem at the
+# repo root, mounted read-only at /certs.
+tls /certs/cert.pem /certs/key.pem
+header Strict-Transport-Security "max-age=31536000"

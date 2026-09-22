@@ -44,3 +44,16 @@
   --n-900: #0f172a;
   --n-950: #020617;
 }
+
+/* Live updates (docs/adr/0053-live-updates.md): a row that just changed or
+   arrived glows briefly. A translucent indigo reads on every theme. */
+@keyframes live-flash {
+  from { background-color: rgba(99, 102, 241, 0.16); }
+  to { background-color: transparent; }
+}
+.live-flash {
+  animation: live-flash 2.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-flash { animation: none; background-color: rgba(99, 102, 241, 0.12); }
+}

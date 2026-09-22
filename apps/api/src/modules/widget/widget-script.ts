@@ -11,7 +11,7 @@
  * untrusted host content the way an iframe would for the reverse direction.
  *
  * `document.currentScript.dataset.tenant` gives the tenant slug; the API's
- * own origin is derived from the script's own src (same Fastify app serves
+ * base URL is derived from the script's own src (same Fastify app serves
  * both), so the embed snippet needs no separate API URL configuration.
  */
 export function renderWidgetScript(): string {
@@ -28,11 +28,14 @@ const WIDGET_SCRIPT_SOURCE = String.raw`(function () {
     return;
   }
 
-  var apiOrigin = new URL(currentScript.src).origin;
+  // Everything before "/widget.js" in the script's own URL, so the widget
+  // works whether the API is served at its own origin or under a path prefix
+  // (https://helpdesk.example.com/api/widget.js -- docs/adr/0054-server-address-and-tls.md).
+  var apiBase = currentScript.src.replace(/\/widget\.js(?:[?#].*)?$/, '');
   var storageKey = 'seredina-widget-' + tenantSlug;
 
   function apiUrl(path) {
-    return apiOrigin + '/public/' + encodeURIComponent(tenantSlug) + path;
+    return apiBase + '/public/' + encodeURIComponent(tenantSlug) + path;
   }
 
   function loadState() {

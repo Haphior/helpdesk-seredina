@@ -8,8 +8,13 @@ works from any domain.
 A single `<script>` tag on any page:
 
 ```html
-<script src="https://your-instance.example.com/widget.js" data-tenant="your-organization"></script>
+<script src="https://your-instance.example.com/api/widget.js" data-tenant="your-organization"></script>
 ```
+
+The `src` is your API's address plus `/widget.js` — with the built-in HTTPS
+proxy that's `https://<your address>/api/widget.js`; on an older setup
+reaching the API on its own port, `https://<api host>:4000/widget.js`. The
+widget talks back to whatever address it was loaded from.
 
 `data-tenant` is your organization's slug (the same one you use to log
 in). That's it — no CORS configuration needed on the embedding site's

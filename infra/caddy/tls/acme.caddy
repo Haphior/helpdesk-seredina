@@ -1,0 +1,5 @@
+# Let's Encrypt (or ZeroSSL), issued and renewed automatically. Needs a real
+# domain name pointing at this server, with ports 80 and 443 reachable from
+# the internet. ACME_EMAIL gets expiry warnings if renewal ever fails.
+tls {$ACME_EMAIL}
+header Strict-Transport-Security "max-age=31536000"

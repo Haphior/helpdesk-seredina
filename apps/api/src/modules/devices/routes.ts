@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
 import { checkIn, createEnrollmentToken, enrollDevice, listDevices, revokeDevice } from './service';
+import { getAgentSetup } from './agentSetup';
 
 // Format only -- neighbors.ts's normalizeMac() does the real validation
 // (multicast/broadcast/all-zero rejected there, not here).
@@ -38,6 +39,14 @@ export default async function deviceRoutes(app: FastifyInstance) {
       const result = await createEnrollmentToken(request.user.tenantId);
       return reply.code(201).send(result);
     },
+  );
+
+  // Feeds the Devices page's enrollment command: the address agents should
+  // use and, for a non-public certificate, the CA the agent pins.
+  app.get(
+    '/devices/agent-setup',
+    { preHandler: [app.authenticate, requirePermission('assets:manage')] },
+    async (_request, reply) => reply.send(await getAgentSetup()),
   );
 
   app.get('/devices', { preHandler: [app.authenticate, requirePermission('assets:read')] }, async (request, reply) => {

@@ -56,4 +56,18 @@ echo "[setup] losing it makes every stored IMAP/SMTP password undecryptable."
 echo "[setup]"
 echo "[setup] Optional: set ANTHROPIC_API_KEY in .env for the AI copilot."
 echo "[setup]"
+
+# Address and HTTPS (docs/adr/0054-server-address-and-tls.md). Only asked
+# interactively: an automated install passes flags to configure-address.sh
+# itself, and skipping it keeps the old localhost-only behavior.
+if [ -t 0 ]; then
+  read -r -p "[setup] Set the server's address and HTTPS now? [Y/n]: " answer
+  if [[ ! "${answer:-y}" =~ ^[Nn] ]]; then
+    echo
+    scripts/configure-address.sh
+    exit 0
+  fi
+fi
+echo "[setup] To serve Seredina at your own address with HTTPS, run scripts/configure-address.sh."
+echo "[setup]"
 echo "[setup] Next: docker compose -f infra/docker-compose.yml up"

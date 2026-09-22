@@ -6,7 +6,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-seredina}
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      # Host-only: `worker` (host networking) reaches it at localhost; nothing
+      # outside this machine needs the database. DB_BIND=0.0.0.0 to expose it.
+      - '${DB_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +20,10 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - '${REDIS_PORT:-6379}:6379'
+      # Host-only, same reason as postgres -- and Redis here has no password,
+      # so publishing it on every interface would hand anyone on the network
+      # the queues and live-update channels.
+      - '${DB_BIND:-127.0.0.1}:${REDIS_PORT:-6379}:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -73,10 +78,27 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-}
       # Only required to connect a Telegram bot (docs/adr/0044-telegram-
       # channel.md) -- must be the real, internet-reachable HTTPS address this
-      # container is reachable at, e.g. https://api.yourcompany.com.
+      # container is reachable at, e.g. https://api.yourcompany.com. Also the
+      # address the Devices page puts in agent enrollment commands. Set by
+      # scripts/configure-address.sh (https://<your address>/api).
       API_PUBLIC_URL: ${API_PUBLIC_URL:-}
+      # Requests reach the API through the web container's nginx (and, with
+      # the `proxy` profile, Caddy): trust X-Forwarded-For only from private
+      # addresses, so per-IP rate limits see the real client -- see index.ts.
+      TRUST_PROXY: ${TRUST_PROXY:-loopback,uniquelocal}
+      # A CA certificate agents should pin for a non-public server certificate
+      # (the Devices page puts it in the enrollment command). configure-address.sh sets it
+      # for the `internal` and `custom` TLS modes; empty = publicly trusted.
+      TLS_CA_FILE: ${TLS_CA_FILE:-}
+    volumes:
+      # Read-only: only to hand agents the CA certificate above, never keys --
+      # see modules/devices/agentSetup.ts.
+      - caddy_data:/caddy-data:ro
+      - ../certs:/certs:ro
     ports:
-      - '${API_PORT:-4000}:4000'
+      # With the `proxy` profile, configure-address.sh sets API_BIND=127.0.0.1
+      # so the only way in from the network is through HTTPS on the proxy.
+      - '${API_BIND:-0.0.0.0}:${API_PORT:-4000}:4000'
 
   worker:
     build:
@@ -113,13 +135,43 @@ services:
       context: ..
       dockerfile: infra/docker/Dockerfile.web
       args:
-        # Baked in at build time -- see Dockerfile.web. Must be reachable from the
-        # end user's BROWSER, not from inside the compose network (so not
-        # `http://api:4000`), which is why it defaults to the host-mapped API_PORT.
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+        # Leave empty (the default): the console then reaches the API at /api on
+        # whatever address it was opened at -- this container's nginx proxies it
+        # (docs/adr/0054-server-address-and-tls.md). Only set it to point the
+        # console at an API on a different origin; it's baked in at build time.
+        VITE_API_URL: ${VITE_API_URL:-}
         VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+    depends_on:
+      - api
     ports:
-      - '${WEB_PORT:-8080}:80'
+      # Same as API_BIND: host-only once the `proxy` profile is in front.
+      - '${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:80'
+
+  # Optional HTTPS entry point (docs/adr/0054-server-address-and-tls.md):
+  # `COMPOSE_PROFILES=proxy` in .env (scripts/configure-address.sh sets it).
+  # Terminates TLS for your address -- Let's Encrypt, your own certificate, or
+  # a generated internal CA -- and forwards everything to `web`.
+  proxy:
+    profiles: ['proxy']
+    image: caddy:2.10-alpine
+    depends_on:
+      - web
+    environment:
+      SEREDINA_SITE: ${SEREDINA_SITE:-localhost}
+      TLS_MODE: ${TLS_MODE:-internal}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/tls:/etc/caddy/tls:ro
+      - ../certs:/certs:ro
+      # Issued certificates and the internal CA -- must survive restarts, or
+      # Let's Encrypt rate limits and re-trusting a new CA become a problem.
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
 
   # Optional, profile-gated: the MCP server's Streamable HTTP transport (see
   # docs/adr/0035-mcp-http-transport.md). Unlike the stdio transport (meant to
@@ -150,3 +202,5 @@ services:
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:

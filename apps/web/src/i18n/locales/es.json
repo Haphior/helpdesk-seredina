@@ -228,6 +228,14 @@
       "request": "Solicitud",
       "createTicket": "Crear ticket",
       "createFailed": "No se pudo crear el ticket"
+    },
+    "live": {
+      "live": "En vivo",
+      "liveHint": "Los cambios aparecen aquí en cuanto ocurren",
+      "connecting": "Conectando…",
+      "connectingHint": "Conectando con las actualizaciones en vivo",
+      "offline": "Reconectando…",
+      "offlineHint": "Las actualizaciones en vivo están en pausa; recarga para ver lo último"
     }
   },
   "ticketDetail": {

@@ -1,6 +1,7 @@
 import { prisma, withTenantTx, type Prisma } from '@seredina/db';
 import type { EscalationAdvanceJobPayload } from '@seredina/shared';
 import { escalationAdvanceQueue } from '../lib/queue';
+import { publishLive } from '../lib/live';
 
 type Tier = { userId: string | null; onCallScheduleId: string | null };
 
@@ -54,6 +55,7 @@ export async function startEscalationIfConfigured(tenantId: string, ticketId: st
   });
 
   if (!started) return;
+  await publishLive(tenantId, { type: 'message.created', ticketId });
   await escalationAdvanceQueue.add(
     'advance',
     { tenantId, escalationRunId: started.runId, expectedTierIndex: 0 },
@@ -89,7 +91,7 @@ export async function advanceEscalation(payload: EscalationAdvanceJobPayload): P
           body: 'Escalation exhausted -- no one acknowledged.',
         },
       });
-      return null;
+      return { ticketId: run.ticketId, next: null };
     }
 
     const nextTier = tiers[nextIndex];
@@ -104,13 +106,15 @@ export async function advanceEscalation(payload: EscalationAdvanceJobPayload): P
         body: `Not acknowledged -- escalated to tier ${nextIndex + 1}: ${who}.`,
       },
     });
-    return { nextIndex, delayMinutes: nextTier.escalateAfterMinutes };
+    return { ticketId: run.ticketId, next: { nextIndex, delayMinutes: nextTier.escalateAfterMinutes } };
   });
 
   if (!advanced) return;
+  await publishLive(tenantId, { type: 'message.created', ticketId: advanced.ticketId });
+  if (!advanced.next) return;
   await escalationAdvanceQueue.add(
     'advance',
-    { tenantId, escalationRunId, expectedTierIndex: advanced.nextIndex },
-    { delay: advanced.delayMinutes * 60_000 },
+    { tenantId, escalationRunId, expectedTierIndex: advanced.next.nextIndex },
+    { delay: advanced.next.delayMinutes * 60_000 },
   );
 }

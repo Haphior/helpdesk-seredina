@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
+import { useLiveEvents, useLiveStatus } from '../lib/live';
 import type {
   CustomFieldDefinition,
   SavedView,
@@ -68,16 +69,21 @@ export function TicketsQueue() {
     return () => clearTimeout(timer);
   }, [q]);
 
-  function load(offset = 0) {
-    setError(null);
-    if (offset > 0) setLoadingMore(true);
+  function ticketQuery(offset: number, limit: number) {
     const params = new URLSearchParams();
     if (tab !== 'ALL') params.set('statusCategory', tab);
     if (assigneeFilter) params.set('assigneeId', assigneeFilter);
     if (priorityFilter) params.set('priority', priorityFilter);
     if (debouncedQ) params.set('q', debouncedQ);
-    params.set('limit', String(PAGE_SIZE));
+    params.set('limit', String(limit));
     params.set('offset', String(offset));
+    return params;
+  }
+
+  function load(offset = 0) {
+    setError(null);
+    if (offset > 0) setLoadingMore(true);
+    const params = ticketQuery(offset, PAGE_SIZE);
     apiGet<{ tickets: Ticket[]; total: number }>(`/tickets?${params.toString()}`)
       .then((res) => {
         setTickets((prev) => (offset > 0 && prev ? [...prev, ...res.tickets] : res.tickets));
@@ -86,6 +92,47 @@ export function TicketsQueue() {
       .catch((err) => setError(err instanceof Error ? err.message : t('tickets.loadFailed')))
       .finally(() => setLoadingMore(false));
   }
+
+  // Live updates (docs/adr/0053-live-updates.md): events only say WHICH ticket
+  // changed, so collect them for a moment and refetch what's on screen once --
+  // an alert storm becomes one request, not one per event. Rows that changed
+  // or appeared get a brief highlight.
+  const liveStatus = useLiveStatus();
+  const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
+  const changedIds = useRef(new Set<string>());
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shownIds = useRef(new Set<string>());
+  shownIds.current = new Set(tickets?.map((ticket) => ticket.id) ?? []);
+  const shownCount = useRef(0);
+  shownCount.current = tickets?.length ?? 0;
+
+  function refreshLive() {
+    refreshTimer.current = null;
+    const changed = changedIds.current;
+    changedIds.current = new Set();
+    const previous = shownIds.current;
+    apiGet<{ tickets: Ticket[]; total: number }>(`/tickets?${ticketQuery(0, Math.max(PAGE_SIZE, shownCount.current)).toString()}`)
+      .then((res) => {
+        setTickets(res.tickets);
+        setTotal(res.total);
+        const flash = new Set(res.tickets.filter((ticket) => changed.has(ticket.id) || !previous.has(ticket.id)).map((ticket) => ticket.id));
+        if (flash.size > 0) {
+          setFlashIds(flash);
+          setTimeout(() => setFlashIds(new Set()), 2500);
+        }
+      })
+      .catch(() => {});
+  }
+
+  useLiveEvents((event) => {
+    if (event.type === 'notification.created') return;
+    if ('ticketId' in event) changedIds.current.add(event.ticketId);
+    if (!refreshTimer.current) refreshTimer.current = setTimeout(refreshLive, 400);
+  });
+
+  useEffect(() => () => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+  }, []);
 
   function loadSavedViews() {
     apiGet<{ views: SavedView[] }>('/saved-views')
@@ -163,6 +210,18 @@ export function TicketsQueue() {
                 {t('tickets.countOfTotal', { count: tickets.length, total })}
               </span>
             )}
+            <span
+              className={`inline-flex items-center gap-1.5 self-center text-[11.5px] font-semibold ${
+                liveStatus === 'live' ? 'text-emerald-600' : 'text-slate-400'
+              }`}
+              title={t(`tickets.live.${liveStatus}Hint`)}
+            >
+              <span
+                aria-hidden="true"
+                className={`h-1.5 w-1.5 rounded-full bg-current ${liveStatus === 'live' ? 'animate-pulse' : ''}`}
+              />
+              {t(`tickets.live.${liveStatus}`)}
+            </span>
           </div>
           {hasPermission('tickets:write') && <Button onClick={() => setShowRequest(true)}>{t('tickets.newTicket')}</Button>}
         </div>
@@ -334,7 +393,7 @@ export function TicketsQueue() {
               {tickets.map((ticket) => (
                 <div
                   key={ticket.id}
-                  className="grid items-center gap-3 px-5 py-3.5 hover:bg-slate-50"
+                  className={`grid items-center gap-3 px-5 py-3.5 hover:bg-slate-50 ${flashIds.has(ticket.id) ? 'live-flash' : ''}`}
                   style={{ gridTemplateColumns: ROW_COLUMNS }}
                 >
                   <span>
