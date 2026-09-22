@@ -19,6 +19,12 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+/** The session itself is no longer valid (expired, user deactivated or deleted): drop it and go log in again. */
+export function endSession() {
+  setToken(null);
+  window.location.assign('/login');
+}
+
 // zod's .flatten() shape, returned as `{ error: ... }` by every route that does
 // `reply.code(400).send({ error: parsed.error.flatten() })`. Recognized here so a
 // validation failure reads as "title: String must contain at least 1 character(s)"
@@ -75,8 +81,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     // from other 401s like a wrong KB access code. Drop the dead token and go
     // back to login instead of leaving every page erroring.
     if (res.status === 401 && token && extractErrorMessage(body, res.status) === 'unauthorized') {
-      setToken(null);
-      window.location.assign('/login');
+      endSession();
     }
     throw new ApiError(res.status, extractErrorMessage(body, res.status));
   }

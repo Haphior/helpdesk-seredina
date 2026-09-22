@@ -1,6 +1,7 @@
 import { prisma, withTenantTx, type MessageAuthorType, type Prisma, type TicketPriority, type TicketStatusCategory } from '@seredina/db';
 import { emailSendQueue, telegramSendQueue } from '../../lib/queue';
 import { dispatchWebhookEvent } from '../../lib/webhookDispatch';
+import { publishLive } from '../../lib/live';
 import { computeSlaDueAts, scheduleSlaBreachChecks } from '../sla/service';
 import { getActiveEscalationForTicket } from '../oncall/service';
 import { notifyUser } from '../notifications/service';
@@ -471,6 +472,10 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
   // tenant's own webhook receiver might not be trusted with.
   if (!message.isPrivateNote) {
     await dispatchWebhookEvent(tenantId, 'message.created', { ticketId, messageId: message.id, body: message.body });
+  } else {
+    // ...but colleagues with the ticket open should still see the note appear.
+    // The live event is the ticket id only, so nothing of the note leaves.
+    await publishLive(tenantId, { type: 'message.created', ticketId });
   }
 
   return message;

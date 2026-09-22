@@ -1,6 +1,13 @@
 import { prisma, withTenantTx } from '@seredina/db';
 import type { WebhookEvent } from '@seredina/shared';
 import { webhookDeliveryQueue } from './queue';
+import { publishLive } from './live';
+
+const LIVE_EVENT_FOR: Partial<Record<WebhookEvent, 'ticket.created' | 'ticket.updated' | 'message.created'>> = {
+  'ticket.created': 'ticket.created',
+  'ticket.updated': 'ticket.updated',
+  'message.created': 'message.created',
+};
 
 /**
  * Fire-and-forget: looks up active webhooks subscribed to `event` (a short read-
@@ -9,6 +16,14 @@ import { webhookDeliveryQueue } from './queue';
  * after their own tx has already committed, never from inside one.
  */
 export async function dispatchWebhookEvent(tenantId: string, event: WebhookEvent, data: Record<string, unknown>) {
+  // Every ticket/message change already funnels through here after its commit,
+  // so this is also where open consoles hear about it (docs/adr/0053-live-updates.md).
+  // Only the id goes out -- see packages/shared/src/liveEvents.ts.
+  const liveType = LIVE_EVENT_FOR[event];
+  if (liveType && typeof data.ticketId === 'string') {
+    await publishLive(tenantId, { type: liveType, ticketId: data.ticketId });
+  }
+
   const webhooks = await withTenantTx(prisma, tenantId, (tx) =>
     tx.webhook.findMany({ where: { isActive: true, events: { has: event } }, select: { id: true } }),
   );

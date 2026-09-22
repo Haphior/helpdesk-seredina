@@ -45,6 +45,7 @@ import brandingRoutes from './modules/branding/routes';
 import telegramRoutes from './modules/telegram/routes';
 import csatRoutes from './modules/csat/routes';
 import deviceRoutes from './modules/devices/routes';
+import liveRoutes from './modules/live/routes';
 
 initErrorTracking();
 
@@ -126,6 +127,7 @@ export function buildApp() {
   app.register(telegramRoutes);
   app.register(csatRoutes);
   app.register(deviceRoutes);
+  app.register(liveRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

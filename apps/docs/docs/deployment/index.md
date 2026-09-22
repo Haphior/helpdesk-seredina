@@ -13,7 +13,12 @@ distinction.
 - A domain or reachable IP if you're exposing the instance beyond your own
   machine — Seredina doesn't manage TLS on its own, so a reverse proxy
   (Caddy, nginx, Traefik) in front of `WEB_PORT`/`API_PORT` is your
-  responsibility.
+  responsibility. The console's live updates use a long-lived
+  `GET /events` stream on the API: the API already sends
+  `X-Accel-Buffering: no` for nginx, but make sure your proxy doesn't
+  buffer that path or cut idle connections in under ~60 seconds (the API
+  sends a heartbeat every 25). If live updates can't connect, the console
+  falls back to refreshing as it did before.
 
 ## Install in three commands
 

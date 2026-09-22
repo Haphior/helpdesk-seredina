@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, downloadFile, ApiError } from '../lib/api';
+import { useLiveEvents } from '../lib/live';
 import type {
   AssetSummary,
   AutonomousLoopResult,
@@ -113,6 +114,14 @@ export function TicketDetail() {
     loadTicket();
     loadReferenceData();
   }, [loadTicket, loadReferenceData]);
+
+  // A customer's reply, a colleague's note or status change, an SLA breach:
+  // shown as it happens instead of only on reload (docs/adr/0053-live-updates.md).
+  useLiveEvents((event) => {
+    if (event.type === 'resync' || ('ticketId' in event && event.ticketId === id && event.type !== 'ticket.created')) {
+      void loadTicket();
+    }
+  });
 
   // Collision detection: "who else has this ticket open right now" -- a short-poll
   // heartbeat, not a WebSocket (see docs/adr/0019-collision-merge-bulk-actions.md).

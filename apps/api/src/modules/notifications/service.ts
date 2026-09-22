@@ -1,4 +1,5 @@
 import { prisma, withTenantTx, type NotificationEventType } from '@seredina/db';
+import { publishLive } from '../../lib/live';
 import { notificationEmailQueue } from '../../lib/queue';
 
 const EVENT_LABELS: Record<NotificationEventType, string> = {
@@ -88,15 +89,16 @@ export interface NotifyInput {
  * ingest -- see docs/adr/0022-notifications.md for why that isn't shared code.
  */
 export async function notifyUser(tenantId: string, userId: string, eventType: NotificationEventType, input: NotifyInput) {
-  const needsEmail = await withTenantTx(prisma, tenantId, async (tx) => {
+  const { inApp, needsEmail } = await withTenantTx(prisma, tenantId, async (tx) => {
     const pref = await tx.notificationPreference.findUnique({ where: { userId_eventType: { userId, eventType } } });
     const inApp = pref?.inApp ?? true;
-    const email = pref?.email ?? false;
     if (inApp) {
       await tx.notification.create({ data: { tenantId, userId, eventType, ticketId: input.ticketId, body: input.body } });
     }
-    return email;
+    return { inApp, needsEmail: pref?.email ?? false };
   });
+
+  if (inApp) await publishLive(tenantId, { type: 'notification.created', userId });
 
   if (needsEmail) {
     await notificationEmailQueue.add('send', { tenantId, userId, subject: input.subject, body: input.body });

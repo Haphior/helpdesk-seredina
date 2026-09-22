@@ -4,7 +4,10 @@ import { apiGet, apiPost } from '../lib/api';
 import type { AppNotification } from '../lib/types';
 import { BellIcon } from './icons';
 import { formatDateTime } from '../lib/format';
+import { useLiveEvents, useLiveStatus } from '../lib/live';
 
+// Only a fallback now: while the live stream is connected, new notifications
+// arrive as they happen (docs/adr/0053-live-updates.md).
 const POLL_INTERVAL_MS = 20_000;
 
 export function NotificationBell() {
@@ -18,17 +21,26 @@ export function NotificationBell() {
       .catch(() => {});
   }
 
+  const liveStatus = useLiveStatus();
+
   useEffect(() => {
     refreshCount();
+    if (liveStatus === 'live') return;
     const interval = setInterval(refreshCount, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [liveStatus]);
 
   function loadList() {
     apiGet<{ notifications: AppNotification[] }>('/notifications')
       .then((res) => setNotifications(res.notifications))
       .catch(() => {});
   }
+
+  useLiveEvents((event) => {
+    if (event.type !== 'notification.created' && event.type !== 'resync') return;
+    refreshCount();
+    if (open) loadList();
+  });
 
   function toggleOpen() {
     setOpen((o) => {

@@ -1,6 +1,7 @@
 import { prisma, withTenantTx } from '@seredina/db';
 import type { WebhookEvent } from '@seredina/shared';
 import { webhookDeliveryQueue } from './queue';
+import { publishLive } from './live';
 
 /**
  * Mirrors apps/api/src/lib/webhookDispatch.ts -- duplicated rather than imported
@@ -12,6 +13,11 @@ import { webhookDeliveryQueue } from './queue';
  * apps/api's request/service layer.
  */
 export async function dispatchWebhookEvent(tenantId: string, event: WebhookEvent, data: Record<string, unknown>) {
+  // Same as apps/api's copy: open consoles hear about it too, id only.
+  if (event.startsWith('sla.') && typeof data.ticketId === 'string') {
+    await publishLive(tenantId, { type: 'sla.breached', ticketId: data.ticketId });
+  }
+
   const webhooks = await withTenantTx(prisma, tenantId, (tx) =>
     tx.webhook.findMany({ where: { isActive: true, events: { has: event } }, select: { id: true } }),
   );

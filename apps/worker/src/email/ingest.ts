@@ -1,4 +1,5 @@
 import { prisma, withTenantTx } from '@seredina/db';
+import { publishLive } from '../lib/live';
 
 export interface InboundEmail {
   tenantId: string;
@@ -35,7 +36,8 @@ export interface IngestResult {
  * monitoring alert is.
  */
 export async function ingestInboundEmail(email: InboundEmail): Promise<IngestResult> {
-  return withTenantTx(prisma, email.tenantId, async (tx) => {
+  let createdTicket = false;
+  const result = await withTenantTx(prisma, email.tenantId, async (tx) => {
     const candidateIds = [email.inReplyTo, ...email.references].filter((v): v is string => Boolean(v));
 
     const existingMessage =
@@ -92,6 +94,7 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<IngestRes
         },
       });
       ticketId = ticket.id;
+      createdTicket = true;
     }
 
     await tx.message.create({
@@ -107,4 +110,8 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<IngestRes
 
     return { ticketId, assigneeToNotify };
   });
+
+  // After the commit, never inside it -- see docs/adr/0053-live-updates.md.
+  await publishLive(email.tenantId, { type: createdTicket ? 'ticket.created' : 'message.created', ticketId: result.ticketId });
+  return result;
 }

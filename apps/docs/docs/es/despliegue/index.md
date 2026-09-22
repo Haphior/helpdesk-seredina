@@ -13,7 +13,12 @@ variable de entorno, no un fork ni una imagen distinta. Ver
 - Un dominio o IP accesible si vas a exponer la instancia más allá de tu
   propia máquina — Seredina no gestiona TLS por sí sola, así que un proxy
   reverso (Caddy, nginx, Traefik) delante de `WEB_PORT`/`API_PORT` es tu
-  responsabilidad.
+  responsabilidad. Las actualizaciones en vivo de la consola usan un stream
+  de larga duración, `GET /events`, en la API: la API ya envía
+  `X-Accel-Buffering: no` para nginx, pero asegúrate de que tu proxy no
+  haga buffer de esa ruta ni corte conexiones inactivas en menos de ~60
+  segundos (la API manda un latido cada 25). Si no logra conectarse, la
+  consola vuelve a refrescar como antes.
 
 ## Instalación en tres comandos
 

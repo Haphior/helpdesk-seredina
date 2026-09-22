@@ -9,6 +9,17 @@ contain breaking changes).
 
 ### Added
 
+- **Live console updates** (`docs/adr/0053-live-updates.md`): the ticket
+  queue, ticket detail and notification bell now update as things happen —
+  a new ticket slides into the queue, a customer's reply or a colleague's
+  note appears in the open ticket, the bell counts up — without reloading.
+  The queue shows a Live / Reconnecting indicator. Built on a
+  Server-Sent Events stream (`GET /events`) fed by Redis pub/sub, so it
+  works across API replicas and for changes the worker makes (inbound
+  email, SLA breaches, escalations). Events carry ids only; the console
+  refetches through the normal API, so the stream can't expose anything
+  the viewer couldn't already read.
+
 - **Knowledge base portal access control**: the public self-service KB portal
   can now be disabled entirely (internal-only KB) or gated behind a single
   shared access code, from a new "Portal settings" panel on the console's
