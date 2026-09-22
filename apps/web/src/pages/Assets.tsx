@@ -33,6 +33,9 @@ export function Assets() {
   const [total, setTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [jobs, setJobs] = useState<DiscoveryJob[]>([]);
+  // Server-side scans are self-hosted only (docs/adr/0052-agent-based-discovery.md);
+  // null until the API says, so the form never flashes up in cloud mode.
+  const [scanEnabled, setScanEnabled] = useState<boolean | null>(null);
   const [cidrRange, setCidrRange] = useState('');
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
@@ -62,8 +65,11 @@ export function Assets() {
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load assets'))
       .finally(() => setLoadingMore(false));
-    apiGet<{ discoveryJobs: DiscoveryJob[] }>('/discovery-jobs')
-      .then((res) => setJobs(res.discoveryJobs))
+    apiGet<{ discoveryJobs: DiscoveryJob[]; scanEnabled: boolean }>('/discovery-jobs')
+      .then((res) => {
+        setJobs(res.discoveryJobs);
+        setScanEnabled(res.scanEnabled);
+      })
       .catch(() => {});
   }
 
@@ -124,24 +130,31 @@ export function Assets() {
         <Button onClick={() => setEditingAsset('new')}>New asset</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Discovered via agentless network scans (TCP liveness + SNMP), or added by hand. See
-        docs/adr/0002-agentless-discovery.md for how classification works and its limits.
+        Discovered by enrolled agents (each reports its own inventory and the devices it sees on its
+        network){scanEnabled ? ', by network scans from this server,' : ''} or added by hand. Enroll agents
+        from the{' '}
+        <Link to="/devices" className="font-medium text-slate-700 underline">
+          Devices
+        </Link>{' '}
+        page.
       </p>
 
-      <form onSubmit={onSubmitScan} className="mb-5 flex items-end gap-2">
-        <div className="w-64">
-          <Input
-            label="Scan a network range"
-            value={cidrRange}
-            onChange={(e) => setCidrRange(e.target.value)}
-            placeholder="192.168.1.0/24"
-            required
-          />
-        </div>
-        <Button type="submit" variant="secondary" isLoading={submitting}>
-          Start scan
-        </Button>
-      </form>
+      {scanEnabled && (
+        <form onSubmit={onSubmitScan} className="mb-5 flex items-end gap-2">
+          <div className="w-64">
+            <Input
+              label="Scan a network range"
+              value={cidrRange}
+              onChange={(e) => setCidrRange(e.target.value)}
+              placeholder="192.168.1.0/24"
+              required
+            />
+          </div>
+          <Button type="submit" variant="secondary" isLoading={submitting}>
+            Start scan
+          </Button>
+        </form>
+      )}
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
 

@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { prisma, withTenantTx } from '@seredina/db';
 import { callTelegramApi, decryptSecret, encryptSecret, type TelegramGetMeResult, type TelegramUpdate } from '@seredina/shared';
 import { addMessage, createTicketFromApi } from '../tickets/service';
@@ -93,7 +93,11 @@ export async function verifyTelegramWebhookSecret(tenantId: string, secretFromHe
   const channel = await withTenantTx(prisma, tenantId, (tx) =>
     tx.telegramChannel.findUnique({ where: { tenantId }, select: { webhookSecret: true } }),
   );
-  return channel?.webhookSecret === secretFromHeader;
+  if (!channel?.webhookSecret) return false;
+  // Constant-time compare (hashing first gives both sides equal length) so
+  // response timing can't leak how much of a guessed secret was right.
+  const digest = (value: string) => createHash('sha256').update(value).digest();
+  return timingSafeEqual(digest(channel.webhookSecret), digest(secretFromHeader));
 }
 
 function contactFromTelegramUser(from: NonNullable<TelegramUpdate['message']>['from'], chatId: number) {

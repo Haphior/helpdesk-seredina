@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { prisma, withTenantTx, type Prisma } from '@seredina/db';
 import { sha256Hex } from '@seredina/shared';
+import { ingestNeighbors, normalizeMac, type NeighborIngestResult, type NeighborReport } from './neighbors';
 
 const TOKEN_PREFIX = 'ent_';
 const CREDENTIAL_PREFIX = 'dev_';
@@ -38,6 +39,10 @@ export interface EnrollDeviceInput {
   hostname: string;
   platform: string;
   agentVersion?: string;
+  /** sha256 hex of the OS machine id, hashed on the device -- see Device.machineFingerprint. */
+  machineFingerprint?: string;
+  /** The device's own primary MAC, used to adopt a record passive discovery already created for it. */
+  macAddress?: string;
 }
 
 export interface EnrolledDevice {
@@ -45,50 +50,98 @@ export interface EnrolledDevice {
   assetId: string;
   /** Returned once, at enrollment time only -- never retrievable again (only the hash is stored). */
   credential: string;
+  /** True when this machine was already enrolled and its existing Device+Asset were reused. */
+  reenrolled: boolean;
 }
 
 /**
  * Redeems a DeviceEnrollmentToken: validates it (exists, unexpired, unused),
- * then atomically creates the Asset + Device pair and consumes the token, all
- * inside one tenant-scoped transaction. ipAddress is deliberately left unset --
- * see docs/adr/0047-endpoint-agents-v1.md for why (Asset's own
- * @@unique([tenantId, ipAddress]) makes a real collision risk across devices
- * sharing a dynamic/NAT'd IP; NULL never collides in Postgres, so simply not
- * setting it sidesteps the problem entirely).
+ * then atomically finds-or-creates the Asset + Device pair and consumes the
+ * token, all inside one tenant-scoped transaction.
+ *
+ * Which Asset the device gets (docs/adr/0052-agent-based-discovery.md):
+ * 1. Same machineFingerprint already enrolled -> reuse that Device and Asset
+ *    (a reinstall, not a new machine). The credential is rotated, so the old
+ *    install's credential stops working, and a revoked device is reactivated:
+ *    an admin minting a fresh enrollment token for it is the explicit act.
+ * 2. Else, a record passive discovery or a scan already created for this MAC
+ *    -> adopt it (becomes source AGENT), keeping its history and ticket links.
+ * 3. Else a new Asset.
+ *
+ * Agent assets never keep an ipAddress -- see docs/adr/0047-endpoint-agents-v1.md
+ * (Asset's @@unique([tenantId, ipAddress]) makes a real collision risk across
+ * devices sharing a dynamic/NAT'd IP; NULL never collides in Postgres).
  */
 export async function enrollDevice(rawToken: string, input: EnrollDeviceInput): Promise<EnrolledDevice> {
   const hashedToken = sha256Hex(rawToken);
   const tenantId = await resolveTenantIdByEnrollmentTokenHash(hashedToken);
   if (!tenantId) throw new Error('invalid or expired enrollment token');
 
+  const macAddress = input.macAddress ? normalizeMac(input.macAddress) : null;
+
   return withTenantTx(prisma, tenantId, async (tx) => {
     const enrollmentToken = await tx.deviceEnrollmentToken.findUnique({ where: { hashedToken } });
     if (!enrollmentToken || enrollmentToken.usedAt || enrollmentToken.expiresAt < new Date()) {
       throw new Error('invalid or expired enrollment token');
     }
+    await tx.deviceEnrollmentToken.update({ where: { hashedToken }, data: { usedAt: new Date() } });
 
     const credential = CREDENTIAL_PREFIX + randomBytes(32).toString('base64url');
     const hashedCredential = sha256Hex(credential);
+    const deviceFields = { platform: input.platform, agentVersion: input.agentVersion };
 
-    const asset = await tx.asset.create({
-      data: {
-        tenantId,
-        name: input.hostname,
-        assetType: 'WORKSTATION',
-        hostname: input.hostname,
-        discoverySource: 'AGENT',
-        lastSeenAt: new Date(),
-      },
-    });
+    const existingDevice = input.machineFingerprint
+      ? await tx.device.findUnique({
+          where: { tenantId_machineFingerprint: { tenantId, machineFingerprint: input.machineFingerprint } },
+        })
+      : null;
+
+    if (existingDevice) {
+      await tx.device.update({
+        where: { id: existingDevice.id },
+        data: { ...deviceFields, hashedCredential, revokedAt: null },
+      });
+      await tx.asset.update({
+        where: { id: existingDevice.assetId },
+        data: { hostname: input.hostname, ...(macAddress ? await freeMacFor(tx, macAddress, existingDevice.assetId) : {}), lastSeenAt: new Date() },
+      });
+      return { deviceId: existingDevice.id, assetId: existingDevice.assetId, credential, reenrolled: true };
+    }
+
+    const discovered = macAddress
+      ? await tx.asset.findFirst({
+          where: { macAddress, discoverySource: { in: ['AGENT_NEIGHBOR', 'AGENTLESS_SCAN'] }, device: null },
+        })
+      : null;
+
+    const assetData = {
+      name: input.hostname,
+      assetType: 'WORKSTATION' as const,
+      hostname: input.hostname,
+      discoverySource: 'AGENT' as const,
+      lastSeenAt: new Date(),
+    };
+    const asset = discovered
+      ? await tx.asset.update({ where: { id: discovered.id }, data: { ...assetData, ipAddress: null } })
+      : await tx.asset.create({
+          data: { tenantId, ...assetData, ...(macAddress ? await freeMacFor(tx, macAddress) : {}) },
+        });
 
     const device = await tx.device.create({
-      data: { tenantId, assetId: asset.id, hashedCredential, platform: input.platform, agentVersion: input.agentVersion },
+      data: { tenantId, assetId: asset.id, hashedCredential, machineFingerprint: input.machineFingerprint, ...deviceFields },
     });
 
-    await tx.deviceEnrollmentToken.update({ where: { hashedToken }, data: { usedAt: new Date() } });
-
-    return { deviceId: device.id, assetId: asset.id, credential };
+    return { deviceId: device.id, assetId: asset.id, credential, reenrolled: false };
   });
+}
+
+/**
+ * `{ macAddress }` if no OTHER asset already claims that MAC, else `{}` --
+ * never let two records share one, or neighbor matching becomes ambiguous.
+ */
+async function freeMacFor(tx: Prisma.TransactionClient, macAddress: string, ownAssetId?: string) {
+  const holder = await tx.asset.findFirst({ where: { macAddress, id: ownAssetId ? { not: ownAssetId } : undefined } });
+  return holder ? {} : { macAddress };
 }
 
 export interface DeviceListItem {
@@ -132,6 +185,10 @@ export interface CheckInInput {
   diskEncrypted?: boolean;
   antivirusStatus?: string;
   installedPackages?: unknown;
+  /** The device's own primary MAC. */
+  macAddress?: string;
+  /** The device's ARP/neighbor table -- passive discovery, see ./neighbors.ts. */
+  neighbors?: NeighborReport[];
 }
 
 /**
@@ -142,11 +199,13 @@ export interface CheckInInput {
  * revocation is a per-device state, not a credential-validity question the
  * plugin's simple hash-resolve can answer on its own.
  */
-export async function checkIn(hashedCredential: string, input: CheckInInput): Promise<void> {
+export async function checkIn(hashedCredential: string, input: CheckInInput): Promise<NeighborIngestResult> {
   const tenantId = await resolveTenantIdByDeviceCredentialHash(hashedCredential);
   if (!tenantId) throw new Error('unauthorized');
 
-  await withTenantTx(prisma, tenantId, async (tx) => {
+  const macAddress = input.macAddress ? normalizeMac(input.macAddress) : null;
+
+  return withTenantTx(prisma, tenantId, async (tx) => {
     const device = await tx.device.findUnique({ where: { hashedCredential } });
     if (!device) throw new Error('unauthorized');
     if (device.revokedAt) throw new Error('device revoked');
@@ -161,8 +220,11 @@ export async function checkIn(hashedCredential: string, input: CheckInInput): Pr
         diskEncrypted: input.diskEncrypted,
         antivirusStatus: input.antivirusStatus,
         installedPackages: input.installedPackages as Prisma.InputJsonValue | undefined,
+        ...(macAddress ? await freeMacFor(tx, macAddress, device.assetId) : {}),
         lastSeenAt: new Date(),
       },
     });
+
+    return ingestNeighbors(tx, tenantId, input.neighbors ?? []);
   });
 }

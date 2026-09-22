@@ -70,6 +70,14 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   const body = isJson ? await res.json() : undefined;
 
   if (!res.ok) {
+    // The API answers a bare 'unauthorized' when the session itself is no
+    // longer valid (token expired, user deactivated or deleted) -- distinct
+    // from other 401s like a wrong KB access code. Drop the dead token and go
+    // back to login instead of leaving every page erroring.
+    if (res.status === 401 && token && extractErrorMessage(body, res.status) === 'unauthorized') {
+      setToken(null);
+      window.location.assign('/login');
+    }
     throw new ApiError(res.status, extractErrorMessage(body, res.status));
   }
   return body as T;

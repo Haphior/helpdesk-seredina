@@ -151,7 +151,7 @@ export default async function authRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: parsed.error.flatten() });
       }
       try {
-        const user = await createUser(request.user.tenantId, parsed.data);
+        const user = await createUser(request.user.tenantId, parsed.data, request.user.permissions);
         return reply.code(201).send(user);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
@@ -169,7 +169,10 @@ export default async function authRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: parsed.error.flatten() });
       }
       try {
-        const user = await updateUser(request.user.tenantId, id, parsed.data, request.user.sub);
+        const user = await updateUser(request.user.tenantId, id, parsed.data, {
+          id: request.user.sub,
+          permissions: request.user.permissions,
+        });
         return reply.send(user);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });

@@ -98,6 +98,9 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
       EMAIL_POLL_INTERVAL_MS: ${EMAIL_POLL_INTERVAL_MS:-30000}
       SENTRY_DSN: ${SENTRY_DSN:-}
+      # Must match `api`'s -- the worker refuses to run network scans outside
+      # self_hosted mode (docs/adr/0052-agent-based-discovery.md).
+      SEREDINA_MODE: ${SEREDINA_MODE:-self_hosted}
     # Agentless discovery (see docs/adr/0002-agentless-discovery.md) needs to reach
     # whatever LAN an operator asks it to scan -- host networking is the pragmatic
     # default for a self-hosted deployment. Linux-only; on Docker Desktop

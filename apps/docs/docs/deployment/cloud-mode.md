@@ -24,6 +24,14 @@ Row-Level Security (see the
 if you're curious about the technical detail). This is what you need if
 you're going to run Seredina as your own service for multiple customers.
 
+Cloud mode also turns off **network scans from the server** (Assets →
+"Scan a network range"). In self-hosted mode the worker sits on your own
+network, so scanning it is useful; in cloud mode it would sit on the
+provider's network, so the option is hidden and the API refuses it.
+Cloud tenants discover devices with the [endpoint agent](https://github.com/Haphior/helpdesk-seredina/tree/main/apps/agent)
+instead: each enrolled agent reports its own inventory plus the devices it
+sees in its ARP table, without scanning anything.
+
 ## What cloud mode does *not* include yet
 
 Being direct about this rather than implying it's a flip-a-switch-and-done

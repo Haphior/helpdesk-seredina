@@ -14,6 +14,7 @@ import path from 'node:path';
 import http from 'node:http';
 import https from 'node:https';
 import { collectInventory } from './inventory.mjs';
+import { collectNeighbors, machineFingerprint, primaryMacAddress } from './network.mjs';
 
 const CONFIG_DIR = path.join(os.homedir(), '.seredina-agent');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'credentials.json');
@@ -79,7 +80,15 @@ async function cmdEnroll(args) {
 
   const result = await request(`${url}/v1/devices/enroll`, {
     method: 'POST',
-    body: { enrollmentToken: token, hostname: os.hostname(), platform: os.platform() },
+    body: {
+      enrollmentToken: token,
+      hostname: os.hostname(),
+      platform: os.platform(),
+      // Lets the server reuse this machine's record on a reinstall, or adopt
+      // one passive discovery already created -- see network.mjs.
+      machineFingerprint: machineFingerprint(),
+      macAddress: primaryMacAddress(),
+    },
   });
 
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
@@ -87,7 +96,7 @@ async function cmdEnroll(args) {
   // (docs/adr/0047-endpoint-agents-v1.md) -- readable only by the user running
   // the agent, same posture as an SSH private key.
   fs.writeFileSync(CONFIG_PATH, JSON.stringify({ url, credential: result.credential }, null, 2), { mode: 0o600 });
-  console.log(`Enrolled. Credential saved to ${CONFIG_PATH}`);
+  console.log(`${result.reenrolled ? 'Re-enrolled (existing record reused)' : 'Enrolled'}. Credential saved to ${CONFIG_PATH}`);
 }
 
 function loadConfig() {
@@ -104,12 +113,14 @@ async function cmdCheckin() {
   if (!config) return;
 
   const inventory = collectInventory();
-  await request(`${config.url}/v1/devices/checkin`, {
+  const neighbors = collectNeighbors();
+  const result = await request(`${config.url}/v1/devices/checkin`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${config.credential}` },
-    body: inventory,
+    body: { ...inventory, macAddress: primaryMacAddress(), neighbors },
   });
-  console.log(`Checked in: ${inventory.hostname} (${inventory.platform})`);
+  const found = result?.neighbors ? `, ${neighbors.length} neighbors (${result.neighbors.created} new)` : '';
+  console.log(`Checked in: ${inventory.hostname} (${inventory.platform})${found}`);
 }
 
 async function cmdRun(args) {

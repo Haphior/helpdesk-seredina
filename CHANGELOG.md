@@ -19,6 +19,49 @@ contain breaking changes).
   the same action, plus drag-to-reorder and a duplicate-step button when
   configuring process templates. See
   `docs/adr/0052-process-ticket-creation-and-reorder.md`.
+- `JWT_EXPIRES_IN` env var for the console session length (default `8h`).
+- **Agent-based discovery** (`docs/adr/0052-agent-based-discovery.md`):
+  - Reinstalling the agent on the same machine reuses its existing record
+    (matched by a hashed OS machine id) instead of creating a duplicate; the
+    old install's credential stops working.
+  - **Passive network discovery**: each check-in reports the agent's ARP
+    table, and the devices in it become assets (source `AGENT_NEIGHBOR`),
+    identified by MAC — a DHCP lease change now moves the IP on the same
+    record instead of creating a new one. Enrolling a machine that was already
+    discovered this way adopts that record.
+
+### Changed
+
+- **Network scans from the server are self-hosted only.** In cloud mode the
+  API refuses them (403), the worker won't run them, and the Assets page hides
+  the form — the worker there sits on the provider's network, not the
+  tenant's. `infra/docker-compose.yml` now passes `SEREDINA_MODE` to `worker`.
+- `POST /v1/devices/checkin` returns `200 { neighbors: { created, updated } }`
+  instead of `204`.
+
+### Security
+
+- **Console sessions now expire and are revoked immediately.** Login tokens
+  previously never expired, and their permissions were a snapshot from login
+  time -- a deactivated or demoted user kept their old access indefinitely.
+  Tokens now expire (`JWT_EXPIRES_IN`, default `8h`), tokens issued before
+  this release are rejected (everyone signs in once more), and every request
+  re-checks that the user is still active and uses their *current* role's
+  permissions.
+- **No privilege escalation through `users:manage`.** A user can no longer
+  create a user with, or assign, a role that has permissions they don't have
+  themselves (e.g. a custom role with `users:manage` promoting itself to
+  `admin`).
+- **Outbound SSRF hardening.** Webhook delivery no longer follows redirects
+  (a public URL answering `307` to `169.254.169.254` bypassed the check),
+  checks every address a hostname resolves to, and blocks IPv4 addresses
+  hidden in IPv6 forms (`::ffff:127.0.0.1`, NAT64, 6to4) plus the remaining
+  reserved ranges (CGNAT, multicast, ...). In cloud mode, a tenant's own
+  Ollama `baseUrl` gets the same protection, both when saved and on every
+  request.
+- Login takes the same time whether or not the email exists, so response
+  timing no longer reveals which accounts exist; the Telegram webhook secret
+  is compared in constant time.
 
 ## [0.1.0-alpha.1] - 2026-09-22
 

@@ -136,7 +136,7 @@ export interface CustomFieldDefinition {
 
 export type AssetType = 'SERVER' | 'WORKSTATION' | 'NETWORK_DEVICE' | 'PRINTER' | 'MOBILE_DEVICE' | 'OTHER';
 export type AssetStatus = 'ACTIVE' | 'INACTIVE' | 'RETIRED';
-export type AssetDiscoverySource = 'MANUAL' | 'AGENTLESS_SCAN' | 'AGENT';
+export type AssetDiscoverySource = 'MANUAL' | 'AGENTLESS_SCAN' | 'AGENT' | 'AGENT_NEIGHBOR';
 
 export interface AssetDiskSummary {
   mount: string;

@@ -1,5 +1,5 @@
 import { prisma, withTenantTx } from '@seredina/db';
-import { decryptSecret, encryptSecret } from '@seredina/shared';
+import { assertPublicUrl, decryptSecret, encryptSecret } from '@seredina/shared';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 if (!ENCRYPTION_KEY) {
@@ -11,6 +11,17 @@ export type AiProvider = (typeof AI_PROVIDERS)[number];
 
 function isValidProvider(value: string): value is AiProvider {
   return (AI_PROVIDERS as readonly string[]).includes(value);
+}
+
+/**
+ * In cloud mode a tenant's own Ollama base URL is attacker-controlled from the
+ * server's point of view -- without this, any tenant could point it at our
+ * internal network or the cloud metadata endpoint and have the API fetch it.
+ * A self-hosted operator's Ollama legitimately lives on localhost/the LAN, and
+ * there's only the one tenant, so the guard only applies in cloud mode.
+ */
+export function tenantBaseUrlNeedsSsrfGuard(): boolean {
+  return process.env.SEREDINA_MODE !== 'self_hosted';
 }
 
 /** Never includes the key itself, decrypted or not -- see modules/ai/routes.ts. */
@@ -43,6 +54,15 @@ export interface UpdateTenantAiSettingsInput {
 export async function updateTenantAiSettings(tenantId: string, input: UpdateTenantAiSettingsInput): Promise<TenantAiSettingsView> {
   if (input.provider != null && !isValidProvider(input.provider)) {
     throw new Error(`provider must be one of ${AI_PROVIDERS.join(', ')}`);
+  }
+  // Fail fast with a readable error at save time; adapter.ts re-checks on every
+  // request anyway, since DNS can change after the URL was saved.
+  if (input.baseUrl && tenantBaseUrlNeedsSsrfGuard()) {
+    try {
+      await assertPublicUrl(input.baseUrl);
+    } catch (err) {
+      throw new Error(`baseUrl is not allowed: ${(err as Error).message}`);
+    }
   }
   const apiKeyEncrypted = input.apiKey !== undefined ? encryptSecret(input.apiKey, ENCRYPTION_KEY!) : undefined;
 

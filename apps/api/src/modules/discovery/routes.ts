@@ -1,7 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { createDiscoveryJob, getDiscoveryJob, listDiscoveryJobs } from './service';
+import {
+  createDiscoveryJob,
+  getDiscoveryJob,
+  isServerSideScanAllowed,
+  listDiscoveryJobs,
+  ServerSideScanDisabledError,
+} from './service';
 
 const createSchema = z.object({ cidrRange: z.string().min(1) });
 
@@ -21,6 +27,7 @@ export default async function discoveryRoutes(app: FastifyInstance) {
         const job = await createDiscoveryJob(request.user.tenantId, parsed.data.cidrRange);
         return reply.code(201).send(job);
       } catch (err) {
+        if (err instanceof ServerSideScanDisabledError) return reply.code(403).send({ error: err.message });
         return reply.code(400).send({ error: (err as Error).message });
       }
     },
@@ -31,7 +38,9 @@ export default async function discoveryRoutes(app: FastifyInstance) {
     { preHandler: [app.authenticate, requirePermission('assets:read')] },
     async (request, reply) => {
       const jobs = await listDiscoveryJobs(request.user.tenantId);
-      return reply.send({ discoveryJobs: jobs });
+      // scanEnabled lets the web app hide the scan form instead of offering
+      // a button that can only ever 403.
+      return reply.send({ discoveryJobs: jobs, scanEnabled: isServerSideScanAllowed() });
     },
   );
 

@@ -552,6 +552,9 @@ enum AssetDiscoverySource {
   MANUAL
   AGENTLESS_SCAN
   AGENT
+  // Seen in an enrolled agent's ARP/neighbor table -- passive discovery, no
+  // scanning (docs/adr/0052-agent-based-discovery.md).
+  AGENT_NEIGHBOR
 }
 
 // A best-effort seed record from network discovery (see apps/worker/src/discovery),
@@ -605,8 +608,10 @@ model Asset {
 
   // Re-scanning the same range upserts by (tenantId, ipAddress) rather than
   // duplicating -- imperfect under DHCP churn, a known v1 limitation (see ADR), not
-  // an oversight.
+  // an oversight. Agent neighbor reports match by MAC first (see
+  // modules/devices/neighbors.ts), which is what the macAddress index is for.
   @@unique([tenantId, ipAddress])
+  @@index([tenantId, macAddress])
   @@map("assets")
 }
 
@@ -645,9 +650,16 @@ model Device {
   hashedCredential String    @unique @map("hashed_credential")
   platform         String // os.platform() at enrollment: 'linux' | 'darwin' | 'win32'
   agentVersion     String?   @map("agent_version")
+  // sha256 of the OS's own stable machine id (/etc/machine-id, Windows
+  // MachineGuid, macOS IOPlatformUUID), hashed on the device so the raw id
+  // never leaves it. Re-enrolling the same machine reuses its Device+Asset
+  // instead of creating a duplicate (docs/adr/0052-agent-based-discovery.md).
+  // Nullable: agents older than this send none.
+  machineFingerprint String?   @map("machine_fingerprint")
   enrolledAt       DateTime  @default(now()) @map("enrolled_at")
   revokedAt        DateTime? @map("revoked_at")
 
+  @@unique([tenantId, machineFingerprint])
   @@map("devices")
 }
 

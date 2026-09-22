@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { prisma, withTenantTx } from '@seredina/db';
-import { createRole, createUser, deleteRole, listRoles, login, updateRole } from '../src/modules/auth/service';
+import { PERMISSIONS } from '@seredina/shared';
+import { createRole, createUser, deleteRole, listRoles, login, updateRole, updateUser } from '../src/modules/auth/service';
 import { seedDefaultTicketStatuses } from '../src/modules/tickets/service';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
@@ -59,7 +60,7 @@ describe.skipIf(!hasDb)('Custom roles (Phase 4)', () => {
 
   it('blocks deleting a role with users assigned, succeeds once reassigned', async () => {
     const role = await createRole(tenantId, { key: 'temp_role', name: 'Temp Role', permissions: ['tickets:read'] });
-    const user = await createUser(tenantId, { email: 'temp@example.com', name: 'Temp User', password: 'password123', roleKey: 'temp_role' });
+    const user = await createUser(tenantId, { email: 'temp@example.com', name: 'Temp User', password: 'password123', roleKey: 'temp_role' }, PERMISSIONS);
 
     await expect(deleteRole(tenantId, role.id)).rejects.toThrow('user(s) still assigned');
 
@@ -72,9 +73,29 @@ describe.skipIf(!hasDb)('Custom roles (Phase 4)', () => {
 
   it('a custom role with a narrow permission set actually restricts login-derived permissions for real', async () => {
     await createRole(tenantId, { key: 'read_only', name: 'Read Only', permissions: ['tickets:read'] });
-    await createUser(tenantId, { email: 'readonly@example.com', name: 'Read Only User', password: 'password123', roleKey: 'read_only' });
+    await createUser(tenantId, { email: 'readonly@example.com', name: 'Read Only User', password: 'password123', roleKey: 'read_only' }, PERMISSIONS);
 
     const result = await login({ tenantSlug, email: 'readonly@example.com', password: 'password123' });
     expect(result.permissions).toEqual(['tickets:read']);
+  });
+
+  it('users:manage alone cannot hand out a role with more permissions than the caller has', async () => {
+    // e.g. an HR role that onboards people but was never meant to mint admins
+    const hrPermissions = ['users:manage', 'tickets:read'] as const;
+    await createRole(tenantId, { key: 'hr', name: 'HR', permissions: [...hrPermissions] });
+    await createRole(tenantId, { key: 'full_admin', name: 'Full Admin', permissions: [...PERMISSIONS] });
+    const hrUser = await createUser(tenantId, { email: 'hr@example.com', name: 'HR', password: 'password123', roleKey: 'hr' }, PERMISSIONS);
+
+    await expect(
+      updateUser(tenantId, hrUser.id, { roleKey: 'full_admin' }, { id: hrUser.id, permissions: hrPermissions }),
+    ).rejects.toThrow("permissions you don't have");
+    await expect(
+      createUser(tenantId, { email: 'mint@example.com', name: 'Minted', password: 'password123', roleKey: 'full_admin' }, hrPermissions),
+    ).rejects.toThrow("permissions you don't have");
+
+    // A role within the caller's own permissions is still assignable.
+    await createRole(tenantId, { key: 'viewer', name: 'Viewer', permissions: ['tickets:read'] });
+    const viewer = await createUser(tenantId, { email: 'viewer@example.com', name: 'Viewer', password: 'password123', roleKey: 'viewer' }, hrPermissions);
+    expect(viewer.role?.key).toBe('viewer');
   });
 });
