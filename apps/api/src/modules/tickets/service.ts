@@ -84,6 +84,7 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
         customFields: input.customFields as Prisma.InputJsonValue | undefined,
         assigneeId: input.assigneeId,
         createdAt,
+        slaStartedAt: dueAts.firstResponseDueAt || dueAts.resolutionDueAt ? createdAt : null,
         firstResponseDueAt: dueAts.firstResponseDueAt,
         resolutionDueAt: dueAts.resolutionDueAt,
       },
@@ -192,6 +193,7 @@ export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
         channel: 'alert',
         externalId: input.externalId,
         createdAt,
+        slaStartedAt: dueAts.firstResponseDueAt || dueAts.resolutionDueAt ? createdAt : null,
         firstResponseDueAt: dueAts.firstResponseDueAt,
         resolutionDueAt: dueAts.resolutionDueAt,
       },
@@ -528,7 +530,9 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
     // never touches an already-running clock.
     if (input.priority && input.priority !== ticket.priority) {
       priorityChanged = true;
-      const dueAts = await computeSlaDueAts(tx, tenantId, input.priority, new Date());
+      const now = new Date();
+      const dueAts = await computeSlaDueAts(tx, tenantId, input.priority, now);
+      data.slaStartedAt = dueAts.firstResponseDueAt || dueAts.resolutionDueAt ? now : null;
       data.firstResponseDueAt = dueAts.firstResponseDueAt;
       data.resolutionDueAt = dueAts.resolutionDueAt;
     }

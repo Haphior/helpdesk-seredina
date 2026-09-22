@@ -201,7 +201,8 @@
       "assignee": "Responsable",
       "channel": "Canal",
       "updated": "Actualizado",
-      "slaOverdue": "SLA vencido"
+      "slaOverdue": "SLA vencido",
+      "sla": "SLA"
     },
     "empty": "No hay tickets aquí.",
     "loadFailed": "No se pudieron cargar los tickets",
@@ -358,5 +359,13 @@
         "body": "Podés volver a ver este tour cuando quieras con el ícono de ayuda, justo abajo."
       }
     }
+  },
+  "sla": {
+    "left": "Quedan {{time}}",
+    "overdueBy": "Vencido hace {{time}}",
+    "firstResponseDue": "Primera respuesta vence {{time}}",
+    "resolutionDue": "Resolución vence {{time}}",
+    "firstResponseShort": "Respuesta",
+    "resolutionShort": "Resolución"
   }
 }

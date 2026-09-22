@@ -201,7 +201,8 @@
       "assignee": "Assignee",
       "channel": "Channel",
       "updated": "Updated",
-      "slaOverdue": "SLA overdue"
+      "slaOverdue": "SLA overdue",
+      "sla": "SLA"
     },
     "empty": "No tickets here.",
     "loadFailed": "Failed to load tickets",
@@ -358,5 +359,13 @@
         "body": "You can watch this tour again anytime with the help icon right below."
       }
     }
+  },
+  "sla": {
+    "left": "{{time}} left",
+    "overdueBy": "{{time}} overdue",
+    "firstResponseDue": "First response due {{time}}",
+    "resolutionDue": "Resolution due {{time}}",
+    "firstResponseShort": "Response",
+    "resolutionShort": "Resolution"
   }
 }

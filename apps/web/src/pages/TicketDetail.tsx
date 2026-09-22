@@ -19,6 +19,7 @@ import type {
 } from '../lib/types';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
+import { SlaMilestoneCountdown } from '../components/SlaCountdown';
 import { Modal } from '../components/Modal';
 import { ChannelGlyph } from '../components/ChannelGlyph';
 import { BackArrowIcon, BoltIcon, ChevronDownIcon, ClockIcon, EyeIcon, LockIcon, PaperclipIcon, SparkleIcon } from '../components/icons';
@@ -681,9 +682,7 @@ export function TicketDetail() {
                       {t('ticketDetail.met', { time: formatDateTime(ticket.firstRespondedAt) })}
                     </span>
                   ) : (
-                    <span className={`text-[13px] font-medium ${isFirstResponseOverdue(ticket) ? 'text-rose-600' : 'text-slate-700'}`}>
-                      {t('ticketDetail.due', { time: formatDateTime(ticket.firstResponseDueAt) })}
-                    </span>
+                    <SlaMilestoneCountdown ticket={ticket} milestone="firstResponse" />
                   )}
                 </PropertyRow>
               )}
@@ -693,10 +692,8 @@ export function TicketDetail() {
                     <span className="text-[13px] font-medium text-emerald-600">
                       {t('ticketDetail.met', { time: formatDateTime(ticket.resolvedAt) })}
                     </span>
-                  ) : (
-                    <span className={`text-[13px] font-medium ${isResolutionOverdue(ticket) ? 'text-rose-600' : 'text-slate-700'}`}>
-                      {t('ticketDetail.due', { time: formatDateTime(ticket.resolutionDueAt) })}
-                    </span>
+                  ) : ticket.closedAt ? null : (
+                    <SlaMilestoneCountdown ticket={ticket} milestone="resolution" />
                   )}
                 </PropertyRow>
               )}
