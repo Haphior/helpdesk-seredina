@@ -33,7 +33,7 @@ export function Assets() {
   const [total, setTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [jobs, setJobs] = useState<DiscoveryJob[]>([]);
-  // Server-side scans are self-hosted only (docs/adr/0052-agent-based-discovery.md);
+  // Server-side scans are self-hosted only (docs/adr/0055-agent-based-discovery.md);
   // null until the API says, so the form never flashes up in cloud mode.
   const [scanEnabled, setScanEnabled] = useState<boolean | null>(null);
   const [cidrRange, setCidrRange] = useState('');

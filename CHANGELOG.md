@@ -44,7 +44,7 @@ contain breaking changes).
   configuring process templates. See
   `docs/adr/0052-process-ticket-creation-and-reorder.md`.
 - `JWT_EXPIRES_IN` env var for the console session length (default `8h`).
-- **Agent-based discovery** (`docs/adr/0052-agent-based-discovery.md`):
+- **Agent-based discovery** (`docs/adr/0055-agent-based-discovery.md`):
   - Reinstalling the agent on the same machine reuses its existing record
     (matched by a hashed OS machine id) instead of creating a duplicate; the
     old install's credential stops working.

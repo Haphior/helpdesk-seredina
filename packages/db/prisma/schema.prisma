@@ -553,7 +553,7 @@ enum AssetDiscoverySource {
   AGENTLESS_SCAN
   AGENT
   // Seen in an enrolled agent's ARP/neighbor table -- passive discovery, no
-  // scanning (docs/adr/0052-agent-based-discovery.md).
+  // scanning (docs/adr/0055-agent-based-discovery.md).
   AGENT_NEIGHBOR
 }
 
@@ -653,7 +653,7 @@ model Device {
   // sha256 of the OS's own stable machine id (/etc/machine-id, Windows
   // MachineGuid, macOS IOPlatformUUID), hashed on the device so the raw id
   // never leaves it. Re-enrolling the same machine reuses its Device+Asset
-  // instead of creating a duplicate (docs/adr/0052-agent-based-discovery.md).
+  // instead of creating a duplicate (docs/adr/0055-agent-based-discovery.md).
   // Nullable: agents older than this send none.
   machineFingerprint String?   @map("machine_fingerprint")
   enrolledAt       DateTime  @default(now()) @map("enrolled_at")

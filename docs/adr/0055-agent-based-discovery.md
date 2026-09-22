@@ -1,4 +1,4 @@
-# ADR 0052: Agent-based discovery
+# ADR 0055: Agent-based discovery
 
 ## Status
 
