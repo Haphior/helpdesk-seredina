@@ -647,7 +647,7 @@ export function TicketDetail() {
             <PropertySelect value={ticket.priority} onChange={(v) => patch({ priority: v })}>
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {t(`priority.${p}`)}
                 </option>
               ))}
             </PropertySelect>
