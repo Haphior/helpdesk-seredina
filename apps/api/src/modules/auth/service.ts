@@ -25,6 +25,13 @@ export interface AuthResult {
   tenantId: string;
   userId: string;
   permissions: Permission[];
+  /**
+   * Set when the password was right but a second step is still owed
+   * (docs/adr/0059-mfa-totp.md): 'verify' = enter a code from the app,
+   * 'setup' = the tenant requires MFA and this user hasn't enrolled yet. No
+   * session token may be issued while this is set.
+   */
+  mfa?: 'verify' | 'setup';
 }
 
 export async function registerTenant(input: RegisterTenantInput): Promise<AuthResult> {
@@ -94,8 +101,8 @@ export interface LoginInput {
 // anti-enumeration reasoning as everywhere else in this function: a client
 // shouldn't be able to distinguish "wrong password," "no such user," or "locked
 // out" from the response alone.
-const MAX_FAILED_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+export const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+export const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
 // Compared against when there's no real hash to check (unknown email, locked or
 // inactive account), so every login attempt pays the same bcrypt cost. Without
@@ -152,13 +159,20 @@ export async function login(input: LoginInput, origin: RequestOrigin = { ipAddre
       return null;
     }
 
-    if (user.failedLoginAttempts > 0) {
+    const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { mfaRequired: true } });
+    const mfa: AuthResult['mfa'] = user.mfaEnabledAt ? 'verify' : tenant.mfaRequired ? 'setup' : undefined;
+
+    // With a second step still owed, the failed-attempt counter is left alone:
+    // resetting it on the password alone would let someone who has the password
+    // retry codes forever by signing in again between guesses. It resets once
+    // the code is right (see mfa.ts).
+    if (!mfa && user.failedLoginAttempts > 0) {
       await tx.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
     }
 
     const permissions = (user.role?.permissions.map((rp) => rp.permission.key) ?? []) as Permission[];
 
-    return { tenantId, userId: user.id, permissions };
+    return { tenantId, userId: user.id, permissions, mfa };
   });
 
   const actor = { actorLabel: input.email, ...origin };
@@ -182,7 +196,10 @@ export async function login(input: LoginInput, origin: RequestOrigin = { ipAddre
     throw new Error('invalid credentials');
   }
 
-  await recordAudit(tenantId, { action: 'auth.login_succeeded', actorType: 'user', actorUserId: result.userId, ...actor });
+  // With MFA pending, success is recorded once the code checks out (mfa.ts).
+  if (!result.mfa) {
+    await recordAudit(tenantId, { action: 'auth.login_succeeded', actorType: 'user', actorUserId: result.userId, ...actor });
+  }
   return result;
 }
 
@@ -263,12 +280,17 @@ export async function listUsers(tenantId: string) {
         role: { select: { key: true } },
         isActive: true,
         lockedUntil: true,
+        mfaEnabledAt: true,
       },
       orderBy: { name: 'asc' },
     }),
   );
   const now = new Date();
-  return users.map(({ lockedUntil, ...u }) => ({ ...u, isLocked: !!lockedUntil && lockedUntil > now }));
+  return users.map(({ lockedUntil, mfaEnabledAt, ...u }) => ({
+    ...u,
+    isLocked: !!lockedUntil && lockedUntil > now,
+    mfaEnabled: Boolean(mfaEnabledAt),
+  }));
 }
 
 /**

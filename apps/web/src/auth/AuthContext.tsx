@@ -9,10 +9,15 @@ interface TokenPayload {
   exp?: number;
 }
 
+/** What /auth/login answered: signed in, or a second step (docs/adr/0059-mfa-totp.md) is owed. */
+export type LoginOutcome = { kind: 'signed_in' } | { kind: 'mfa_verify'; mfaToken: string } | { kind: 'mfa_setup'; mfaToken: string };
+
 interface AuthContextValue {
   payload: TokenPayload | null;
   hasPermission: (permission: Permission) => boolean;
-  login: (input: { tenantSlug: string; email: string; password: string }) => Promise<void>;
+  login: (input: { tenantSlug: string; email: string; password: string }) => Promise<LoginOutcome>;
+  /** Finishes a sign-in whose last step (MFA, SSO) produced the session token elsewhere. */
+  acceptToken: (token: string) => void;
   register: (input: {
     tenantSlug: string;
     tenantName: string;
@@ -53,7 +58,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       payload,
       hasPermission: (permission) => payload?.permissions.includes(permission) ?? false,
       login: async (input) => {
-        const { token } = await apiPost<{ token: string }>('/auth/login', input);
+        const res = await apiPost<{ token?: string; mfaRequired?: boolean; mfaSetupRequired?: boolean; mfaToken?: string }>(
+          '/auth/login',
+          input,
+        );
+        if (res.mfaRequired && res.mfaToken) return { kind: 'mfa_verify', mfaToken: res.mfaToken };
+        if (res.mfaSetupRequired && res.mfaToken) return { kind: 'mfa_setup', mfaToken: res.mfaToken };
+        setToken(res.token!);
+        setPayload(decodeToken(res.token!));
+        return { kind: 'signed_in' };
+      },
+      acceptToken: (token) => {
         setToken(token);
         setPayload(decodeToken(token));
       },

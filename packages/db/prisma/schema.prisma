@@ -87,6 +87,10 @@ model Tenant {
 
   @@map("tenants")
   auditLogs AuditLog[]
+
+  // Every user must set up two-factor sign-in before they can use the console
+  // (docs/adr/0059-mfa-totp.md). Off by default; users can still opt in.
+  mfaRequired Boolean @default(false) @map("mfa_required")
 }
 
 model Role {
@@ -146,6 +150,18 @@ model User {
   // lockout is applied; lockedUntil null means not currently locked.
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until")
+
+  // Two-factor sign-in with an authenticator app (TOTP) -- see
+  // docs/adr/0059-mfa-totp.md. The secret is encrypted with ENCRYPTION_KEY
+  // (the server must recompute codes from it, so it can't be hashed); the
+  // pending one exists only between "show QR code" and "confirm first code".
+  // mfaLastUsedStep blocks replaying a code inside its validity window.
+  // Recovery codes are one-time and high-entropy, so a plain SHA-256 each.
+  mfaSecretEncrypted        String?   @map("mfa_secret_encrypted")
+  mfaPendingSecretEncrypted String?   @map("mfa_pending_secret_encrypted")
+  mfaEnabledAt              DateTime? @map("mfa_enabled_at")
+  mfaLastUsedStep           Int?      @map("mfa_last_used_step")
+  mfaRecoveryCodeHashes     String[]  @default([]) @map("mfa_recovery_code_hashes")
 
   // Soft-deactivation for offboarding -- deliberately not a delete: Ticket.assignee
   // and Message.authorUser have no onDelete action (a hard delete would be blocked

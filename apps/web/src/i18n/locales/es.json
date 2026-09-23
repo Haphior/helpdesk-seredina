@@ -84,7 +84,8 @@
     }
   },
   "layout": {
-    "logOut": "Cerrar sesión"
+    "logOut": "Cerrar sesión",
+    "accountSecurity": "Seguridad de la cuenta"
   },
   "language": {
     "english": "English",
@@ -486,7 +487,82 @@
       "autonomy_policy.updated": "Política de autonomía de IA modificada",
       "kb_portal.settings_updated": "Configuración del portal de conocimiento modificada",
       "telegram.connected": "Bot de Telegram conectado",
-      "telegram.disconnected": "Bot de Telegram desconectado"
+      "telegram.disconnected": "Bot de Telegram desconectado",
+      "auth.mfa_enabled": "Verificación en dos pasos activada",
+      "auth.mfa_disabled": "Verificación en dos pasos desactivada",
+      "auth.mfa_recovery_code_used": "Inicio de sesión con código de recuperación",
+      "auth.mfa_recovery_codes_regenerated": "Nuevos códigos de recuperación",
+      "user.mfa_reset": "Verificación en dos pasos restablecida por un administrador",
+      "tenant.mfa_policy_changed": "Cambió la exigencia de verificación en dos pasos"
+    }
+  },
+  "mfa": {
+    "codeLabel": "Código de 6 dígitos",
+    "verifying": "Verificando…",
+    "back": "Volver al inicio de sesión",
+    "verify": {
+      "title": "Verificación en dos pasos",
+      "subtitle": "Escribe el código de tu app de autenticación.",
+      "codeOrRecovery": "Código de tu app, o un código de recuperación",
+      "submit": "Iniciar sesión"
+    },
+    "setupRequired": {
+      "title": "Configura la verificación en dos pasos",
+      "subtitle": "Tu espacio de trabajo exige un código de una app de autenticación en cada inicio de sesión. Toma un minuto."
+    },
+    "enroll": {
+      "step1": "Instala una app de autenticación en tu teléfono (Microsoft Authenticator, Google Authenticator, 1Password, Authy…).",
+      "step2": "En la app, agrega una cuenta y escanea este código QR.",
+      "step3": "Escribe el código de 6 dígitos que muestra la app.",
+      "qrAlt": "Código QR para tu app de autenticación",
+      "cantScan": "¿No puedes escanearlo? Escribe esta clave a mano",
+      "confirm": "Activar"
+    },
+    "recovery": {
+      "title": "Guarda tus códigos de recuperación",
+      "explain": "Si pierdes el teléfono, cada uno de estos códigos te permite iniciar sesión una vez. Guárdalos en un lugar seguro, como un gestor de contraseñas. No se volverán a mostrar.",
+      "copy": "Copiar",
+      "copied": "Copiados",
+      "download": "Descargar",
+      "saved": "Ya los guardé"
+    }
+  },
+  "accountSecurity": {
+    "title": "Seguridad de la cuenta",
+    "intro": "Protege tu cuenta con un segundo paso al iniciar sesión: un código de una app de autenticación en tu teléfono.",
+    "loadFailed": "No se pudo cargar tu configuración de seguridad",
+    "actionFailed": "Algo salió mal",
+    "mfaTitle": "Verificación en dos pasos",
+    "on": "Activada",
+    "off": "Desactivada",
+    "offExplain": "Solo tu contraseña protege esta cuenta.",
+    "enabledSince": "Activada desde {{date}}. Se te pedirá un código en cada inicio de sesión.",
+    "recoveryRemaining_one": "Te queda {{count}} código de recuperación.",
+    "recoveryRemaining_other": "Te quedan {{count}} códigos de recuperación.",
+    "requiredByWorkspace": "Tu espacio de trabajo exige la verificación en dos pasos, así que no se puede desactivar.",
+    "turnOn": "Activar",
+    "turnOff": "Desactivar",
+    "newRecoveryCodes": "Nuevos códigos de recuperación",
+    "newDevice": "Cambiar a un teléfono nuevo",
+    "disableExplain": "Escribe tu contraseña para desactivar la verificación en dos pasos.",
+    "password": "Contraseña",
+    "disable": "Desactivar",
+    "regenerateExplain": "Escribe un código de tu app. Tus códigos de recuperación anteriores dejarán de funcionar.",
+    "regenerate": "Crear códigos nuevos"
+  },
+  "users": {
+    "mfa": {
+      "badge": "2FA",
+      "reset": "restablecer 2FA",
+      "confirmReset": "¿Restablecer la verificación en dos pasos de {{name}}? Podrá iniciar sesión solo con su contraseña hasta que la configure de nuevo (o se le pedirá, si tu espacio de trabajo la exige).",
+      "resetFailed": "No se pudo restablecer la verificación en dos pasos",
+      "policyTitle": "Exigir verificación en dos pasos",
+      "policyOn": "Todos deben escribir un código de una app de autenticación. Quien no la tenga la configurará en su próximo inicio de sesión.",
+      "policyOff": "Opcional: cada usuario decide en Seguridad de la cuenta.",
+      "require": "Exigir a todos",
+      "stopRequiring": "Dejar de exigir",
+      "confirmRequire": "¿Exigir la verificación en dos pasos a todos? A quienes no la tengan se les pedirá configurarla en su próximo inicio de sesión.",
+      "policyFailed": "No se pudo cambiar la política de verificación en dos pasos"
     }
   }
 }

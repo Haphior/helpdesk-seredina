@@ -39,6 +39,7 @@ export interface UserSummary {
   role: { key: string } | null;
   isActive: boolean;
   isLocked: boolean;
+  mfaEnabled: boolean;
 }
 
 export interface Role {

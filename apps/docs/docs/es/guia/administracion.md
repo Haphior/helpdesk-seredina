@@ -20,6 +20,27 @@ Los permisos son granulares (`tickets:read`, `tickets:write`,
 `users:manage`, `roles:manage`) — un rol personalizado puede combinarlos
 como necesites, no estás atado a los tres roles de fábrica.
 
+## Verificación en dos pasos
+
+Cada usuario puede activar la verificación en dos pasos en **Seguridad de la
+cuenta** (el ícono de escudo al pie de la barra lateral): escanea el código
+QR con una app de autenticación (Microsoft Authenticator, Google
+Authenticator, 1Password, Authy…) y escribe el código de 6 dígitos. Desde
+entonces, al iniciar sesión se pide un código después de la contraseña. Se
+muestran una sola vez diez **códigos de recuperación**: guárdalos en un lugar
+seguro, cada uno sirve para entrar una vez si pierdes el teléfono.
+
+En **Administración → Usuarios**, un administrador puede:
+
+- **Exigir la verificación en dos pasos a todos.** A quien no la tenga se le
+  guía para configurarla en su próximo inicio de sesión, y no puede
+  desactivarla mientras sea obligatoria. Tú debes tenerla activada primero.
+- **Restablecer** la verificación de un usuario que perdió su teléfono.
+  Entrará solo con su contraseña y la configurará de nuevo.
+
+Los códigos incorrectos cuentan para el mismo bloqueo de 5 intentos que las
+contraseñas incorrectas.
+
 ## Registro de auditoría
 
 **Administración → Registro de auditoría** muestra la actividad relevante

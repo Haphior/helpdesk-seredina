@@ -17,6 +17,7 @@ describe.skipIf(!hasDb)('security audit log', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/auth/register',
+      remoteAddress: `10.97.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`,
       payload: { tenantSlug: slug, tenantName: 'Audit', adminEmail: 'admin@audit.test', adminName: 'Admin', password: 'correct-horse-1' },
     });
     expect(res.statusCode).toBe(201);
@@ -28,10 +29,14 @@ describe.skipIf(!hasDb)('security audit log', () => {
     await app.close();
   });
 
+  // A fresh source address per sign-in, so repeated runs within a minute don't
+  // trip the per-IP login rate limit (its counters live in Redis).
+  let ip = 0;
   const login = (email: string, password: string) =>
     app.inject({
       method: 'POST',
       url: '/auth/login',
+      remoteAddress: `10.98.${Math.floor(++ip / 250)}.${ip % 250}`,
       headers: { 'user-agent': 'audit-test/1.0' },
       payload: { tenantSlug: slug, email, password },
     });

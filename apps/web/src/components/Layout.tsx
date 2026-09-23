@@ -214,6 +214,14 @@ export function Layout() {
             <div className="truncate text-[13px] font-semibold text-slate-800">{me?.name ?? '…'}</div>
             <div className="truncate text-[11.5px] capitalize text-slate-400">{me?.role?.key ?? ''}</div>
           </div>
+          <button
+            onClick={() => navigate('/account/security')}
+            aria-label={t('layout.accountSecurity')}
+            title={t('layout.accountSecurity')}
+            className="flex-shrink-0 text-slate-400 hover:text-slate-700"
+          >
+            <ShieldIcon width={16} height={16} />
+          </button>
           <button onClick={logout} aria-label={t('layout.logOut')} className="flex-shrink-0 text-slate-400 hover:text-slate-700">
             <LogoutIcon width={16} height={16} />
           </button>

@@ -20,6 +20,25 @@ Permissions are granular (`tickets:read`, `tickets:write`,
 `users:manage`, `roles:manage`) — a custom role can combine them however
 you need, you're not tied to the three factory-default roles.
 
+## Two-factor sign-in
+
+Each user can turn on two-factor sign-in under **Account security** (the
+shield icon at the bottom of the sidebar): scan the QR code with an
+authenticator app (Microsoft Authenticator, Google Authenticator, 1Password,
+Authy…) and type the 6-digit code. From then on, sign-in asks for a code
+after the password. Ten one-time **recovery codes** are shown once. Keep
+them somewhere safe; each one lets you in once if you lose the phone.
+
+On **Administration → Users**, an admin can:
+
+- **Require two-factor sign-in for everyone.** Users who haven't set it up
+  are walked through it at their next sign-in, and can't turn it off while
+  it's required. You must have it on yourself first.
+- **Reset** a user's two-factor sign-in when they lose their phone. They sign
+  in with just their password and set it up again.
+
+Wrong codes count toward the same 5-attempt lockout as wrong passwords.
+
 ## Audit log
 
 **Administration → Audit Log** lists security-relevant activity: sign-ins

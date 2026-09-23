@@ -35,6 +35,11 @@ contain breaking changes).
   full data exports. Entries can't be edited or deleted, even by the app
   itself. Needs the new `audit:read` permission, which existing admin roles
   get automatically.
+- **Two-factor sign-in** (`docs/adr/0059-mfa-totp.md`): users can protect
+  their account with a code from an authenticator app (Account security, the
+  shield icon in the sidebar), with one-time recovery codes. Admins can
+  require it for the whole workspace (users set it up at their next sign-in)
+  and reset it for someone who lost their phone.
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or

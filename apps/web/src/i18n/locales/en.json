@@ -84,7 +84,8 @@
     }
   },
   "layout": {
-    "logOut": "Log out"
+    "logOut": "Log out",
+    "accountSecurity": "Account security"
   },
   "language": {
     "english": "English",
@@ -486,7 +487,82 @@
       "autonomy_policy.updated": "AI autonomy policy changed",
       "kb_portal.settings_updated": "Knowledge base portal settings changed",
       "telegram.connected": "Telegram bot connected",
-      "telegram.disconnected": "Telegram bot disconnected"
+      "telegram.disconnected": "Telegram bot disconnected",
+      "auth.mfa_enabled": "Two-factor sign-in turned on",
+      "auth.mfa_disabled": "Two-factor sign-in turned off",
+      "auth.mfa_recovery_code_used": "Signed in with a recovery code",
+      "auth.mfa_recovery_codes_regenerated": "New recovery codes created",
+      "user.mfa_reset": "Two-factor sign-in reset by admin",
+      "tenant.mfa_policy_changed": "Two-factor requirement changed"
+    }
+  },
+  "mfa": {
+    "codeLabel": "6-digit code",
+    "verifying": "Checking…",
+    "back": "Back to sign in",
+    "verify": {
+      "title": "Two-factor sign-in",
+      "subtitle": "Enter the code from your authenticator app.",
+      "codeOrRecovery": "Code from your app, or a recovery code",
+      "submit": "Sign in"
+    },
+    "setupRequired": {
+      "title": "Set up two-factor sign-in",
+      "subtitle": "Your workspace requires a code from an authenticator app at every sign-in. It takes a minute."
+    },
+    "enroll": {
+      "step1": "Install an authenticator app on your phone (Microsoft Authenticator, Google Authenticator, 1Password, Authy…).",
+      "step2": "In the app, add an account and scan this QR code.",
+      "step3": "Type the 6-digit code the app shows.",
+      "qrAlt": "QR code for your authenticator app",
+      "cantScan": "Can't scan it? Enter this key by hand",
+      "confirm": "Turn on"
+    },
+    "recovery": {
+      "title": "Save your recovery codes",
+      "explain": "If you lose your phone, each of these codes lets you sign in once. Keep them somewhere safe, like a password manager. They won't be shown again.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "download": "Download",
+      "saved": "I've saved them"
+    }
+  },
+  "accountSecurity": {
+    "title": "Account security",
+    "intro": "Protect your account with a second step at sign-in: a code from an authenticator app on your phone.",
+    "loadFailed": "Failed to load your security settings",
+    "actionFailed": "Something went wrong",
+    "mfaTitle": "Two-factor sign-in",
+    "on": "On",
+    "off": "Off",
+    "offExplain": "Only your password protects this account.",
+    "enabledSince": "On since {{date}}. You'll be asked for a code at every sign-in.",
+    "recoveryRemaining_one": "{{count}} recovery code left.",
+    "recoveryRemaining_other": "{{count}} recovery codes left.",
+    "requiredByWorkspace": "Your workspace requires two-factor sign-in, so it can't be turned off.",
+    "turnOn": "Turn on",
+    "turnOff": "Turn off",
+    "newRecoveryCodes": "New recovery codes",
+    "newDevice": "Move to a new phone",
+    "disableExplain": "Enter your password to turn off two-factor sign-in.",
+    "password": "Password",
+    "disable": "Turn off",
+    "regenerateExplain": "Enter a code from your app. Your old recovery codes stop working.",
+    "regenerate": "Create new codes"
+  },
+  "users": {
+    "mfa": {
+      "badge": "2FA",
+      "reset": "reset 2FA",
+      "confirmReset": "Reset two-factor sign-in for {{name}}? They'll sign in with just their password until they set it up again (or be asked to, if your workspace requires it).",
+      "resetFailed": "Failed to reset two-factor sign-in",
+      "policyTitle": "Require two-factor sign-in",
+      "policyOn": "Everyone must enter a code from an authenticator app. Users without one set it up at their next sign-in.",
+      "policyOff": "Optional: each user decides in Account security.",
+      "require": "Require for everyone",
+      "stopRequiring": "Stop requiring",
+      "confirmRequire": "Require two-factor sign-in for everyone? Users who haven't set it up will be asked to at their next sign-in.",
+      "policyFailed": "Failed to change the two-factor policy"
     }
   }
 }

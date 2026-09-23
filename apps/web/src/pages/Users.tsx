@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Role, UserSummary } from '../lib/types';
 import { Modal } from '../components/Modal';
@@ -10,7 +11,9 @@ import { Card } from '../components/Card';
 import { useAuth } from '../auth/AuthContext';
 
 export function Users() {
+  const { t } = useTranslation();
   const { payload } = useAuth();
+  const [mfaRequired, setMfaRequired] = useState<boolean | null>(null);
   const [users, setUsers] = useState<UserSummary[] | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +27,30 @@ export function Users() {
     apiGet<{ roles: Role[] }>('/roles')
       .then((res) => setRoles(res.roles))
       .catch(() => {});
+    apiGet<{ required: boolean }>('/auth/mfa')
+      .then((res) => setMfaRequired(res.required))
+      .catch(() => {});
+  }
+
+  async function toggleMfaRequired() {
+    if (mfaRequired === null) return;
+    if (!mfaRequired && !confirm(t('users.mfa.confirmRequire'))) return;
+    try {
+      const res = await apiPatch<{ required: boolean }>('/auth/mfa-policy', { required: !mfaRequired });
+      setMfaRequired(res.required);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('users.mfa.policyFailed'));
+    }
+  }
+
+  async function resetMfa(user: UserSummary) {
+    if (!confirm(t('users.mfa.confirmReset', { name: user.name }))) return;
+    try {
+      await apiPost(`/users/${user.id}/mfa/reset`);
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('users.mfa.resetFailed'));
+    }
   }
 
   useEffect(load, []);
@@ -66,12 +93,24 @@ export function Users() {
         Agents/admins in this organization. No invite email yet: share the password with them directly.
       </p>
 
+      {mfaRequired !== null && (
+        <Card className="mb-4 flex items-center justify-between gap-4 p-4">
+          <div>
+            <p className="text-[13.5px] font-semibold text-slate-800">{t('users.mfa.policyTitle')}</p>
+            <p className="text-[12.5px] text-slate-500">{mfaRequired ? t('users.mfa.policyOn') : t('users.mfa.policyOff')}</p>
+          </div>
+          <Button variant={mfaRequired ? 'ghost' : 'primary'} onClick={toggleMfaRequired}>
+            {mfaRequired ? t('users.mfa.stopRequiring') : t('users.mfa.require')}
+          </Button>
+        </Card>
+      )}
+
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
       {users === null && <p className="text-sm text-slate-500">Loading…</p>}
 
       {users && users.length > 0 && (
         <Card className="overflow-hidden p-0">
-          <div className="grid grid-cols-[1fr_1fr_140px_160px_170px] items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-400">
+          <div className="grid grid-cols-[1fr_1fr_140px_190px_230px] items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-400">
             <span>Name</span>
             <span>Email</span>
             <span>Role</span>
@@ -82,7 +121,7 @@ export function Users() {
             {users.map((u) => (
               <div
                 key={u.id}
-                className={`grid grid-cols-[1fr_1fr_140px_160px_170px] items-center gap-3 px-5 py-3 ${!u.isActive ? 'opacity-50' : ''}`}
+                className={`grid grid-cols-[1fr_1fr_140px_190px_230px] items-center gap-3 px-5 py-3 ${!u.isActive ? 'opacity-50' : ''}`}
               >
                 <span className="truncate text-[13.5px] font-semibold text-slate-800">{u.name}</span>
                 <span className="truncate text-[13px] text-slate-500">{u.email}</span>
@@ -108,6 +147,7 @@ export function Users() {
                     <Badge tone="slate">Deactivated</Badge>
                   )}
                   {u.isLocked && <Badge tone="rose">Locked</Badge>}
+                  {u.mfaEnabled && <Badge tone="indigo">{t('users.mfa.badge')}</Badge>}
                 </div>
                 <div className="flex flex-shrink-0 items-center justify-end gap-2.5 text-xs">
                   {u.isLocked && (
@@ -118,6 +158,11 @@ export function Users() {
                   <button onClick={() => setResettingPassword(u)} className="text-slate-400 hover:text-indigo-600">
                     reset password
                   </button>
+                  {u.mfaEnabled && u.id !== payload?.sub && (
+                    <button onClick={() => resetMfa(u)} className="text-slate-400 hover:text-indigo-600">
+                      {t('users.mfa.reset')}
+                    </button>
+                  )}
                   {u.id !== payload?.sub && (
                     <button
                       onClick={() => toggleActive(u)}
