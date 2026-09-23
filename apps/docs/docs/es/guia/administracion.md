@@ -20,6 +20,24 @@ Los permisos son granulares (`tickets:read`, `tickets:write`,
 `users:manage`, `roles:manage`) — un rol personalizado puede combinarlos
 como necesites, no estás atado a los tres roles de fábrica.
 
+## Registro de auditoría
+
+**Administración → Registro de auditoría** muestra la actividad relevante
+para la seguridad: inicios de sesión (exitosos y fallidos, con dirección IP
+y navegador), bloqueos de cuenta, usuarios creados, desactivados o con un
+rol nuevo, cambios de roles, claves de API, webhooks, canales de correo,
+Telegram, agentes de equipos, configuración de IA, configuración del portal
+de conocimiento y exportaciones completas de datos. Cada entrada indica
+quién lo hizo, sobre qué, cuándo y desde dónde. Los secretos nunca se
+registran: cambiar una clave de API deja constancia de *que* cambió, no de
+su valor.
+
+Las entradas son de solo inserción: el rol de base de datos de la propia
+aplicación puede agregarlas y leerlas, nunca modificarlas ni borrarlas. Ver
+el registro requiere el permiso `audit:read`, que tiene el rol de
+administrador incorporado (también en instalaciones existentes, después de
+actualizar).
+
 ## Claves de API
 
 **Administración → Claves de API** — para integraciones externas, no

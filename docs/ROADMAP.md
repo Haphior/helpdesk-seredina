@@ -339,7 +339,7 @@ confirmed helmet headers on a live response, confirmed the CORS guard both fails
 closed with no `CORS_ORIGIN` and boots correctly with one set, full existing test
 suite (9/9) still green. Remaining lower-priority items from the audit (CAPTCHA/bot
 protection on login+register, CI-gated dependency scanning, a real security-event
-audit log, tenant-slug enumeration on `/auth/register`) are deliberately deferred,
+audit log (✅ since shipped, ADR 0058), tenant-slug enumeration on `/auth/register`) are deliberately deferred,
 not silently dropped — revisit once real users exist.
 
 **AI copilot v1 ✅ (this pass).** `packages/ai-adapters`: a provider-agnostic

@@ -97,7 +97,7 @@ describe('email OAuth provider helpers', () => {
 describe('email OAuth state', () => {
   it('round-trips and rejects tampering or expiry', () => {
     const state = signEmailOAuthState({ tenantId: 't1', channelId: 'c1' });
-    expect(verifyEmailOAuthState(state)).toEqual({ tenantId: 't1', channelId: 'c1' });
+    expect(verifyEmailOAuthState(state)).toEqual({ tenantId: 't1', channelId: 'c1', userId: null });
 
     const [body, sig] = state.split('.');
     const forged = Buffer.from(JSON.stringify({ t: 'other', c: 'c1', e: Date.now() + 60_000, n: 'x' })).toString('base64url');

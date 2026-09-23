@@ -161,24 +161,37 @@ function stateKey(): Buffer {
   return createHmac('sha256', secret).update('seredina:email-oauth-state:v1').digest();
 }
 
-export function signEmailOAuthState(payload: { tenantId: string; channelId: string }, now = Date.now()): string {
+export interface EmailOAuthState {
+  tenantId: string;
+  channelId: string;
+  /** Who started the connection -- for the audit entry the callback writes. */
+  userId?: string | null;
+}
+
+export function signEmailOAuthState(payload: EmailOAuthState, now = Date.now()): string {
   const body = Buffer.from(
-    JSON.stringify({ t: payload.tenantId, c: payload.channelId, e: now + STATE_TTL_MS, n: randomBytes(8).toString('hex') }),
+    JSON.stringify({
+      t: payload.tenantId,
+      c: payload.channelId,
+      u: payload.userId ?? null,
+      e: now + STATE_TTL_MS,
+      n: randomBytes(8).toString('hex'),
+    }),
   ).toString('base64url');
   const sig = createHmac('sha256', stateKey()).update(body).digest('base64url');
   return `${body}.${sig}`;
 }
 
-export function verifyEmailOAuthState(state: string, now = Date.now()): { tenantId: string; channelId: string } | null {
+export function verifyEmailOAuthState(state: string, now = Date.now()): EmailOAuthState | null {
   const [body, sig] = state.split('.');
   if (!body || !sig) return null;
   const expected = createHmac('sha256', stateKey()).update(body).digest();
   const given = Buffer.from(sig, 'base64url');
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
   try {
-    const data = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as { t: string; c: string; e: number };
+    const data = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as { t: string; c: string; u?: string | null; e: number };
     if (typeof data.e !== 'number' || data.e < now) return null;
-    return { tenantId: data.t, channelId: data.c };
+    return { tenantId: data.t, channelId: data.c, userId: data.u ?? null };
   } catch {
     return null;
   }
@@ -187,7 +200,7 @@ export function verifyEmailOAuthState(state: string, now = Date.now()): { tenant
 export class EmailOAuthSetupError extends Error {}
 
 /** Step 1: the URL to send the admin's browser to. Also how a needs_reconnect channel is reconnected. */
-export async function startEmailOAuth(tenantId: string, channelId: string): Promise<string> {
+export async function startEmailOAuth(tenantId: string, channelId: string, userId?: string): Promise<string> {
   const redirectUri = emailOAuthRedirectUri();
   if (!redirectUri) throw new EmailOAuthSetupError('Set WEB_ORIGIN or API_PUBLIC_URL so the provider knows where to send you back.');
 
@@ -199,7 +212,7 @@ export async function startEmailOAuth(tenantId: string, channelId: string): Prom
 
   return buildEmailOAuthAuthorizeUrl(
     { provider: channel.authType as EmailOAuthProvider, clientId: channel.oauthClientId, microsoftTenant: channel.oauthMicrosoftTenant },
-    { redirectUri, state: signEmailOAuthState({ tenantId, channelId }), loginHint: channel.fromAddress },
+    { redirectUri, state: signEmailOAuthState({ tenantId, channelId, userId }), loginHint: channel.fromAddress },
   );
 }
 
@@ -208,7 +221,7 @@ export async function completeEmailOAuth(
   state: string,
   code: string,
   exchange: typeof exchangeEmailOAuthCode = exchangeEmailOAuthCode,
-): Promise<{ tenantId: string; channelId: string }> {
+): Promise<EmailOAuthState & { fromAddress: string }> {
   const verified = verifyEmailOAuthState(state);
   if (!verified) throw new EmailOAuthSetupError('The sign-in link expired or was tampered with. Start again from the console.');
   const redirectUri = emailOAuthRedirectUri();
@@ -249,5 +262,5 @@ export async function completeEmailOAuth(
       },
     }),
   );
-  return verified;
+  return { ...verified, fromAddress: channel.fromAddress };
 }

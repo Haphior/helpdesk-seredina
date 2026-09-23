@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { TelegramApiError, type TelegramUpdate } from '@seredina/shared';
 import { requirePermission } from '../rbac/permissions';
+import { auditRequest } from '../audit/service';
 import {
   connectTelegramChannel,
   disconnectTelegramChannel,
@@ -31,6 +32,7 @@ export default async function telegramRoutes(app: FastifyInstance) {
       if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
       try {
         const channel = await connectTelegramChannel(request.user.tenantId, parsed.data.botToken);
+        await auditRequest(request, 'telegram.connected', { type: 'telegram_channel', label: channel.botUsername });
         return reply.send(channel);
       } catch (err) {
         const message = err instanceof TelegramApiError ? `Telegram rejected this bot token: ${err.message}` : (err as Error).message;
@@ -44,6 +46,7 @@ export default async function telegramRoutes(app: FastifyInstance) {
     { preHandler: [app.authenticate, requirePermission('channels:manage')] },
     async (request, reply) => {
       await disconnectTelegramChannel(request.user.tenantId);
+      await auditRequest(request, 'telegram.disconnected', { type: 'telegram_channel' });
       return reply.code(204).send();
     },
   );

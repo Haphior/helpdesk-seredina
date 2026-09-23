@@ -24,6 +24,7 @@ const Devices = lazy(() => import('./pages/Devices').then((m) => ({ default: m.D
 const AssetDetail = lazy(() => import('./pages/AssetDetail').then((m) => ({ default: m.AssetDetail })));
 const Users = lazy(() => import('./pages/Users').then((m) => ({ default: m.Users })));
 const Roles = lazy(() => import('./pages/Roles').then((m) => ({ default: m.Roles })));
+const AuditLog = lazy(() => import('./pages/AuditLog').then((m) => ({ default: m.AuditLog })));
 const EmailChannels = lazy(() => import('./pages/EmailChannels').then((m) => ({ default: m.EmailChannels })));
 const CustomFields = lazy(() => import('./pages/CustomFields').then((m) => ({ default: m.CustomFields })));
 const EquipmentCatalog = lazy(() => import('./pages/EquipmentCatalog').then((m) => ({ default: m.EquipmentCatalog })));
@@ -89,6 +90,7 @@ export function App() {
               <Route path="/users" element={<Users />} />
               <Route path="/roles" element={<Roles />} />
               <Route path="/email-channels" element={<EmailChannels />} />
+              <Route path="/audit-log" element={<AuditLog />} />
               <Route path="/custom-fields" element={<CustomFields />} />
               <Route path="/equipment-catalog" element={<EquipmentCatalog />} />
               <Route path="/processes" element={<Processes />} />

@@ -20,6 +20,21 @@ Permissions are granular (`tickets:read`, `tickets:write`,
 `users:manage`, `roles:manage`) — a custom role can combine them however
 you need, you're not tied to the three factory-default roles.
 
+## Audit log
+
+**Administration → Audit Log** lists security-relevant activity: sign-ins
+(successful and failed, with IP address and browser), account lockouts,
+users created, deactivated or given a new role, role changes, API keys,
+webhooks, email channels, Telegram, endpoint agents, AI settings, the
+knowledge base portal settings, and full data exports. Each entry shows who
+did it, to what, when, and from where. Secrets are never logged: changing
+an API key records *that* it changed, not its value.
+
+Entries are append-only: the application's own database role can insert and
+read them, never change or delete them. Viewing the log needs the
+`audit:read` permission, which the built-in admin role has (including on
+existing installs, after upgrading).
+
 ## API Keys
 
 **Administration → API Keys** — for external integrations, not for human

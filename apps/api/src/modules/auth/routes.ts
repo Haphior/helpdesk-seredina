@@ -17,6 +17,7 @@ import {
   updateRole,
   updateUser,
 } from './service';
+import { auditRequest, recordAudit, requestOrigin } from '../audit/service';
 
 const registerSchema = z.object({
   tenantSlug: z
@@ -82,6 +83,14 @@ export default async function authRoutes(app: FastifyInstance) {
 
       try {
         const result = await registerTenant(parsed.data);
+        await recordAudit(result.tenantId, {
+          action: 'tenant.registered',
+          actorType: 'user',
+          actorUserId: result.userId,
+          actorLabel: parsed.data.adminEmail,
+          target: { type: 'tenant', id: result.tenantId, label: parsed.data.tenantSlug },
+          ...requestOrigin(request),
+        });
         const token = app.jwt.sign({
           sub: result.userId,
           tenantId: result.tenantId,
@@ -104,7 +113,7 @@ export default async function authRoutes(app: FastifyInstance) {
       }
 
       try {
-        const result = await login(parsed.data);
+        const result = await login(parsed.data, requestOrigin(request));
         const token = app.jwt.sign({
           sub: result.userId,
           tenantId: result.tenantId,
@@ -152,6 +161,7 @@ export default async function authRoutes(app: FastifyInstance) {
       }
       try {
         const user = await createUser(request.user.tenantId, parsed.data, request.user.permissions);
+        await auditRequest(request, 'user.created', { type: 'user', id: user.id, label: user.email }, { role: parsed.data.roleKey });
         return reply.code(201).send(user);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
@@ -173,6 +183,11 @@ export default async function authRoutes(app: FastifyInstance) {
           id: request.user.sub,
           permissions: request.user.permissions,
         });
+        const target = { type: 'user', id: user.id, label: user.email };
+        if (parsed.data.roleKey) await auditRequest(request, 'user.role_changed', target, { role: parsed.data.roleKey });
+        if (parsed.data.isActive === false) await auditRequest(request, 'user.deactivated', target);
+        if (parsed.data.isActive === true) await auditRequest(request, 'user.reactivated', target);
+        if (parsed.data.name) await auditRequest(request, 'user.renamed', target, { name: parsed.data.name });
         return reply.send(user);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
@@ -187,6 +202,7 @@ export default async function authRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       try {
         await unlockUser(request.user.tenantId, id);
+        await auditRequest(request, 'user.unlocked', { type: 'user', id });
         return reply.code(204).send();
       } catch (err) {
         return reply.code(404).send({ error: (err as Error).message });
@@ -205,6 +221,7 @@ export default async function authRoutes(app: FastifyInstance) {
       }
       try {
         await resetUserPassword(request.user.tenantId, id, parsed.data.password);
+        await auditRequest(request, 'user.password_reset', { type: 'user', id });
         return reply.code(204).send();
       } catch (err) {
         return reply.code(404).send({ error: (err as Error).message });
@@ -232,6 +249,7 @@ export default async function authRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     try {
       const role = await createRole(request.user.tenantId, parsed.data);
+      await auditRequest(request, 'role.created', { type: 'role', id: role.id, label: role.key }, { permissions: role.permissions });
       return reply.code(201).send(role);
     } catch (err) {
       return reply.code(400).send({ error: (err as Error).message });
@@ -244,6 +262,10 @@ export default async function authRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     try {
       const role = await updateRole(request.user.tenantId, id, parsed.data);
+      await auditRequest(request, 'role.updated', { type: 'role', id: role.id, label: role.key }, {
+        ...(parsed.data.name ? { name: parsed.data.name } : {}),
+        ...(parsed.data.permissions ? { permissions: role.permissions } : {}),
+      });
       return reply.send(role);
     } catch (err) {
       return reply.code(404).send({ error: (err as Error).message });
@@ -254,6 +276,7 @@ export default async function authRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     try {
       await deleteRole(request.user.tenantId, id);
+      await auditRequest(request, 'role.deleted', { type: 'role', id });
       return reply.code(204).send();
     } catch (err) {
       return reply.code(400).send({ error: (err as Error).message });

@@ -37,6 +37,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   csat_responses, device_enrollment_tokens, devices
   TO app_tenant;
 
+-- Append-only: the app can write and read audit entries, never change or delete
+-- them (docs/adr/0058-audit-log.md). REVOKE first so a re-run after a future
+-- grant change still lands on exactly this set.
+REVOKE ALL ON audit_logs FROM app_tenant;
+GRANT SELECT, INSERT ON audit_logs TO app_tenant;
+
 -- tenants: a tenant-scoped session may see only its own row (defense against
 -- cross-tenant enumeration via the tenant registry itself). Its scope column is its
 -- own `id`, everything else below is scoped by `tenant_id`.
@@ -67,7 +73,7 @@ BEGIN
     'on_call_schedules', 'on_call_shifts', 'escalation_tiers', 'escalation_runs', 'saved_views',
     'notifications', 'notification_preferences', 'ai_usage_logs', 'attachments', 'kb_chunks',
     'autonomy_policies', 'ai_agent_runs', 'tenant_ai_settings', 'tenant_ui_settings', 'tenant_kb_settings', 'telegram_channels',
-    'csat_responses', 'device_enrollment_tokens', 'devices'
+    'csat_responses', 'device_enrollment_tokens', 'devices', 'audit_logs'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);

@@ -46,6 +46,8 @@ export interface EnrollDeviceInput {
 }
 
 export interface EnrolledDevice {
+  /** For the audit entry the route writes -- stripped before the response goes to the agent. */
+  tenantId: string;
   deviceId: string;
   assetId: string;
   /** Returned once, at enrollment time only -- never retrievable again (only the hash is stored). */
@@ -105,7 +107,7 @@ export async function enrollDevice(rawToken: string, input: EnrollDeviceInput): 
         where: { id: existingDevice.assetId },
         data: { hostname: input.hostname, ...(macAddress ? await freeMacFor(tx, macAddress, existingDevice.assetId) : {}), lastSeenAt: new Date() },
       });
-      return { deviceId: existingDevice.id, assetId: existingDevice.assetId, credential, reenrolled: true };
+      return { tenantId, deviceId: existingDevice.id, assetId: existingDevice.assetId, credential, reenrolled: true };
     }
 
     const discovered = macAddress
@@ -131,7 +133,7 @@ export async function enrollDevice(rawToken: string, input: EnrollDeviceInput): 
       data: { tenantId, assetId: asset.id, hashedCredential, machineFingerprint: input.machineFingerprint, ...deviceFields },
     });
 
-    return { deviceId: device.id, assetId: asset.id, credential, reenrolled: false };
+    return { tenantId, deviceId: device.id, assetId: asset.id, credential, reenrolled: false };
   });
 }
 

@@ -86,6 +86,7 @@ model Tenant {
   csatResponses         CsatResponse[]
 
   @@map("tenants")
+  auditLogs AuditLog[]
 }
 
 model Role {
@@ -1483,4 +1484,33 @@ model TenantKbSettings {
   createdAt        DateTime @default(now()) @map("created_at")
 
   @@map("tenant_kb_settings")
+}
+
+// Security audit log (docs/adr/0058-audit-log.md): who signed in, who changed
+// access, who touched integrations and secrets. Append-only for the app --
+// app_tenant is granted SELECT/INSERT only (prisma/rls/policies.sql), so not
+// even a compromised API process can rewrite history. actorUserId is a plain
+// column, not a relation: the entry must outlive the user it names.
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // 'user' | 'system' | 'anonymous'
+  actorType   String   @map("actor_type")
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  // The actor's email at the time -- still readable after the user is renamed or removed.
+  actorLabel  String?  @map("actor_label")
+  // Dotted, past tense: 'auth.login_succeeded', 'user.role_changed', ...
+  action      String
+  targetType  String?  @map("target_type")
+  targetId    String?  @map("target_id")
+  targetLabel String?  @map("target_label")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action, createdAt])
+  @@map("audit_logs")
 }

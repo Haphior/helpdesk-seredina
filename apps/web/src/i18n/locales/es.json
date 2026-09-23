@@ -79,7 +79,8 @@
       "monitoringIntegrations": "Integraciones de Monitoreo",
       "appearance": "Apariencia",
       "branding": "Marca",
-      "language": "Idioma"
+      "language": "Idioma",
+      "auditLog": "Registro de auditoría"
     }
   },
   "layout": {
@@ -415,5 +416,77 @@
     "username": "Usuario",
     "password": "Contraseña",
     "useTls": "Usar TLS"
+  },
+  "auditLog": {
+    "title": "Registro de auditoría",
+    "intro": "Actividad relevante para la seguridad de este espacio de trabajo: inicios de sesión, cambios en usuarios y roles, y cambios en integraciones y secretos. Las entradas no se pueden editar ni borrar.",
+    "loadFailed": "No se pudo cargar el registro de auditoría",
+    "empty": "Todavía no hay nada registrado.",
+    "loadMore": "Cargar más",
+    "when": "Cuándo",
+    "who": "Quién",
+    "what": "Qué",
+    "target": "Sobre",
+    "from": "Desde",
+    "category": {
+      "all": "Todo",
+      "auth": "Inicios de sesión",
+      "user": "Usuarios",
+      "role": "Roles",
+      "email_channel": "Correo",
+      "api_key": "Claves de API",
+      "webhook": "Webhooks",
+      "device": "Agentes",
+      "ai_settings": "IA",
+      "tenant": "Espacio de trabajo"
+    },
+    "actor": {
+      "system": "Sistema",
+      "anonymous": "Desconocido"
+    },
+    "targetType": {
+      "ai_settings": "Configuración de IA",
+      "autonomy_policy": "Política de autonomía de IA",
+      "kb_settings": "Portal de conocimiento",
+      "tenant": "Espacio de trabajo",
+      "telegram_channel": "Telegram",
+      "device_enrollment_token": "Token de inscripción"
+    },
+    "action": {
+      "auth.login_succeeded": "Inicio de sesión",
+      "auth.login_failed": "Inicio de sesión fallido",
+      "auth.account_locked": "Cuenta bloqueada",
+      "tenant.registered": "Espacio de trabajo creado",
+      "tenant.data_exported": "Exportó todos los datos",
+      "user.created": "Usuario creado",
+      "user.role_changed": "Rol cambiado",
+      "user.deactivated": "Usuario desactivado",
+      "user.reactivated": "Usuario reactivado",
+      "user.renamed": "Usuario renombrado",
+      "user.unlocked": "Usuario desbloqueado",
+      "user.password_reset": "Contraseña restablecida por un administrador",
+      "role.created": "Rol creado",
+      "role.updated": "Rol modificado",
+      "role.deleted": "Rol eliminado",
+      "email_channel.created": "Canal de correo agregado",
+      "email_channel.connected": "Buzón conectado",
+      "email_channel.deleted": "Canal de correo eliminado",
+      "api_key.created": "Clave de API creada",
+      "api_key.deleted": "Clave de API eliminada",
+      "webhook.created": "Webhook creado",
+      "webhook.updated": "Webhook modificado",
+      "webhook.secret_rotated": "Secreto de webhook rotado",
+      "webhook.deleted": "Webhook eliminado",
+      "device.enrollment_token_created": "Token de inscripción de agente creado",
+      "device.enrolled": "Agente inscrito",
+      "device.reenrolled": "Agente reinscrito",
+      "device.revoked": "Agente revocado",
+      "ai_settings.updated": "Configuración de IA modificada",
+      "ai_settings.cleared": "Configuración de IA borrada",
+      "autonomy_policy.updated": "Política de autonomía de IA modificada",
+      "kb_portal.settings_updated": "Configuración del portal de conocimiento modificada",
+      "telegram.connected": "Bot de Telegram conectado",
+      "telegram.disconnected": "Bot de Telegram desconectado"
+    }
   }
 }

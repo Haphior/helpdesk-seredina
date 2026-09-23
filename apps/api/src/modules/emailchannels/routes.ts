@@ -13,6 +13,7 @@ import {
   listEmailChannels,
   startEmailOAuth,
 } from './service';
+import { auditRequest, recordAudit, requestOrigin } from '../audit/service';
 
 const passwordChannelSchema = z.object({
   authType: z.literal('password').default('password'),
@@ -63,6 +64,7 @@ export default async function emailChannelRoutes(app: FastifyInstance) {
         const parsed = oauthChannelSchema.safeParse(request.body);
         if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
         const channel = await createOAuthEmailChannel(request.user.tenantId, parsed.data);
+        await auditRequest(request, 'email_channel.created', { type: 'email_channel', id: channel.id, label: channel.fromAddress }, { authType: channel.authType });
         return reply.code(201).send(channel);
       }
 
@@ -71,6 +73,7 @@ export default async function emailChannelRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: parsed.error.flatten() });
       }
       const channel = await createEmailChannel(request.user.tenantId, parsed.data);
+      await auditRequest(request, 'email_channel.created', { type: 'email_channel', id: channel.id, label: channel.fromAddress }, { authType: 'password' });
       return reply.code(201).send(channel);
     },
   );
@@ -83,7 +86,7 @@ export default async function emailChannelRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       try {
-        const authorizeUrl = await startEmailOAuth(request.user.tenantId, id);
+        const authorizeUrl = await startEmailOAuth(request.user.tenantId, id, request.user.sub);
         return reply.send({ authorizeUrl });
       } catch (err) {
         if (err instanceof EmailOAuthSetupError) return reply.code(400).send({ error: err.message });
@@ -107,7 +110,14 @@ export default async function emailChannelRoutes(app: FastifyInstance) {
         return reply.redirect(emailChannelsConsoleUrl({ error: 'missing code or state' }));
       }
       try {
-        await completeEmailOAuth(q.state, q.code);
+        const connected = await completeEmailOAuth(q.state, q.code);
+        await recordAudit(connected.tenantId, {
+          action: 'email_channel.connected',
+          actorType: connected.userId ? 'user' : 'anonymous',
+          actorUserId: connected.userId,
+          target: { type: 'email_channel', id: connected.channelId, label: connected.fromAddress },
+          ...requestOrigin(request),
+        });
         return reply.redirect(emailChannelsConsoleUrl({ connected: true }));
       } catch (err) {
         request.log.warn({ err }, 'email OAuth callback failed');
@@ -124,6 +134,7 @@ export default async function emailChannelRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       try {
         await deleteEmailChannel(request.user.tenantId, id);
+        await auditRequest(request, 'email_channel.deleted', { type: 'email_channel', id });
         return reply.code(204).send();
       } catch {
         return reply.code(404).send({ error: 'email channel not found' });

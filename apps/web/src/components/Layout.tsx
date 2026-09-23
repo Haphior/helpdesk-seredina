@@ -108,6 +108,7 @@ const navGroups: {
     items: [
       { to: '/users', itemKey: 'users', icon: UsersIcon, permission: 'users:manage' },
       { to: '/roles', itemKey: 'roles', icon: ShieldIcon, permission: 'roles:manage' },
+      { to: '/audit-log', itemKey: 'auditLog', icon: ChecklistIcon, permission: 'audit:read' },
       { to: '/api-keys', itemKey: 'apiKeys', icon: KeyIcon },
       { to: '/email-channels', itemKey: 'emailChannels', icon: MailIcon, permission: 'channels:manage' },
       { to: '/telegram', itemKey: 'telegram', icon: PaperPlaneIcon, permission: 'channels:manage' },

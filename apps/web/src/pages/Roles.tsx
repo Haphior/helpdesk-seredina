@@ -16,6 +16,7 @@ const ALL_PERMISSIONS: Permission[] = [
   'channels:manage',
   'users:manage',
   'roles:manage',
+  'audit:read',
 ];
 
 export function Roles() {

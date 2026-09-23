@@ -6,7 +6,8 @@ export type Permission =
   | 'tickets:manage_all'
   | 'assets:read'
   | 'assets:manage'
-  | 'channels:manage';
+  | 'channels:manage'
+  | 'audit:read';
 
 export type TicketStatusCategory = 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
 export type TicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
@@ -632,5 +633,20 @@ export interface AiAgentRun {
   ticket: { id: string; number: number; subject: string } | null;
   reviewedByUser: { id: string; name: string } | null;
   reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorType: 'user' | 'system' | 'anonymous';
+  actorUserId: string | null;
+  actorLabel: string | null;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  targetLabel: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown> | null;
   createdAt: string;
 }

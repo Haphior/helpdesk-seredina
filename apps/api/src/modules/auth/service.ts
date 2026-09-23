@@ -5,6 +5,13 @@ import { prisma, withTenantTx } from '@seredina/db';
 import { countTenants, resolveTenantIdBySlug } from '../tenants/service';
 import { seedDefaultTicketStatuses } from '../tickets/service';
 import { seedDefaultTeam } from '../teams/service';
+import { recordAudit } from '../audit/service';
+
+/** Where a sign-in attempt came from, for the audit log. */
+export interface RequestOrigin {
+  ipAddress: string | null;
+  userAgent: string | null;
+}
 
 export interface RegisterTenantInput {
   tenantSlug: string;
@@ -97,11 +104,18 @@ const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 // alone enumerates which emails have accounts.
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('seredina-login-timing-equalizer', 12);
 
-export async function login(input: LoginInput): Promise<AuthResult> {
+type LoginFailure = 'unknown_user' | 'account_inactive' | 'account_locked' | 'wrong_password';
+
+export async function login(input: LoginInput, origin: RequestOrigin = { ipAddress: null, userAgent: null }): Promise<AuthResult> {
   const tenantId = await resolveTenantIdBySlug(input.tenantSlug);
   if (!tenantId) {
     throw new Error('invalid credentials');
   }
+
+  // Filled in inside the transaction, written to the audit log after it commits.
+  let failure: LoginFailure | null = null;
+  let failedUserId: string | null = null;
+  let justLockedOut = false;
 
   // Returns null on any failure rather than throwing inside the transaction --
   // throwing here would roll back the whole interactive transaction, INCLUDING the
@@ -116,6 +130,8 @@ export async function login(input: LoginInput): Promise<AuthResult> {
 
     if (!user || !user.isActive || (user.lockedUntil && user.lockedUntil > new Date())) {
       await bcrypt.compare(input.password, DUMMY_PASSWORD_HASH);
+      failure = !user ? 'unknown_user' : !user.isActive ? 'account_inactive' : 'account_locked';
+      failedUserId = user?.id ?? null;
       return null;
     }
 
@@ -123,6 +139,9 @@ export async function login(input: LoginInput): Promise<AuthResult> {
     if (!valid) {
       const failedLoginAttempts = user.failedLoginAttempts + 1;
       const lockedOut = failedLoginAttempts >= MAX_FAILED_LOGIN_ATTEMPTS;
+      failure = 'wrong_password';
+      failedUserId = user.id;
+      justLockedOut = lockedOut;
       await tx.user.update({
         where: { id: user.id },
         data: {
@@ -142,7 +161,28 @@ export async function login(input: LoginInput): Promise<AuthResult> {
     return { tenantId, userId: user.id, permissions };
   });
 
-  if (!result) throw new Error('invalid credentials');
+  const actor = { actorLabel: input.email, ...origin };
+  if (!result) {
+    await recordAudit(tenantId, {
+      action: 'auth.login_failed',
+      actorType: failedUserId ? 'user' : 'anonymous',
+      actorUserId: failedUserId,
+      metadata: { reason: failure },
+      ...actor,
+    });
+    if (justLockedOut) {
+      await recordAudit(tenantId, {
+        action: 'auth.account_locked',
+        actorType: 'system',
+        target: { type: 'user', id: failedUserId, label: input.email },
+        metadata: { failedAttempts: MAX_FAILED_LOGIN_ATTEMPTS, lockMinutes: LOCKOUT_DURATION_MS / 60_000 },
+        ...origin,
+      });
+    }
+    throw new Error('invalid credentials');
+  }
+
+  await recordAudit(tenantId, { action: 'auth.login_succeeded', actorType: 'user', actorUserId: result.userId, ...actor });
   return result;
 }
 

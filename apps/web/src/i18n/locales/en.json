@@ -79,7 +79,8 @@
       "monitoringIntegrations": "Monitoring Integrations",
       "appearance": "Appearance",
       "branding": "Branding",
-      "language": "Language"
+      "language": "Language",
+      "auditLog": "Audit Log"
     }
   },
   "layout": {
@@ -415,5 +416,77 @@
     "username": "Username",
     "password": "Password",
     "useTls": "Use TLS"
+  },
+  "auditLog": {
+    "title": "Audit Log",
+    "intro": "Security-relevant activity in this workspace: sign-ins, changes to users and roles, and changes to integrations and secrets. Entries can't be edited or deleted.",
+    "loadFailed": "Failed to load the audit log",
+    "empty": "Nothing recorded yet.",
+    "loadMore": "Load more",
+    "when": "When",
+    "who": "Who",
+    "what": "What",
+    "target": "On",
+    "from": "From",
+    "category": {
+      "all": "All",
+      "auth": "Sign-ins",
+      "user": "Users",
+      "role": "Roles",
+      "email_channel": "Email",
+      "api_key": "API keys",
+      "webhook": "Webhooks",
+      "device": "Agents",
+      "ai_settings": "AI",
+      "tenant": "Workspace"
+    },
+    "actor": {
+      "system": "System",
+      "anonymous": "Unknown"
+    },
+    "targetType": {
+      "ai_settings": "AI settings",
+      "autonomy_policy": "AI autonomy policy",
+      "kb_settings": "Knowledge base portal",
+      "tenant": "Workspace",
+      "telegram_channel": "Telegram",
+      "device_enrollment_token": "Enrollment token"
+    },
+    "action": {
+      "auth.login_succeeded": "Signed in",
+      "auth.login_failed": "Failed sign-in",
+      "auth.account_locked": "Account locked",
+      "tenant.registered": "Workspace created",
+      "tenant.data_exported": "Exported all data",
+      "user.created": "User created",
+      "user.role_changed": "Role changed",
+      "user.deactivated": "User deactivated",
+      "user.reactivated": "User reactivated",
+      "user.renamed": "User renamed",
+      "user.unlocked": "User unlocked",
+      "user.password_reset": "Password reset by admin",
+      "role.created": "Role created",
+      "role.updated": "Role changed",
+      "role.deleted": "Role deleted",
+      "email_channel.created": "Email channel added",
+      "email_channel.connected": "Mailbox connected",
+      "email_channel.deleted": "Email channel deleted",
+      "api_key.created": "API key created",
+      "api_key.deleted": "API key deleted",
+      "webhook.created": "Webhook created",
+      "webhook.updated": "Webhook changed",
+      "webhook.secret_rotated": "Webhook secret rotated",
+      "webhook.deleted": "Webhook deleted",
+      "device.enrollment_token_created": "Agent enrollment token created",
+      "device.enrolled": "Agent enrolled",
+      "device.reenrolled": "Agent re-enrolled",
+      "device.revoked": "Agent revoked",
+      "ai_settings.updated": "AI settings changed",
+      "ai_settings.cleared": "AI settings cleared",
+      "autonomy_policy.updated": "AI autonomy policy changed",
+      "kb_portal.settings_updated": "Knowledge base portal settings changed",
+      "telegram.connected": "Telegram bot connected",
+      "telegram.disconnected": "Telegram bot disconnected"
+    }
   }
 }

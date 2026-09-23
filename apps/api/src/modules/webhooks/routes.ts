@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { WEBHOOK_EVENTS, WEBHOOK_KINDS } from '@seredina/shared';
 import { requirePermission } from '../rbac/permissions';
 import { createWebhook, deleteWebhook, listWebhooks, rotateWebhookSecret, updateWebhook } from './service';
+import { auditRequest } from '../audit/service';
 
 const createWebhookSchema = z.object({
   url: z.string().url(),
@@ -36,6 +37,7 @@ export default async function webhookRoutes(app: FastifyInstance) {
       if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
       try {
         const webhook = await createWebhook(request.user.tenantId, parsed.data);
+        await auditRequest(request, 'webhook.created', { type: 'webhook', id: webhook.id, label: webhook.url });
         return reply.code(201).send(webhook);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
@@ -52,6 +54,7 @@ export default async function webhookRoutes(app: FastifyInstance) {
       if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
       try {
         const webhook = await updateWebhook(request.user.tenantId, id, parsed.data);
+        await auditRequest(request, 'webhook.updated', { type: 'webhook', id, label: webhook.url });
         return reply.send(webhook);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
@@ -66,6 +69,7 @@ export default async function webhookRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       try {
         const webhook = await rotateWebhookSecret(request.user.tenantId, id);
+        await auditRequest(request, 'webhook.secret_rotated', { type: 'webhook', id, label: webhook.url });
         return reply.send(webhook);
       } catch (err) {
         return reply.code(404).send({ error: (err as Error).message });
@@ -80,6 +84,7 @@ export default async function webhookRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       try {
         await deleteWebhook(request.user.tenantId, id);
+        await auditRequest(request, 'webhook.deleted', { type: 'webhook', id });
         return reply.code(204).send();
       } catch {
         return reply.code(404).send({ error: 'webhook not found' });
