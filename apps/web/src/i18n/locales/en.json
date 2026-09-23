@@ -164,7 +164,8 @@
     "creating": "Creating…",
     "remove": "remove",
     "link": "Link",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "someone": "Someone"
   },
   "tickets": {
     "title": "Tickets",
@@ -201,7 +202,8 @@
       "assignee": "Assignee",
       "channel": "Channel",
       "updated": "Updated",
-      "slaOverdue": "SLA overdue"
+      "slaOverdue": "SLA overdue",
+      "sla": "SLA"
     },
     "empty": "No tickets here.",
     "loadFailed": "Failed to load tickets",
@@ -315,7 +317,13 @@
       "suggestFailed": "Failed to suggest a reply",
       "autonomousFailed": "Failed to run the autonomous agent",
       "applyMacroFailed": "Failed to apply macro"
-    }
+    },
+    "typing_one": "{{names}} is typing…",
+    "typing_other": "{{names}} are typing…",
+    "collisionReply": "{{name}} replied while you were writing. Check their reply before sending yours, so the customer doesn't get two.",
+    "collisionNote": "{{name}} added an internal note while you were writing.",
+    "collisionCustomer": "{{name}} wrote back while you were writing — read it before sending.",
+    "collisionDismiss": "Got it"
   },
   "tour": {
     "stepCount": "Step {{current}} of {{total}}",
@@ -358,5 +366,13 @@
         "body": "You can watch this tour again anytime with the help icon right below."
       }
     }
+  },
+  "sla": {
+    "left": "{{time}} left",
+    "overdueBy": "{{time}} overdue",
+    "firstResponseDue": "First response due {{time}}",
+    "resolutionDue": "Resolution due {{time}}",
+    "firstResponseShort": "Response",
+    "resolutionShort": "Resolution"
   }
 }

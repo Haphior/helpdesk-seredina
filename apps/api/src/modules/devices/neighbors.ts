@@ -1,7 +1,7 @@
 import type { Prisma } from '@seredina/db';
 
 /**
- * Passive discovery (docs/adr/0052-agent-based-discovery.md): an enrolled
+ * Passive discovery (docs/adr/0055-agent-based-discovery.md): an enrolled
  * agent reports its own ARP/neighbor table -- the devices its machine has
  * recently talked to on the local network -- and those become CMDB records.
  * Nothing is scanned; the server never opens a connection anywhere.

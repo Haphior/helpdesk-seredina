@@ -1,4 +1,4 @@
-// Machine identity and passive network discovery (docs/adr/0052-agent-based-
+// Machine identity and passive network discovery (docs/adr/0055-agent-based-
 // discovery.md). Nothing here sends a single packet: the fingerprint comes
 // from the OS's own machine id, and neighbors come from the ARP cache the OS
 // already keeps. Same per-OS shell-out approach as inventory.mjs; only the

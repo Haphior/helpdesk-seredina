@@ -9,6 +9,15 @@ contain breaking changes).
 
 ### Added
 
+- **SLA countdown** (`docs/adr/0056-sla-countdown.md`): the ticket queue has
+  an SLA column with the time left on the next milestone, and the ticket
+  page shows each milestone's countdown with a progress bar. Both tick every
+  second, turn amber once 75% of the window is used, and red once breached.
+- **"Ana is typing…"**: agents with the same ticket open see who is writing a
+  reply. Nothing of the draft is sent.
+- **Reply-collision warning**: if a colleague replies or adds a note, or the
+  customer writes back, while you're drafting, a notice asks you to check
+  before sending.
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or
@@ -44,7 +53,7 @@ contain breaking changes).
   configuring process templates. See
   `docs/adr/0052-process-ticket-creation-and-reorder.md`.
 - `JWT_EXPIRES_IN` env var for the console session length (default `8h`).
-- **Agent-based discovery** (`docs/adr/0052-agent-based-discovery.md`):
+- **Agent-based discovery** (`docs/adr/0055-agent-based-discovery.md`):
   - Reinstalling the agent on the same machine reuses its existing record
     (matched by a hashed OS machine id) instead of creating a duplicate; the
     old install's credential stops working.

@@ -39,7 +39,7 @@ Requires Node.js 18+ on the target machine.
 ## What it reports
 
 Besides hardware/software inventory, since
-[`docs/adr/0052-agent-based-discovery.md`](../../docs/adr/0052-agent-based-discovery.md):
+[`docs/adr/0055-agent-based-discovery.md`](../../docs/adr/0055-agent-based-discovery.md):
 
 - **A machine fingerprint** at enrollment — a SHA-256 of the OS's own machine
   id (`/etc/machine-id`, Windows `MachineGuid`, macOS `IOPlatformUUID`), hashed

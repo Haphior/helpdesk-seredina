@@ -141,6 +141,42 @@ describe.skipIf(!hasDb)('SLA engine', () => {
     expect(current.firstRespondedAt!.getTime()).toBe(stampedAt);
   });
 
+  it('records when the SLA clock started: at creation, and again on a priority change', async () => {
+    await upsertSlaPolicy(tenantId, { priority: 'HIGH', firstResponseMinutes: 30, resolutionMinutes: 240, businessHoursOnly: false });
+    await upsertSlaPolicy(tenantId, { priority: 'URGENT', firstResponseMinutes: 15, resolutionMinutes: 60, businessHoursOnly: false });
+
+    const ticket = await createTicketFromApi(tenantId, {
+      subject: 'Clock start',
+      body: 'body',
+      contactEmail: 'clock@example.com',
+      contactName: 'Clock',
+      priority: 'HIGH',
+    });
+    expect(ticket.slaStartedAt?.getTime()).toBe(ticket.createdAt.getTime());
+
+    await new Promise((r) => setTimeout(r, 20));
+    const beforeChange = Date.now();
+    const updated = await updateTicket(tenantId, ticket.id, { priority: 'URGENT' });
+    expect(updated.slaStartedAt!.getTime()).toBeGreaterThanOrEqual(beforeChange);
+    // The console measures "window used" from here, so it must match the recomputed due-at.
+    expect(updated.firstResponseDueAt!.getTime() - updated.slaStartedAt!.getTime()).toBe(15 * 60_000);
+
+    // Patching anything but the priority leaves the running clock alone.
+    const same = await updateTicket(tenantId, ticket.id, { assigneeId: agentUserId });
+    expect(same.slaStartedAt!.getTime()).toBe(updated.slaStartedAt!.getTime());
+  });
+
+  it('a ticket with no SLA policy has no clock start either', async () => {
+    const ticket = await createTicketFromApi(tenantId, {
+      subject: 'No clock',
+      body: 'body',
+      contactEmail: 'noclock@example.com',
+      contactName: 'No Clock',
+      priority: 'LOW',
+    });
+    expect(ticket.slaStartedAt).toBeNull();
+  });
+
   it('throws deleting an SLA policy that does not exist', async () => {
     await expect(deleteSlaPolicy(tenantId, randomUUID())).rejects.toThrow('SLA policy not found');
   });

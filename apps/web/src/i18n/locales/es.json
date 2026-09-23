@@ -164,7 +164,8 @@
     "creating": "Creando…",
     "remove": "quitar",
     "link": "Vincular",
-    "unassigned": "Sin asignar"
+    "unassigned": "Sin asignar",
+    "someone": "Alguien"
   },
   "tickets": {
     "title": "Tickets",
@@ -201,7 +202,8 @@
       "assignee": "Responsable",
       "channel": "Canal",
       "updated": "Actualizado",
-      "slaOverdue": "SLA vencido"
+      "slaOverdue": "SLA vencido",
+      "sla": "SLA"
     },
     "empty": "No hay tickets aquí.",
     "loadFailed": "No se pudieron cargar los tickets",
@@ -315,7 +317,13 @@
       "suggestFailed": "No se pudo sugerir una respuesta",
       "autonomousFailed": "No se pudo ejecutar el agente autónomo",
       "applyMacroFailed": "No se pudo aplicar la macro"
-    }
+    },
+    "typing_one": "{{names}} está escribiendo…",
+    "typing_other": "{{names}} están escribiendo…",
+    "collisionReply": "{{name}} respondió mientras escribías. Revisa su respuesta antes de enviar la tuya, para que el cliente no reciba dos.",
+    "collisionNote": "{{name}} agregó una nota interna mientras escribías.",
+    "collisionCustomer": "{{name}} volvió a escribir mientras redactabas: léelo antes de enviar.",
+    "collisionDismiss": "Entendido"
   },
   "tour": {
     "stepCount": "Paso {{current}} de {{total}}",
@@ -358,5 +366,13 @@
         "body": "Podés volver a ver este tour cuando quieras con el ícono de ayuda, justo abajo."
       }
     }
+  },
+  "sla": {
+    "left": "Quedan {{time}}",
+    "overdueBy": "Vencido hace {{time}}",
+    "firstResponseDue": "Primera respuesta vence {{time}}",
+    "resolutionDue": "Resolución vence {{time}}",
+    "firstResponseShort": "Respuesta",
+    "resolutionShort": "Resolución"
   }
 }

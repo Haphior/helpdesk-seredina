@@ -286,6 +286,11 @@ model Ticket {
   // "Met" is resolvedAt (already existed) and firstRespondedAt below; a milestone
   // is breached when its due-at has passed and the matching "met" timestamp is
   // still null. See docs/adr/0011-sla-engine.md.
+  // When the current SLA clock started: creation, or the latest priority change
+  // (which recomputes both due-ats from that moment). The console's countdown
+  // measures "how much of the window is used" against it. Null on tickets from
+  // before it existed -- the console falls back to createdAt.
+  slaStartedAt       DateTime? @map("sla_started_at")
   firstResponseDueAt DateTime? @map("first_response_due_at")
   firstRespondedAt   DateTime? @map("first_responded_at")
   resolutionDueAt    DateTime? @map("resolution_due_at")
@@ -553,7 +558,7 @@ enum AssetDiscoverySource {
   AGENTLESS_SCAN
   AGENT
   // Seen in an enrolled agent's ARP/neighbor table -- passive discovery, no
-  // scanning (docs/adr/0052-agent-based-discovery.md).
+  // scanning (docs/adr/0055-agent-based-discovery.md).
   AGENT_NEIGHBOR
 }
 
@@ -653,7 +658,7 @@ model Device {
   // sha256 of the OS's own stable machine id (/etc/machine-id, Windows
   // MachineGuid, macOS IOPlatformUUID), hashed on the device so the raw id
   // never leaves it. Re-enrolling the same machine reuses its Device+Asset
-  // instead of creating a duplicate (docs/adr/0052-agent-based-discovery.md).
+  // instead of creating a duplicate (docs/adr/0055-agent-based-discovery.md).
   // Nullable: agents older than this send none.
   machineFingerprint String?   @map("machine_fingerprint")
   enrolledAt       DateTime  @default(now()) @map("enrolled_at")

@@ -7,7 +7,7 @@ import { normalizeMac, sanitizeNeighbors } from '../src/modules/devices/neighbor
 import { createDiscoveryJob, ServerSideScanDisabledError } from '../src/modules/discovery/service';
 
 /**
- * Agent-based discovery (docs/adr/0052-agent-based-discovery.md): server-side
+ * Agent-based discovery (docs/adr/0055-agent-based-discovery.md): server-side
  * scans restricted to self-hosted, machine-fingerprint dedup on re-enrollment,
  * and passive discovery from an agent's ARP/neighbor table.
  */
