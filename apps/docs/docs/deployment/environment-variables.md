@@ -58,7 +58,7 @@ used *exclusively*, never falling back to the deployment's global config.
 |---|---|---|
 | `API_PORT` | No | The API's port (`4000` by default). |
 | `WEB_PORT` | No | The web console's port (`8080` by default). |
-| `WEB_ORIGIN` | Yes | Must match how the browser reaches the console (never the in-compose-network hostname). Also read by `api` to build its own public links (e.g. a CSAT survey link) — left unset, that one feature just silently no-ops. |
+| `WEB_ORIGIN` | Yes | Must match how the browser reaches the console (never the in-compose-network hostname). Also read by `api` to build its own public links (e.g. a CSAT survey link) — left unset, that one feature just silently no-ops. Also where Microsoft 365 / Gmail send the browser back after connecting an email channel (`<WEB_ORIGIN>/api/email-channels/oauth/callback`, unless `API_PUBLIC_URL` is set). |
 | `VITE_API_URL` | No | Leave empty: the console reaches the API at `/api` on its own address. Only set it to point the console at an API on a different origin (baked in at build time). |
 | `API_PUBLIC_URL` | Only if using Telegram | A real, internet-reachable HTTPS base URL for your API — Telegram calls it directly to deliver messages, so it can never be `localhost` or an internal compose hostname. Also the address the Devices page puts in agent enrollment commands. `configure-address.sh` sets it to `https://<address>/api`. |
 | `SEREDINA_SITE` | With the `proxy` profile | The address the HTTPS proxy serves: a domain or IP (`http://…` when `TLS_MODE=off`). Set by `scripts/configure-address.sh`. |

@@ -133,7 +133,9 @@ LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT id, tenant_id FROM email_channels WHERE is_active = true;
+  -- connection_status: an OAuth channel still waiting for consent, or whose
+  -- grant was revoked, has nothing to log in with -- see docs/adr/0055-email-oauth.md.
+  SELECT id, tenant_id FROM email_channels WHERE is_active = true AND connection_status = 'connected';
 $$;
 
 REVOKE ALL ON FUNCTION public.list_active_email_channels() FROM PUBLIC;

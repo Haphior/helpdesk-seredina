@@ -358,5 +358,62 @@
         "body": "You can watch this tour again anytime with the help icon right below."
       }
     }
+  },
+  "emailChannels": {
+    "title": "Email Channels",
+    "newChannel": "New channel",
+    "newChannelTitle": "New email channel",
+    "intro": "Tickets are created from the mail that arrives in these mailboxes; agent replies go back out through the same account. Connect Microsoft 365 or Gmail with OAuth, or any other provider with IMAP/SMTP.",
+    "loadFailed": "Failed to load email channels",
+    "deleteFailed": "Failed to delete channel",
+    "createFailed": "Failed to create channel",
+    "confirmDelete": "Delete email channel \"{{name}}\"?",
+    "empty": "No email channel configured yet.",
+    "name": "Name",
+    "from": "From",
+    "provider": "Provider",
+    "status": "Status",
+    "lastPolled": "Last polled",
+    "never": "Never",
+    "connect": "connect",
+    "reconnect": "reconnect",
+    "delete": "delete",
+    "connectedNotice": "Mailbox connected. New mail will start arriving as tickets within a minute.",
+    "connectFailed": "Could not connect the mailbox: {{error}}",
+    "authType": {
+      "password": "Other (IMAP/SMTP)",
+      "google_oauth": "Gmail / Google Workspace",
+      "microsoft_oauth": "Microsoft 365 / Outlook"
+    },
+    "statusValue": {
+      "connected": "Connected",
+      "pending_authorization": "Waiting for sign-in",
+      "needs_reconnect": "Reconnect needed"
+    },
+    "fromAddress": "From address",
+    "mailboxAddress": "Mailbox address (the account you'll sign in with)",
+    "setup": {
+      "microsoft_oauth": {
+        "title": "Before you start: register an app in Microsoft Entra",
+        "steps": "In the Azure portal go to Microsoft Entra ID → App registrations → New registration. Add the redirect URI below as a \"Web\" platform. Under API permissions add the Office 365 Exchange Online delegated permissions IMAP.AccessAsUser.All and SMTP.Send (plus offline_access), then grant admin consent. Create a client secret under Certificates & secrets. SMTP AUTH must be enabled for the mailbox."
+      },
+      "google_oauth": {
+        "title": "Before you start: create an OAuth client in Google Cloud",
+        "steps": "In the Google Cloud console enable the Gmail API, configure the OAuth consent screen (Internal for Workspace), and add the https://mail.google.com/ scope. Then create Credentials → OAuth client ID of type \"Web application\" and add the redirect URI below."
+      }
+    },
+    "redirectUri": "Redirect URI to register",
+    "redirectUriMissing": "The server has no public address configured (WEB_ORIGIN or API_PUBLIC_URL), so the provider can't send you back here.",
+    "clientId": "Client (application) ID",
+    "clientSecret": "Client secret",
+    "microsoftTenant": "Directory (tenant) ID or domain — optional, defaults to any work account",
+    "saveAndConnect": "Save and sign in",
+    "inbound": "Inbound (IMAP)",
+    "outbound": "Outbound (SMTP)",
+    "host": "Host",
+    "port": "Port",
+    "username": "Username",
+    "password": "Password",
+    "useTls": "Use TLS"
   }
 }

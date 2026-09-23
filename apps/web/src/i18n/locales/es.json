@@ -358,5 +358,62 @@
         "body": "Podés volver a ver este tour cuando quieras con el ícono de ayuda, justo abajo."
       }
     }
+  },
+  "emailChannels": {
+    "title": "Canales de correo",
+    "newChannel": "Nuevo canal",
+    "newChannelTitle": "Nuevo canal de correo",
+    "intro": "Los tickets se crean a partir del correo que llega a estos buzones; las respuestas de los agentes salen por la misma cuenta. Conecta Microsoft 365 o Gmail con OAuth, o cualquier otro proveedor por IMAP/SMTP.",
+    "loadFailed": "No se pudieron cargar los canales de correo",
+    "deleteFailed": "No se pudo eliminar el canal",
+    "createFailed": "No se pudo crear el canal",
+    "confirmDelete": "¿Eliminar el canal de correo \"{{name}}\"?",
+    "empty": "Todavía no hay canales de correo configurados.",
+    "name": "Nombre",
+    "from": "Remitente",
+    "provider": "Proveedor",
+    "status": "Estado",
+    "lastPolled": "Última revisión",
+    "never": "Nunca",
+    "connect": "conectar",
+    "reconnect": "reconectar",
+    "delete": "eliminar",
+    "connectedNotice": "Buzón conectado. El correo nuevo empezará a llegar como tickets en menos de un minuto.",
+    "connectFailed": "No se pudo conectar el buzón: {{error}}",
+    "authType": {
+      "password": "Otro (IMAP/SMTP)",
+      "google_oauth": "Gmail / Google Workspace",
+      "microsoft_oauth": "Microsoft 365 / Outlook"
+    },
+    "statusValue": {
+      "connected": "Conectado",
+      "pending_authorization": "Esperando inicio de sesión",
+      "needs_reconnect": "Requiere reconexión"
+    },
+    "fromAddress": "Dirección del remitente",
+    "mailboxAddress": "Dirección del buzón (la cuenta con la que iniciarás sesión)",
+    "setup": {
+      "microsoft_oauth": {
+        "title": "Antes de empezar: registra una app en Microsoft Entra",
+        "steps": "En el portal de Azure ve a Microsoft Entra ID → Registros de aplicaciones → Nuevo registro. Agrega el URI de redirección de abajo como plataforma \"Web\". En Permisos de API agrega los permisos delegados de Office 365 Exchange Online IMAP.AccessAsUser.All y SMTP.Send (y offline_access), y concede el consentimiento de administrador. Crea un secreto de cliente en Certificados y secretos. El buzón debe tener SMTP AUTH habilitado."
+      },
+      "google_oauth": {
+        "title": "Antes de empezar: crea un cliente OAuth en Google Cloud",
+        "steps": "En la consola de Google Cloud habilita la API de Gmail, configura la pantalla de consentimiento OAuth (Interna para Workspace) y agrega el alcance https://mail.google.com/. Luego crea Credenciales → ID de cliente OAuth de tipo \"Aplicación web\" y agrega el URI de redirección de abajo."
+      }
+    },
+    "redirectUri": "URI de redirección a registrar",
+    "redirectUriMissing": "El servidor no tiene una dirección pública configurada (WEB_ORIGIN o API_PUBLIC_URL), así que el proveedor no puede devolverte aquí.",
+    "clientId": "ID de cliente (aplicación)",
+    "clientSecret": "Secreto de cliente",
+    "microsoftTenant": "ID de directorio (inquilino) o dominio — opcional, por defecto cualquier cuenta profesional",
+    "saveAndConnect": "Guardar e iniciar sesión",
+    "inbound": "Entrada (IMAP)",
+    "outbound": "Salida (SMTP)",
+    "host": "Servidor",
+    "port": "Puerto",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "useTls": "Usar TLS"
   }
 }

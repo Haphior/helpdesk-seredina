@@ -5,8 +5,8 @@ import { prisma, withTenantTx } from '@seredina/db';
  * the honest opposite of how a vendor whose business model depends on lock-in
  * treats migrating away. Every tenant-scoped table (see
  * packages/db/src/prisma.ts's TENANT_SCOPE_FIELD) is included, EXCEPT:
- *   - secrets: User.passwordHash, ApiKey.hashedKey, EmailChannel's two
- *     encrypted password fields, Webhook.secretEncrypted -- explicit `select`
+ *   - secrets: User.passwordHash, ApiKey.hashedKey, EmailChannel's
+ *     encrypted password and OAuth secret/token fields, Webhook.secretEncrypted -- explicit `select`
  *     allowlists on those four models, never a denylist, so a future field
  *     added to any of them can't silently leak into an export by default.
  *   - Notification and DiscoveryJob rows -- transient inbox/scan-job state,
@@ -95,6 +95,10 @@ export async function exportTenantData(tenantId: string) {
           isActive: true,
           lastPolledAt: true,
           createdAt: true,
+          authType: true,
+          connectionStatus: true,
+          oauthClientId: true,
+          oauthMicrosoftTenant: true,
         },
       }),
       tx.customFieldDefinition.findMany(),

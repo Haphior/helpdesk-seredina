@@ -12,3 +12,4 @@ export * from './notifications';
 export * from './kb';
 export * from './telegram';
 export * from './liveEvents';
+export * from './emailOAuth';

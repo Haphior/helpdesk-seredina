@@ -256,7 +256,14 @@ export interface EmailChannel {
   isActive: boolean;
   lastPolledAt: string | null;
   createdAt: string;
+  authType: EmailAuthType;
+  connectionStatus: 'connected' | 'pending_authorization' | 'needs_reconnect';
+  lastError: string | null;
+  oauthClientId: string | null;
+  oauthMicrosoftTenant: string | null;
 }
+
+export type EmailAuthType = 'password' | 'google_oauth' | 'microsoft_oauth';
 
 export interface MacroActions {
   setStatusId?: string;

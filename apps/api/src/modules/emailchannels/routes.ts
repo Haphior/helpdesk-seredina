@@ -1,9 +1,21 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { isValidMicrosoftTenant } from '@seredina/shared';
 import { requirePermission } from '../rbac/permissions';
-import { createEmailChannel, deleteEmailChannel, listEmailChannels } from './service';
+import {
+  completeEmailOAuth,
+  createEmailChannel,
+  createOAuthEmailChannel,
+  deleteEmailChannel,
+  emailChannelsConsoleUrl,
+  emailOAuthRedirectUri,
+  EmailOAuthSetupError,
+  listEmailChannels,
+  startEmailOAuth,
+} from './service';
 
-const emailChannelSchema = z.object({
+const passwordChannelSchema = z.object({
+  authType: z.literal('password').default('password'),
   name: z.string().min(1).max(100),
   fromAddress: z.string().email(),
   imapHost: z.string().min(1),
@@ -18,13 +30,27 @@ const emailChannelSchema = z.object({
   smtpPassword: z.string().min(1),
 });
 
+const oauthChannelSchema = z.object({
+  authType: z.enum(['google_oauth', 'microsoft_oauth']),
+  name: z.string().min(1).max(100),
+  fromAddress: z.string().email(),
+  clientId: z.string().min(1).max(500),
+  clientSecret: z.string().min(1).max(2000),
+  microsoftTenant: z
+    .string()
+    .max(253)
+    .refine((v) => v === '' || isValidMicrosoftTenant(v), 'must be a directory (tenant) ID, a domain, or "organizations"')
+    .nullish(),
+});
+
 export default async function emailChannelRoutes(app: FastifyInstance) {
   app.get(
     '/email-channels',
     { preHandler: [app.authenticate, requirePermission('channels:manage')] },
     async (request, reply) => {
       const emailChannels = await listEmailChannels(request.user.tenantId);
-      return reply.send({ emailChannels });
+      // The redirect URI the admin must register in their Google/Microsoft app.
+      return reply.send({ emailChannels, oauthRedirectUri: emailOAuthRedirectUri() });
     },
   );
 
@@ -32,12 +58,62 @@ export default async function emailChannelRoutes(app: FastifyInstance) {
     '/email-channels',
     { preHandler: [app.authenticate, requirePermission('channels:manage')] },
     async (request, reply) => {
-      const parsed = emailChannelSchema.safeParse(request.body);
+      const authType = (request.body as { authType?: unknown } | null)?.authType;
+      if (authType === 'google_oauth' || authType === 'microsoft_oauth') {
+        const parsed = oauthChannelSchema.safeParse(request.body);
+        if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+        const channel = await createOAuthEmailChannel(request.user.tenantId, parsed.data);
+        return reply.code(201).send(channel);
+      }
+
+      const parsed = passwordChannelSchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.code(400).send({ error: parsed.error.flatten() });
       }
       const channel = await createEmailChannel(request.user.tenantId, parsed.data);
       return reply.code(201).send(channel);
+    },
+  );
+
+  // Starts (or restarts, for a needs_reconnect channel) the consent flow; the
+  // console then navigates to the returned URL.
+  app.post(
+    '/email-channels/:id/oauth/authorize',
+    { preHandler: [app.authenticate, requirePermission('channels:manage')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      try {
+        const authorizeUrl = await startEmailOAuth(request.user.tenantId, id);
+        return reply.send({ authorizeUrl });
+      } catch (err) {
+        if (err instanceof EmailOAuthSetupError) return reply.code(400).send({ error: err.message });
+        throw err;
+      }
+    },
+  );
+
+  // Google/Microsoft redirect the admin's browser here -- no session header on
+  // a top-level redirect, so the signed `state` carries the tenant and channel.
+  // Always answers with a redirect back to the console, never a JSON error page.
+  app.get(
+    '/email-channels/oauth/callback',
+    { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const q = request.query as { code?: string; state?: string; error?: string; error_description?: string };
+      if (q.error) {
+        return reply.redirect(emailChannelsConsoleUrl({ error: q.error_description || q.error }));
+      }
+      if (!q.code || !q.state) {
+        return reply.redirect(emailChannelsConsoleUrl({ error: 'missing code or state' }));
+      }
+      try {
+        await completeEmailOAuth(q.state, q.code);
+        return reply.redirect(emailChannelsConsoleUrl({ connected: true }));
+      } catch (err) {
+        request.log.warn({ err }, 'email OAuth callback failed');
+        const message = err instanceof Error ? err.message : 'authorization failed';
+        return reply.redirect(emailChannelsConsoleUrl({ error: message.slice(0, 300) }));
+      }
     },
   );
 

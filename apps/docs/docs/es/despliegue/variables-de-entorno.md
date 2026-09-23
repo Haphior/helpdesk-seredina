@@ -60,7 +60,7 @@ del despliegue.
 |---|---|---|
 | `API_PORT` | No | Puerto de la API (`4000` por defecto). |
 | `WEB_PORT` | No | Puerto de la consola web (`8080` por defecto). |
-| `WEB_ORIGIN` | Sí | Debe ser como el navegador llega a la consola (nunca el hostname interno de compose). También la usa `api` para construir enlaces públicos propios (por ejemplo, un link de encuesta CSAT) — sin definir, esa funcionalidad puntual simplemente no hace nada. |
+| `WEB_ORIGIN` | Sí | Debe ser como el navegador llega a la consola (nunca el hostname interno de compose). También la usa `api` para construir enlaces públicos propios (por ejemplo, un link de encuesta CSAT) — sin definir, esa funcionalidad puntual simplemente no hace nada. También es adonde Microsoft 365 / Gmail devuelven el navegador al conectar un canal de correo (`<WEB_ORIGIN>/api/email-channels/oauth/callback`, salvo que `API_PUBLIC_URL` esté definida). |
 | `VITE_API_URL` | No | Déjala vacía: la consola llega a la API en `/api` de su propia dirección. Defínela solo para apuntar la consola a una API en otro origen (queda fija al compilar). |
 | `API_PUBLIC_URL` | Solo si usás Telegram | URL HTTPS real, accesible desde internet, de tu API — Telegram la llama directamente para entregar mensajes, así que nunca puede ser `localhost` ni un hostname interno de compose. También es la dirección que la página Dispositivos pone en los comandos de enrolamiento de agentes. `configure-address.sh` la define como `https://<dirección>/api`. |
 | `SEREDINA_SITE` | Con el perfil `proxy` | La dirección que sirve el proxy HTTPS: un dominio o IP (`http://…` si `TLS_MODE=off`). La define `scripts/configure-address.sh`. |

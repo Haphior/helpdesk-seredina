@@ -473,15 +473,32 @@ model EmailChannel {
   imapPort              Int       @map("imap_port")
   imapSecure            Boolean   @default(true) @map("imap_secure")
   imapUsername          String    @map("imap_username")
-  imapPasswordEncrypted String    @map("imap_password_encrypted")
+  // Null for an OAuth channel (authType != 'password'), which authenticates
+  // with a refreshed access token instead -- see docs/adr/0055-email-oauth.md.
+  imapPasswordEncrypted String?   @map("imap_password_encrypted")
   smtpHost              String    @map("smtp_host")
   smtpPort              Int       @map("smtp_port")
   smtpSecure            Boolean   @default(true) @map("smtp_secure")
   smtpUsername          String    @map("smtp_username")
-  smtpPasswordEncrypted String    @map("smtp_password_encrypted")
+  smtpPasswordEncrypted String?   @map("smtp_password_encrypted")
   isActive              Boolean   @default(true) @map("is_active")
   lastPolledAt          DateTime? @map("last_polled_at")
   createdAt             DateTime  @default(now()) @map("created_at")
+
+  // 'password' | 'google_oauth' | 'microsoft_oauth' (EMAIL_AUTH_TYPES in
+  // packages/shared/src/emailOAuth.ts). The OAuth app is the tenant's own
+  // (bring-your-own), so its client secret is stored encrypted like a password.
+  authType                    String    @default("password") @map("auth_type")
+  // 'connected' | 'pending_authorization' | 'needs_reconnect' -- the worker
+  // only polls 'connected' channels.
+  connectionStatus            String    @default("connected") @map("connection_status")
+  lastError                   String?   @map("last_error")
+  oauthClientId               String?   @map("oauth_client_id")
+  oauthClientSecretEncrypted  String?   @map("oauth_client_secret_encrypted")
+  oauthMicrosoftTenant        String?   @map("oauth_microsoft_tenant")
+  oauthRefreshTokenEncrypted  String?   @map("oauth_refresh_token_encrypted")
+  oauthAccessTokenEncrypted   String?   @map("oauth_access_token_encrypted")
+  oauthAccessTokenExpiresAt   DateTime? @map("oauth_access_token_expires_at")
 
   @@map("email_channels")
 }

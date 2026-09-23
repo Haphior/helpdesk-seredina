@@ -9,6 +9,15 @@ contain breaking changes).
 
 ### Added
 
+- **Connect Microsoft 365 and Gmail mailboxes with OAuth**
+  (`docs/adr/0055-email-oauth.md`): the Email Channels page now offers
+  "Microsoft 365 / Outlook" and "Gmail / Google Workspace" next to plain
+  IMAP/SMTP. You register your own app in Microsoft Entra or Google Cloud,
+  paste its client ID and secret, and sign in as the mailbox; server
+  settings are filled in for you. Tokens are refreshed automatically. If the
+  provider revokes access, the channel shows "Reconnect needed" and stops
+  being polled until you reconnect. Login errors for any mailbox, including
+  password ones, now show on the Email Channels page.
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or
