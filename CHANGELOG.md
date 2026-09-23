@@ -18,6 +18,13 @@ contain breaking changes).
   provider revokes access, the channel shows "Reconnect needed" and stops
   being polled until you reconnect. Login errors for any mailbox, including
   password ones, now show on the Email Channels page.
+- **Email attachments are kept** (`docs/adr/0056-inbound-email-attachments.md`):
+  files attached to an incoming email (including pasted screenshots) are
+  saved on the ticket, with the same 8 MB / 5-per-message limits as manual
+  uploads. Anything that doesn't fit is named in a note on the message
+  instead of disappearing.
+- **Replies go out from the mailbox the customer wrote to**, when a tenant
+  has more than one email channel, instead of always from the first one.
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or

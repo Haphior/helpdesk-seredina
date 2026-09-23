@@ -213,11 +213,11 @@ narrative in the ADR. Browser-verified the `/email-channels` settings page and t
 rendered conversation thread, zero console errors.
 
 **Deferred from this pass, still open for Phase 1:**
-- A ticket doesn't remember which specific `EmailChannel` it arrived through —
+- ✅ *Resolved, ADR 0056:* A ticket doesn't remember which specific `EmailChannel` it arrived through —
   outbound send just picks the tenant's first active one. Fine for one channel per
   tenant (the expected case); needs `Ticket.emailChannelId` before multiple email
   channels per tenant are meaningfully supported.
-- No email attachment handling (`mailparser` extracts them; nothing stores/surfaces
+- ✅ *Resolved, ADR 0056:* No email attachment handling (`mailparser` extracts them; nothing stores/surfaces
   them yet).
 - Realtime updates over WebSockets via Redis pub/sub (the web app currently polls by
   navigation/refetch-after-mutation only — no live push).

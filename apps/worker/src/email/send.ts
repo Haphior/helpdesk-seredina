@@ -5,10 +5,9 @@ export async function sendEmailMessage(tenantId: string, ticketId: string, messa
   const data = await withTenantTx(prisma, tenantId, async (tx) => {
     const message = await tx.message.findUniqueOrThrow({ where: { id: messageId } });
     const ticket = await tx.ticket.findUniqueOrThrow({ where: { id: ticketId }, include: { contact: true } });
-    // v1: the tenant's first connected email channel -- a ticket doesn't remember which
-    // specific channel it arrived through yet (only one is expected in practice for
-    // now). See docs/adr/0004-email-channel.md.
-    const channel = pickSendChannel(await tx.emailChannel.findMany({ orderBy: { createdAt: 'asc' } }), null);
+    // The mailbox the conversation arrived on, so the reply comes from the address
+    // the customer wrote to; otherwise the tenant's first connected channel.
+    const channel = pickSendChannel(await tx.emailChannel.findMany({ orderBy: { createdAt: 'asc' } }), ticket.emailChannelId);
     if (!channel) throw new Error('no connected email channel configured for this tenant');
 
     // The most recent inbound message with a Message-ID drives the In-Reply-To/

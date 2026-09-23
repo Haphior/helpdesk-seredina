@@ -275,6 +275,12 @@ model Ticket {
   // credential (a guess = read someone else's conversation), not a
   // dedup key where "not unique yet" is a normal, temporary state.
   widgetToken String?       @unique @map("widget_token")
+  // Set only for channel='email' -- the mailbox this conversation arrived on,
+  // so replies go out from the same address the customer wrote to (not just
+  // the tenant's first channel). Null (channel deleted) falls back to the
+  // first connected one.
+  emailChannelId String?      @map("email_channel_id") @db.Uuid
+  emailChannel   EmailChannel? @relation(fields: [emailChannelId], references: [id], onDelete: SetNull)
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
   resolvedAt DateTime?      @map("resolved_at")
@@ -417,9 +423,8 @@ model Message {
   @@map("messages")
 }
 
-// v1 file attachments -- manual uploads on a reply/note only (see
-// docs/adr/0026-work-section-improvements.md for why inbound-email attachments
-// are explicitly deferred). Bytes stored directly in Postgres, not an
+// File attachments -- manual uploads on a reply/note, and files attached to
+// inbound email (docs/adr/0056-inbound-email-attachments.md). Bytes stored directly in Postgres, not an
 // object-storage bucket: no MinIO/S3 exists in this stack yet (self-hosted
 // Docker Compose has none), and a hard per-file size cap enforced at the
 // service layer (modules/attachments/service.ts) keeps row/table bloat bounded
@@ -499,6 +504,8 @@ model EmailChannel {
   oauthRefreshTokenEncrypted  String?   @map("oauth_refresh_token_encrypted")
   oauthAccessTokenEncrypted   String?   @map("oauth_access_token_encrypted")
   oauthAccessTokenExpiresAt   DateTime? @map("oauth_access_token_expires_at")
+
+  tickets Ticket[]
 
   @@map("email_channels")
 }

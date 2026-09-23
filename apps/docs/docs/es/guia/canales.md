@@ -77,7 +77,9 @@ El worker revisa cada buzón conectado por polling (cada
 `EMAIL_POLL_INTERVAL_MS`, 30 segundos por defecto) — no es una suscripción
 push. Un correo nuevo de un remitente desconocido crea un ticket; una
 respuesta a un hilo existente se agrega como mensaje al ticket
-correspondiente. Si un buzón no logra iniciar sesión, el error aparece en
+correspondiente. Los adjuntos se guardan en el ticket (hasta 5 por correo,
+8 MB cada uno — lo que no cabe se menciona en una nota del mensaje), y las
+respuestas salen desde el mismo buzón al que escribió el cliente. Si un buzón no logra iniciar sesión, el error aparece en
 la página de canales de correo.
 
 ## API

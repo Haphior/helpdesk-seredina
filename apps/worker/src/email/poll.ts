@@ -46,6 +46,13 @@ async function pollEmailChannel(channel: EmailChannel): Promise<void> {
           messageId: parsed.messageId ?? `<generated-${channel.id}-${message.uid}@seredina.local>`,
           inReplyTo: parsed.inReplyTo ?? null,
           references,
+          emailChannelId: channel.id,
+          attachments: parsed.attachments.map((a, i) => ({
+            filename: a.filename || `attachment-${i + 1}${a.contentType === 'message/rfc822' ? '.eml' : ''}`,
+            mimeType: a.contentType || 'application/octet-stream',
+            data: a.content,
+            inline: a.related === true || a.contentDisposition === 'inline',
+          })),
         });
 
         if (assigneeToNotify) {

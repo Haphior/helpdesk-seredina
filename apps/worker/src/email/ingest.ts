@@ -1,5 +1,14 @@
 import { prisma, withTenantTx } from '@seredina/db';
+import { MAX_ATTACHMENTS_PER_MESSAGE, MAX_ATTACHMENT_SIZE_BYTES } from '@seredina/shared';
 import { publishLive } from '../lib/live';
+
+export interface InboundAttachment {
+  filename: string;
+  mimeType: string;
+  data: Buffer;
+  /** An inline image referenced from the HTML body (a pasted screenshot, a signature logo). */
+  inline: boolean;
+}
 
 export interface InboundEmail {
   tenantId: string;
@@ -10,6 +19,9 @@ export interface InboundEmail {
   messageId: string;
   inReplyTo: string | null;
   references: string[];
+  /** The mailbox it arrived on -- replies go back out through the same one. */
+  emailChannelId?: string | null;
+  attachments?: InboundAttachment[];
 }
 
 export interface AssigneeNotice {
@@ -37,6 +49,7 @@ export interface IngestResult {
  */
 export async function ingestInboundEmail(email: InboundEmail): Promise<IngestResult> {
   let createdTicket = false;
+  const { kept, skippedNote } = selectInboundAttachments(email.attachments ?? []);
   const result = await withTenantTx(prisma, email.tenantId, async (tx) => {
     const candidateIds = [email.inReplyTo, ...email.references].filter((v): v is string => Boolean(v));
 
@@ -71,6 +84,10 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<IngestRes
         }
       }
 
+      if (!ticket.emailChannelId && email.emailChannelId) {
+        await tx.ticket.update({ where: { id: ticketId }, data: { emailChannelId: email.emailChannelId } });
+      }
+
       if (ticket.assigneeId) {
         assigneeToNotify = { userId: ticket.assigneeId, ticketNumber: ticket.number, ticketSubject: ticket.subject };
       }
@@ -91,22 +108,36 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<IngestRes
           statusId: openStatus.id,
           contactId: contact.id,
           channel: 'email',
+          emailChannelId: email.emailChannelId ?? null,
         },
       });
       ticketId = ticket.id;
       createdTicket = true;
     }
 
-    await tx.message.create({
+    const message = await tx.message.create({
       data: {
         tenantId: email.tenantId,
         ticketId,
         authorType: 'CONTACT',
-        body: email.text,
+        body: skippedNote ? `${email.text}\n\n${skippedNote}` : email.text,
         isPrivateNote: false,
         externalId: email.messageId,
       },
     });
+
+    for (const a of kept) {
+      await tx.attachment.create({
+        data: {
+          tenantId: email.tenantId,
+          messageId: message.id,
+          filename: a.filename,
+          mimeType: a.mimeType,
+          sizeBytes: a.data.byteLength,
+          data: a.data,
+        },
+      });
+    }
 
     return { ticketId, assigneeToNotify };
   });
@@ -114,4 +145,36 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<IngestRes
   // After the commit, never inside it -- see docs/adr/0053-live-updates.md.
   await publishLive(email.tenantId, { type: createdTicket ? 'ticket.created' : 'message.created', ticketId: result.ticketId });
   return result;
+}
+
+/**
+ * Same caps as a manual upload (packages/shared/src/attachments.ts). Real
+ * attachments are kept before inline images, so a signature logo can't push
+ * out the file the customer actually sent. Whatever doesn't fit is named in a
+ * note on the message instead of disappearing silently -- see
+ * docs/adr/0056-inbound-email-attachments.md.
+ */
+export function selectInboundAttachments(attachments: InboundAttachment[]): {
+  kept: InboundAttachment[];
+  skippedNote: string | null;
+} {
+  const ordered = [...attachments.filter((a) => !a.inline), ...attachments.filter((a) => a.inline)];
+  const kept: InboundAttachment[] = [];
+  const skipped: string[] = [];
+
+  for (const a of ordered) {
+    if (a.data.byteLength > MAX_ATTACHMENT_SIZE_BYTES) {
+      skipped.push(`${a.filename} (${(a.data.byteLength / (1024 * 1024)).toFixed(1)} MB, over the ${MAX_ATTACHMENT_SIZE_BYTES / (1024 * 1024)} MB limit)`);
+    } else if (kept.length >= MAX_ATTACHMENTS_PER_MESSAGE) {
+      // Inline images past the cap are almost always signature logos -- not worth a note.
+      if (!a.inline) skipped.push(`${a.filename} (more than ${MAX_ATTACHMENTS_PER_MESSAGE} attachments)`);
+    } else {
+      kept.push(a);
+    }
+  }
+
+  return {
+    kept,
+    skippedNote: skipped.length > 0 ? `[Attachments not saved: ${skipped.join('; ')}]` : null,
+  };
 }

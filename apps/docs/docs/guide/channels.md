@@ -69,7 +69,9 @@ The worker checks every connected mailbox by polling (every
 `EMAIL_POLL_INTERVAL_MS`, 30 seconds by default) — it's not a push
 subscription. A new email from an unknown sender creates a ticket; a
 reply to an existing thread gets added as a message on the matching
-ticket. A mailbox that fails to log in shows the error on the Email
+ticket. Attachments are saved on the ticket (up to 5 per email, 8 MB
+each — anything that doesn't fit is named in a note on the message), and
+replies go out from the same mailbox the customer wrote to. A mailbox that fails to log in shows the error on the Email
 Channels page.
 
 ## API
