@@ -3,9 +3,11 @@ import { Queue } from 'bullmq';
 import {
   ESCALATION_ADVANCE_QUEUE_NAME,
   NOTIFICATION_EMAIL_QUEUE_NAME,
+  TICKET_FOLLOWUP_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type EscalationAdvanceJobPayload,
   type NotificationEmailJobPayload,
+  type TicketFollowupJobPayload,
   type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
 
@@ -39,3 +41,6 @@ export const escalationAdvanceQueue = new Queue<EscalationAdvanceJobPayload>(ESC
  * wiring exists). See docs/adr/0022-notifications.md.
  */
 export const notificationEmailQueue = new Queue<NotificationEmailJobPayload>(NOTIFICATION_EMAIL_QUEUE_NAME, { connection });
+
+// Consumed by apps/api, not here -- see apps/api/src/lib/ticketFollowup.ts.
+export const ticketFollowupQueue = new Queue<TicketFollowupJobPayload>(TICKET_FOLLOWUP_QUEUE_NAME, { connection });

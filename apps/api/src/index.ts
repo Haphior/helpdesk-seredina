@@ -48,6 +48,7 @@ import deviceRoutes from './modules/devices/routes';
 import liveRoutes from './modules/live/routes';
 import auditRoutes from './modules/audit/routes';
 import ssoRoutes from './modules/sso/routes';
+import { startTicketFollowupWorker } from './lib/ticketFollowup';
 
 initErrorTracking();
 
@@ -174,6 +175,7 @@ export function buildApp() {
 
 if (require.main === module) {
   const app = buildApp();
+  startTicketFollowupWorker();
   const port = Number(process.env.PORT ?? 4000);
   app
     .listen({ port, host: '0.0.0.0' })

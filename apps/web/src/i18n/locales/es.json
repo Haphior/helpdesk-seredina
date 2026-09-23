@@ -326,6 +326,11 @@
       "suggestFailed": "No se pudo sugerir una respuesta",
       "autonomousFailed": "No se pudo ejecutar el agente autónomo",
       "applyMacroFailed": "No se pudo aplicar la macro"
+    },
+    "aiTriage": {
+      "suggestion": "La IA sugiere prioridad {{priority}}, equipo {{team}}",
+      "noTeam": "sin cambios",
+      "apply": "Aplicar"
     }
   },
   "tour": {
@@ -505,7 +510,8 @@
       "user.mfa_reset": "Verificación en dos pasos restablecida por un administrador",
       "tenant.mfa_policy_changed": "Cambió la exigencia de verificación en dos pasos",
       "sso.settings_updated": "Configuración de inicio de sesión único modificada",
-      "sso.settings_deleted": "Inicio de sesión único quitado"
+      "sso.settings_deleted": "Inicio de sesión único quitado",
+      "ai_settings.triage_mode_changed": "Modo de clasificación por IA modificado"
     }
   },
   "mfa": {
@@ -610,5 +616,24 @@
     "enabledHint": "Agrega un botón \"Iniciar sesión con SSO\" a la página de inicio de sesión. Las contraseñas siguen funcionando.",
     "enforced": "Exigir inicio de sesión único",
     "enforcedHint": "Solo los administradores pueden seguir entrando con contraseña: es la vía de acceso si el proveedor de identidad tiene un problema."
+  },
+  "aiTriage": {
+    "title": "Clasificación de tickets nuevos con IA",
+    "intro": "Cuando llega un ticket, la IA lee su asunto y primer mensaje y elige una prioridad y un equipo. Cada ticket nuevo cuesta una llamada pequeña al modelo.",
+    "failed": "No se pudo cambiar la clasificación con IA",
+    "mode": {
+      "off": {
+        "label": "Desactivada",
+        "hint": "Sin clasificación."
+      },
+      "suggest": {
+        "label": "Sugerir",
+        "hint": "Muestra la sugerencia en el ticket; un agente la aplica con un clic."
+      },
+      "auto": {
+        "label": "Aplicar automáticamente",
+        "hint": "Asigna la prioridad y el equipo de inmediato — solo si nadie los fijó antes — y deja una nota interna explicando por qué."
+      }
+    }
   }
 }

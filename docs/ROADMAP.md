@@ -222,7 +222,8 @@ rendered conversation thread, zero console errors.
 - Realtime updates over WebSockets via Redis pub/sub (the web app currently polls by
   navigation/refetch-after-mutation only — no live push).
 - ~~AI copilot v1 (reply suggestions, summarization, auto-classify)~~ — reply
-  suggestions and summarization shipped (below); auto-classify still open.
+  suggestions and summarization shipped (below); auto-classify shipped as AI
+  triage (priority + team), ADR 0061.
 - Knowledge base CRUD + full-text search.
 - `SEREDINA_MODE=self_hosted` auto-bootstrapping a default tenant in the `migrate`
   container.

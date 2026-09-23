@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { apiDelete, apiGet, apiPatch, ApiError } from '../lib/api';
+import { useTranslation } from 'react-i18next';
+import { apiDelete, apiGet, apiPatch, apiPut, ApiError } from '../lib/api';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Select } from '../components/Select';
@@ -149,6 +150,54 @@ export function AiSettings() {
           </form>
         </Card>
       )}
+
+      <AiTriageSettings />
     </div>
+  );
+}
+
+type TriageMode = 'off' | 'suggest' | 'auto';
+
+/** AI triage of new tickets -- docs/adr/0061-ai-triage.md. */
+function AiTriageSettings() {
+  const { t } = useTranslation();
+  const [mode, setMode] = useState<TriageMode | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiGet<{ mode: TriageMode }>('/ai-triage-settings')
+      .then((r) => setMode(r.mode))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('aiTriage.failed')));
+  }, [t]);
+
+  async function change(next: TriageMode) {
+    setError(null);
+    try {
+      const r = await apiPut<{ mode: TriageMode }>('/ai-triage-settings', { mode: next });
+      setMode(r.mode);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('aiTriage.failed'));
+    }
+  }
+
+  return (
+    <Card className="mt-6 max-w-md !p-5">
+      <h2 className="mb-1 text-[15px] font-bold text-slate-800">{t('aiTriage.title')}</h2>
+      <p className="mb-3 text-[13px] text-slate-500">{t('aiTriage.intro')}</p>
+      {mode && (
+        <div className="space-y-2">
+          {(['off', 'suggest', 'auto'] as const).map((m) => (
+            <label key={m} className="flex items-start gap-2.5 text-[13px]">
+              <input type="radio" name="ai-triage" checked={mode === m} onChange={() => change(m)} className="mt-0.5" />
+              <span>
+                <span className="block font-semibold text-slate-800">{t(`aiTriage.mode.${m}.label`)}</span>
+                <span className="block text-slate-500">{t(`aiTriage.mode.${m}.hint`)}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+      {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
+    </Card>
   );
 }

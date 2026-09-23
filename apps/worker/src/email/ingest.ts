@@ -1,6 +1,7 @@
 import { prisma, withTenantTx } from '@seredina/db';
 import { MAX_ATTACHMENTS_PER_MESSAGE, MAX_ATTACHMENT_SIZE_BYTES } from '@seredina/shared';
 import { publishLive } from '../lib/live';
+import { ticketFollowupQueue } from '../lib/queue';
 
 export interface InboundAttachment {
   filename: string;
@@ -158,6 +159,18 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<IngestRes
 
   // After the commit, never inside it -- see docs/adr/0053-live-updates.md.
   await publishLive(email.tenantId, { type: createdTicket ? 'ticket.created' : 'message.created', ticketId: result.ticketId });
+  if (createdTicket) {
+    // SLA clock, ticket.created webhook and AI triage live in apps/api's ticket
+    // service -- see docs/adr/0061-ai-triage.md. Best-effort: the ticket exists
+    // either way.
+    await ticketFollowupQueue
+      .add(
+        'followup',
+        { tenantId: email.tenantId, ticketId: result.ticketId, finalize: true },
+        { attempts: 5, backoff: { type: 'exponential', delay: 10_000 }, removeOnComplete: 1000 },
+      )
+      .catch((err) => console.error(`[worker] could not queue follow-up for ticket ${result.ticketId}:`, err));
+  }
   return result;
 }
 

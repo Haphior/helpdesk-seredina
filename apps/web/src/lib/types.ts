@@ -227,7 +227,18 @@ export interface DiscoveryJob {
   completedAt: string | null;
 }
 
+export interface AiTriage {
+  priority: TicketPriority | null;
+  teamId: string | null;
+  teamName: string | null;
+  reason: string;
+  model: string;
+  at: string;
+  applied: boolean;
+}
+
 export interface TicketDetail extends Ticket {
+  aiTriage?: AiTriage | null;
   messages: Message[];
   assets: { assetId: string; asset: AssetSummary }[];
   problem?: { id: string; number: number; title: string } | null;

@@ -45,6 +45,10 @@ contain breaking changes).
   (Administration → Single Sign-On). Optional allowed domains, automatic
   account creation with a chosen role, and "require SSO" (admins keep
   password sign-in as a way back in).
+- **AI triage of new tickets** (`docs/adr/0061-ai-triage.md`): the AI can
+  suggest, or automatically set, a new ticket's priority and team from its
+  subject and first message (AI Settings → AI triage). Automatic mode only
+  fills fields nobody set, and leaves an internal note saying why.
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or
@@ -89,6 +93,12 @@ contain breaking changes).
     identified by MAC — a DHCP lease change now moves the IP on the same
     record instead of creating a new one. Enrolling a machine that was already
     discovered this way adopts that record.
+
+### Fixed
+
+- Tickets created from **email** now get their SLA due dates and fire the
+  `ticket.created` webhook (so Slack/Teams notifications include them);
+  both were skipped before.
 
 ### Changed
 

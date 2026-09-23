@@ -92,6 +92,10 @@ model Tenant {
   // (docs/adr/0059-mfa-totp.md). Off by default; users can still opt in.
   mfaRequired Boolean @default(false) @map("mfa_required")
   ssoSettings TenantSsoSettings?
+
+  // 'off' | 'suggest' | 'auto' -- see docs/adr/0061-ai-triage.md. Off by
+  // default: every new ticket costs a model call once it's on.
+  aiTriageMode String @default("off") @map("ai_triage_mode")
 }
 
 model Role {
@@ -297,6 +301,10 @@ model Ticket {
   // so replies go out from the same address the customer wrote to (not just
   // the tenant's first channel). Null (channel deleted) falls back to the
   // first connected one.
+  // AI triage (docs/adr/0061-ai-triage.md): what the model suggested for this
+  // ticket -- { priority, teamId, teamName, reason, model, at, applied } -- or
+  // null if triage is off, no AI is configured, or it hasn't run yet.
+  aiTriage Json? @map("ai_triage")
   emailChannelId String?      @map("email_channel_id") @db.Uuid
   emailChannel   EmailChannel? @relation(fields: [emailChannelId], references: [id], onDelete: SetNull)
   createdAt  DateTime       @default(now()) @map("created_at")

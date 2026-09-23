@@ -1,5 +1,5 @@
 import { prisma, withTenantTx, type MessageAuthorType, type Prisma, type TicketPriority, type TicketStatusCategory } from '@seredina/db';
-import { emailSendQueue, telegramSendQueue } from '../../lib/queue';
+import { emailSendQueue, telegramSendQueue, ticketFollowupQueue } from '../../lib/queue';
 import { dispatchWebhookEvent } from '../../lib/webhookDispatch';
 import { publishLive } from '../../lib/live';
 import { computeSlaDueAts, scheduleSlaBreachChecks } from '../sla/service';
@@ -51,6 +51,7 @@ export interface CreateTicketFromApiInput {
 
 /** The API channel: POST /v1/tickets, authenticated by ApiKey -- see plugins/apiKeyAuth.ts. */
 export async function createTicketFromApi(tenantId: string, input: CreateTicketFromApiInput) {
+  let triageOn = false;
   const ticket = await withTenantTx(prisma, tenantId, async (tx) => {
     const contact = await tx.contact.upsert({
       where: { tenantId_email: { tenantId, email: input.contactEmail } },
@@ -65,6 +66,7 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
       where: { id: tenantId },
       data: { lastTicketNumber: { increment: 1 } },
     });
+    triageOn = tenant.aiTriageMode !== 'off';
 
     const priority = input.priority ?? 'NORMAL';
     const createdAt = new Date();
@@ -98,6 +100,7 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
 
   await dispatchWebhookEvent(tenantId, 'ticket.created', { ticketId: ticket.id, number: ticket.number, subject: ticket.subject, channel: ticket.channel });
   await scheduleSlaBreachChecks(tenantId, ticket.id, { firstResponseDueAt: ticket.firstResponseDueAt, resolutionDueAt: ticket.resolutionDueAt });
+  if (triageOn) await enqueueTicketTriage(tenantId, ticket.id);
   // Same "only a genuine new assignee notifies" reasoning as updateTicket --
   // trivially true here since a brand-new ticket has no prior assignee to match.
   if (input.assigneeId) {
@@ -143,6 +146,7 @@ export interface IngestAlertInput {
  */
 export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
   let refiredMessageEvent: { ticketId: string; body: string } | null = null;
+  let triageOn = false;
 
   const ticket = await withTenantTx(prisma, tenantId, async (tx) => {
     // A re-fired alert for a problem that's still open folds into the existing
@@ -176,6 +180,7 @@ export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
     if (!openStatus) throw new Error('tenant has no "open" ticket status configured');
 
     const tenant = await tx.tenant.update({ where: { id: tenantId }, data: { lastTicketNumber: { increment: 1 } } });
+    triageOn = tenant.aiTriageMode !== 'off';
 
     const priority = input.severity ? SEVERITY_TO_PRIORITY[input.severity] : 'NORMAL';
     const createdAt = new Date();
@@ -214,6 +219,7 @@ export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
     await dispatchWebhookEvent(tenantId, 'message.created', refiredMessageEvent);
   } else {
     await dispatchWebhookEvent(tenantId, 'ticket.created', { ticketId: ticket.id, number: ticket.number, subject: ticket.subject, channel: ticket.channel });
+    if (triageOn) await enqueueTicketTriage(tenantId, ticket.id);
     await scheduleSlaBreachChecks(tenantId, ticket.id, { firstResponseDueAt: ticket.firstResponseDueAt, resolutionDueAt: ticket.resolutionDueAt });
   }
   return ticket;
@@ -669,4 +675,36 @@ export async function mergeTicket(tenantId: string, sourceTicketId: string, into
   });
 
   return source;
+}
+
+/**
+ * AI triage runs off the request path (docs/adr/0061-ai-triage.md): a model
+ * call must never hold up creating a ticket. Best-effort -- a Redis hiccup
+ * costs a suggestion, never the ticket.
+ */
+async function enqueueTicketTriage(tenantId: string, ticketId: string): Promise<void> {
+  await ticketFollowupQueue
+    .add('followup', { tenantId, ticketId, finalize: false }, { attempts: 3, backoff: { type: 'exponential', delay: 10_000 }, removeOnComplete: 1000 })
+    .catch((err) => console.error(`[tickets] could not queue follow-up for ${ticketId}:`, err));
+}
+
+/**
+ * The part of creating a ticket only this service knows how to do, for a
+ * ticket the worker created (inbound email): start the SLA clock, and fire
+ * ticket.created for webhooks, chat notifications and open consoles.
+ * Idempotent -- an SLA already set is kept, so a retried job can't restart
+ * the clock.
+ */
+export async function finalizeWorkerCreatedTicket(tenantId: string, ticketId: string): Promise<void> {
+  const ticket = await withTenantTx(prisma, tenantId, async (tx) => {
+    const t = await tx.ticket.findUnique({ where: { id: ticketId } });
+    if (!t) return null;
+    if (t.firstResponseDueAt || t.resolutionDueAt) return t;
+    const dueAts = await computeSlaDueAts(tx, tenantId, t.priority, t.createdAt);
+    if (!dueAts.firstResponseDueAt && !dueAts.resolutionDueAt) return t;
+    return tx.ticket.update({ where: { id: ticketId }, data: dueAts });
+  });
+  if (!ticket) return;
+  await scheduleSlaBreachChecks(tenantId, ticket.id, { firstResponseDueAt: ticket.firstResponseDueAt, resolutionDueAt: ticket.resolutionDueAt });
+  await dispatchWebhookEvent(tenantId, 'ticket.created', { ticketId: ticket.id, number: ticket.number, subject: ticket.subject, channel: ticket.channel });
 }

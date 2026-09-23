@@ -326,6 +326,11 @@
       "suggestFailed": "Failed to suggest a reply",
       "autonomousFailed": "Failed to run the autonomous agent",
       "applyMacroFailed": "Failed to apply macro"
+    },
+    "aiTriage": {
+      "suggestion": "AI suggests priority {{priority}}, team {{team}}",
+      "noTeam": "unchanged",
+      "apply": "Apply"
     }
   },
   "tour": {
@@ -505,7 +510,8 @@
       "user.mfa_reset": "Two-factor sign-in reset by admin",
       "tenant.mfa_policy_changed": "Two-factor requirement changed",
       "sso.settings_updated": "Single sign-on settings changed",
-      "sso.settings_deleted": "Single sign-on removed"
+      "sso.settings_deleted": "Single sign-on removed",
+      "ai_settings.triage_mode_changed": "AI triage mode changed"
     }
   },
   "mfa": {
@@ -610,5 +616,24 @@
     "enabledHint": "Adds a \"Sign in with SSO\" button to the sign-in page. Passwords keep working.",
     "enforced": "Require single sign-on",
     "enforcedHint": "Only admins can still sign in with a password — the way back in if the identity provider has a problem."
+  },
+  "aiTriage": {
+    "title": "AI triage of new tickets",
+    "intro": "When a ticket comes in, the AI reads its subject and first message and picks a priority and a team. Each new ticket costs one small model call.",
+    "failed": "Failed to change AI triage",
+    "mode": {
+      "off": {
+        "label": "Off",
+        "hint": "No triage."
+      },
+      "suggest": {
+        "label": "Suggest",
+        "hint": "Show the suggestion on the ticket; an agent applies it with one click."
+      },
+      "auto": {
+        "label": "Apply automatically",
+        "hint": "Set the priority and team right away — only if nobody set them already — and leave an internal note explaining why."
+      }
+    }
   }
 }

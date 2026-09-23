@@ -12,3 +12,18 @@ export interface EmailSendJobPayload {
   ticketId: string;
   messageId: string;
 }
+
+/**
+ * Follow-up work on a ticket that was just created, handled by apps/api
+ * (docs/adr/0061-ai-triage.md). `finalize` is for tickets the worker created
+ * (inbound email): the SLA clock, the ticket.created webhook and live event,
+ * which otherwise only apps/api's ticket service knows how to do. Every new
+ * ticket also gets `triage`, a no-op unless the tenant turned AI triage on.
+ */
+export const TICKET_FOLLOWUP_QUEUE_NAME = 'ticket-followup';
+
+export interface TicketFollowupJobPayload {
+  tenantId: string;
+  ticketId: string;
+  finalize: boolean;
+}

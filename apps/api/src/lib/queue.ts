@@ -7,6 +7,7 @@ import {
   NOTIFICATION_EMAIL_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
   TELEGRAM_SEND_QUEUE_NAME,
+  TICKET_FOLLOWUP_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
@@ -14,6 +15,7 @@ import {
   type NotificationEmailJobPayload,
   type SlaBreachCheckJobPayload,
   type TelegramSendJobPayload,
+  type TicketFollowupJobPayload,
   type WebhookDeliveryJobPayload,
 } from '@seredina/shared';
 
@@ -28,7 +30,7 @@ if (!redisUrl) {
 // it, every test file that merely imports modules/tickets/service.ts (which imports
 // this file for the email-send queue) would need a live Redis just to run, even
 // tests that never touch a queue at all.
-const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null, lazyConnect: true });
+export const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null, lazyConnect: true });
 
 export const discoveryQueue = new Queue<DiscoveryJobPayload>(DISCOVERY_QUEUE_NAME, { connection });
 export const emailSendQueue = new Queue<EmailSendJobPayload>(EMAIL_SEND_QUEUE_NAME, { connection });
@@ -37,3 +39,4 @@ export const slaBreachQueue = new Queue<SlaBreachCheckJobPayload>(SLA_BREACH_QUE
 export const notificationEmailQueue = new Queue<NotificationEmailJobPayload>(NOTIFICATION_EMAIL_QUEUE_NAME, { connection });
 export const embedKbArticleQueue = new Queue<EmbedKbArticleJobPayload>(EMBED_KB_ARTICLE_QUEUE_NAME, { connection });
 export const telegramSendQueue = new Queue<TelegramSendJobPayload>(TELEGRAM_SEND_QUEUE_NAME, { connection });
+export const ticketFollowupQueue = new Queue<TicketFollowupJobPayload>(TICKET_FOLLOWUP_QUEUE_NAME, { connection });

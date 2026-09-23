@@ -19,6 +19,25 @@ search, not exact keyword matching). The draft appears directly in the
 reply box — the agent edits it or sends it as-is, it's never sent on its
 own. If it used an article, it's listed as "Based on:" below the box.
 
+## Triage of new tickets
+
+**Operations → AI Settings → AI triage of new tickets** has the AI read each
+new ticket's subject and first message (or an alert's description) and pick
+a priority and one of your teams:
+
+- **Off** (default): nothing happens.
+- **Suggest**: the ticket shows "AI suggests priority …, team …" with the
+  reason and an **Apply** button.
+- **Apply automatically**: the priority and team are set right away, but
+  only if nobody set them already (a priority chosen on a catalog form or
+  mapped from an alert's severity is kept). An internal note on the ticket
+  says what changed and why.
+
+Triage runs in the background after the ticket is created, so it never
+slows down intake. It works for every channel, email included. Each new
+ticket costs one small model call, shown under AI cost transparency as
+`triage`.
+
 ## Autonomous mode ("Let AI try")
 
 Here the copilot can investigate the ticket and, if confident, **act** on

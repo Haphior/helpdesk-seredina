@@ -392,6 +392,32 @@ export function TicketDetail() {
           </div>
         </div>
 
+        {ticket.aiTriage && !ticket.aiTriage.applied && (ticket.aiTriage.priority !== ticket.priority || (ticket.aiTriage.teamId && ticket.aiTriage.teamId !== ticket.teamId)) && (
+          <div className="mb-3 flex items-center gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-[13.5px] text-violet-900">
+            <SparkleIcon width={15} height={15} className="flex-shrink-0 text-violet-500" />
+            <span className="flex-1">
+              {t('ticketDetail.aiTriage.suggestion', {
+                priority: ticket.aiTriage.priority ?? ticket.priority,
+                team: ticket.aiTriage.teamName ?? t('ticketDetail.aiTriage.noTeam'),
+              })}
+              {ticket.aiTriage.reason && <span className="text-violet-700"> — {ticket.aiTriage.reason}</span>}
+            </span>
+            <button
+              onClick={async () => {
+                try {
+                  await apiPost(`/tickets/${ticket.id}/ai/triage/apply`, {});
+                  await loadTicket();
+                } catch (err) {
+                  setError(err instanceof ApiError ? err.message : t('ticketDetail.errors.updateFailed'));
+                }
+              }}
+              className="rounded-full bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700"
+            >
+              {t('ticketDetail.aiTriage.apply')}
+            </button>
+          </div>
+        )}
+
         {ticket.mergedInto && (
           <div className="mb-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-[13.5px] text-orange-800">
             {t('ticketDetail.mergedIntoNotice')}{' '}
