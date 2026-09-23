@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiDelete, apiGet, apiPatch, ApiError } from '../lib/api';
-import type { AssetDetail as AssetDetailType } from '../lib/types';
+import type { AssetDetail as AssetDetailType, Contract } from '../lib/types';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { AssetFormModal, type AssetFormValues } from '../components/AssetFormModal';
 import { BackArrowIcon } from '../components/icons';
 import { formatDateTime } from '../lib/format';
+import { ContractStatusBadge } from './Contracts';
 
 const STATUS_TONE = { ACTIVE: 'emerald', RETIRED: 'slate', INACTIVE: 'amber' } as const;
 
@@ -161,6 +163,8 @@ export function AssetDetail() {
           </Card>
         </div>
 
+        <AssetContracts assetId={asset.id} />
+
         <Card>
           <h2 className="mb-2.5 text-[13px] font-bold uppercase tracking-wide text-slate-400">
             Services underpinned ({asset.services.length})
@@ -196,5 +200,49 @@ function Spec({ label, value }: { label: string; value: string | null }) {
       <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</div>
       <div className="text-slate-700">{value ?? '—'}</div>
     </div>
+  );
+}
+
+/** Contracts, warranties and licenses covering this asset (docs/adr/0062-contracts.md). */
+function AssetContracts({ assetId }: { assetId: string }) {
+  const { t } = useTranslation();
+  const [contracts, setContracts] = useState<Contract[] | null>(null);
+
+  useEffect(() => {
+    apiGet<{ contracts: Contract[] }>(`/contracts?assetId=${assetId}`)
+      .then((r) => setContracts(r.contracts))
+      .catch(() => setContracts([]));
+  }, [assetId]);
+
+  return (
+    <Card>
+      <h2 className="mb-2.5 text-[13px] font-bold uppercase tracking-wide text-slate-400">
+        {t('contracts.onAsset', { count: contracts?.length ?? 0 })}
+      </h2>
+      {contracts === null ? null : contracts.length === 0 ? (
+        <p className="text-[13px] text-slate-400">
+          {t('contracts.noneOnAsset')}{' '}
+          <Link to="/contracts" className="text-indigo-600 hover:underline">
+            {t('contracts.title')}
+          </Link>
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {contracts.map((c) => (
+            <div key={c.id} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-[13px]">
+              <span>
+                <span className="font-medium text-slate-800">{c.name}</span>
+                <span className="text-slate-400">
+                  {' '}
+                  · {t(`contracts.type.${c.type}`)}
+                  {c.endDate ? ` · ${c.endDate.slice(0, 10)}` : ''}
+                </span>
+              </span>
+              <ContractStatusBadge contract={c} />
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }

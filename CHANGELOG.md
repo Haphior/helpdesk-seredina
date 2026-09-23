@@ -49,6 +49,11 @@ contain breaking changes).
   suggest, or automatically set, a new ticket's priority and team from its
   subject and first message (AI Settings → AI triage). Automatic mode only
   fills fields nobody set, and leaves an internal note saying why.
+- **Contracts, warranties and licenses** (`docs/adr/0062-contracts.md`):
+  CMDB → Contracts tracks support contracts, warranties, licenses, leases and
+  subscriptions with dates, cost and the assets they cover, shows what's
+  ending soon, and reminds asset managers before one ends. Asset pages list
+  the contracts covering them.
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or
@@ -94,12 +99,6 @@ contain breaking changes).
     record instead of creating a new one. Enrolling a machine that was already
     discovered this way adopts that record.
 
-### Fixed
-
-- Tickets created from **email** now get their SLA due dates and fire the
-  `ticket.created` webhook (so Slack/Teams notifications include them);
-  both were skipped before.
-
 ### Changed
 
 - The console reaches the API at `/api` on its own address by default
@@ -118,6 +117,12 @@ contain breaking changes).
   tenant's. `infra/docker-compose.yml` now passes `SEREDINA_MODE` to `worker`.
 - `POST /v1/devices/checkin` returns `200 { neighbors: { created, updated } }`
   instead of `204`.
+
+### Fixed
+
+- Tickets created from **email** now get their SLA due dates and fire the
+  `ticket.created` webhook (so Slack/Teams notifications include them);
+  both were skipped before.
 
 ### Security
 

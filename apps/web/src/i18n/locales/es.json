@@ -89,7 +89,8 @@
       "branding": "Marca",
       "language": "Idioma",
       "auditLog": "Registro de auditoría",
-      "sso": "Inicio de sesión único"
+      "sso": "Inicio de sesión único",
+      "contracts": "Contratos"
     }
   },
   "layout": {
@@ -634,6 +635,74 @@
         "label": "Aplicar automáticamente",
         "hint": "Asigna la prioridad y el equipo de inmediato — solo si nadie los fijó antes — y deja una nota interna explicando por qué."
       }
+    }
+  },
+  "contracts": {
+    "title": "Contratos",
+    "new": "Nuevo contrato",
+    "newTitle": "Nuevo contrato",
+    "editTitle": "Editar contrato",
+    "edit": "editar",
+    "delete": "eliminar",
+    "intro": "Contratos de soporte, garantías, licencias de software, arriendos y suscripciones, vinculados a los equipos que cubren. Quienes gestionan activos reciben un aviso antes de que venzan.",
+    "loadFailed": "No se pudieron cargar los contratos",
+    "saveFailed": "No se pudo guardar el contrato",
+    "confirmDelete": "¿Eliminar el contrato \"{{name}}\"? Los activos vinculados se mantienen.",
+    "empty": "Todavía no hay contratos.",
+    "searchPlaceholder": "Buscar nombre, proveedor o número…",
+    "assetSearch": "Buscar activos para vincular…",
+    "noKeysHint": "No pegues claves de licencia ni contraseñas aquí: estos campos los ve cualquiera que pueda ver los activos y se incluyen en las exportaciones.",
+    "seatsCount_one": "{{count}} puesto",
+    "seatsCount_other": "{{count}} puestos",
+    "onAsset_one": "Contratos ({{count}})",
+    "onAsset_other": "Contratos ({{count}})",
+    "noneOnAsset": "Ningún contrato, garantía o licencia cubre este activo todavía. Agrégalo en",
+    "summary": {
+      "expiring": "Por vencer",
+      "expired": "Vencidos",
+      "yearlyCost": "Costo recurrente anual"
+    },
+    "filter": {
+      "all": "Todos",
+      "expiring": "Por vencer",
+      "expired": "Vencidos",
+      "active": "Vigentes",
+      "no_end_date": "Sin fecha de término"
+    },
+    "status": {
+      "expired": "Vencido",
+      "expiringIn_one": "Vence en {{count}} día",
+      "expiringIn_other": "Vence en {{count}} días",
+      "active": "Vigente",
+      "no_end_date": "Sin fecha de término"
+    },
+    "type": {
+      "SUPPORT": "Soporte",
+      "WARRANTY": "Garantía",
+      "LICENSE": "Licencia",
+      "LEASE": "Arriendo",
+      "SUBSCRIPTION": "Suscripción",
+      "OTHER": "Otro"
+    },
+    "billing": {
+      "one_time": "Pago único",
+      "monthly": "Mensual",
+      "yearly": "Anual"
+    },
+    "fields": {
+      "name": "Nombre",
+      "type": "Tipo",
+      "supplier": "Proveedor",
+      "reference": "N.º de contrato / orden",
+      "startDate": "Inicio",
+      "endDate": "Término",
+      "noticeDays": "Avisar días antes",
+      "cost": "Costo",
+      "currency": "Moneda",
+      "billing": "Facturación",
+      "seats": "Puestos / instalaciones",
+      "assets": "Activos",
+      "notes": "Notas"
     }
   }
 }

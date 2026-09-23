@@ -24,6 +24,7 @@ const Devices = lazy(() => import('./pages/Devices').then((m) => ({ default: m.D
 const AssetDetail = lazy(() => import('./pages/AssetDetail').then((m) => ({ default: m.AssetDetail })));
 const Users = lazy(() => import('./pages/Users').then((m) => ({ default: m.Users })));
 const Roles = lazy(() => import('./pages/Roles').then((m) => ({ default: m.Roles })));
+const Contracts = lazy(() => import('./pages/Contracts').then((m) => ({ default: m.Contracts })));
 const SsoComplete = lazy(() => import('./pages/SsoComplete').then((m) => ({ default: m.SsoComplete })));
 const SsoSettings = lazy(() => import('./pages/SsoSettings').then((m) => ({ default: m.SsoSettings })));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity').then((m) => ({ default: m.AccountSecurity })));
@@ -90,6 +91,7 @@ export function App() {
               <Route path="/assets" element={<Assets />} />
               <Route path="/devices" element={<Devices />} />
               <Route path="/assets/:id" element={<AssetDetail />} />
+              <Route path="/contracts" element={<Contracts />} />
               <Route path="/api-keys" element={<ApiKeys />} />
               <Route path="/users" element={<Users />} />
               <Route path="/roles" element={<Roles />} />

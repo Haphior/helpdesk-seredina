@@ -1601,7 +1601,8 @@ these real users actually want:
 - **Environmental Impact Management**: GLPI's sustainability/carbon-footprint
   tracking for IT assets — needs real power/lifecycle data models nothing here has
   yet.
-- **Contract/license/financial asset management** (added 2026-09-16, from the
+- ✅ *Shipped, ADR 0062 (contracts, warranties, licenses, renewal reminders).*
+  **Contract/license/financial asset management** (added 2026-09-16, from the
   same competitive pass as Phase 2's new items above): contracts, warranties,
   and purchase orders linked to an `Asset`/`AssetModel` — GLPI's strongest
   differentiator against every other tool checked. Same relationship as Data

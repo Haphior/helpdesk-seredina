@@ -96,6 +96,8 @@ model Tenant {
   // 'off' | 'suggest' | 'auto' -- see docs/adr/0061-ai-triage.md. Off by
   // default: every new ticket costs a model call once it's on.
   aiTriageMode String @default("off") @map("ai_triage_mode")
+  contracts      Contract[]
+  contractAssets ContractAsset[]
 }
 
 model Role {
@@ -660,6 +662,8 @@ model Asset {
   // duplicating -- imperfect under DHCP churn, a known v1 limitation (see ADR), not
   // an oversight. Agent neighbor reports match by MAC first (see
   // modules/devices/neighbors.ts), which is what the macAddress index is for.
+  contracts ContractAsset[]
+
   @@unique([tenantId, ipAddress])
   @@index([tenantId, macAddress])
   @@map("assets")
@@ -1315,6 +1319,7 @@ model SavedView {
 enum NotificationEventType {
   TICKET_ASSIGNED
   NEW_REPLY
+  CONTRACT_EXPIRING
 }
 
 // One row per notification actually delivered in-app -- only created when the
@@ -1566,4 +1571,60 @@ model TenantSsoSettings {
   createdAt             DateTime @default(now()) @map("created_at")
 
   @@map("tenant_sso_settings")
+}
+
+// Contracts, warranties and licenses tied to assets -- docs/adr/0062-contracts.md.
+enum ContractType {
+  SUPPORT
+  WARRANTY
+  LICENSE
+  LEASE
+  SUBSCRIPTION
+  OTHER
+}
+
+model Contract {
+  id        String       @id @default(uuid()) @db.Uuid
+  tenantId  String       @map("tenant_id") @db.Uuid
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  type      ContractType @default(SUPPORT)
+  supplier  String?
+  // Contract or order number, license agreement id -- never a license key
+  // itself (that's a secret, and this field is shown in lists and exports).
+  reference String?
+  startDate DateTime?    @map("start_date") @db.Date
+  endDate   DateTime?    @map("end_date") @db.Date
+  // Remind this many days before endDate (0 = no reminder).
+  renewalNoticeDays Int       @default(30) @map("renewal_notice_days")
+  // Set once the reminder went out; cleared whenever endDate changes.
+  renewalNotifiedAt DateTime? @map("renewal_notified_at")
+  cost          Decimal?   @db.Decimal(14, 2)
+  currency      String?
+  // 'one_time' | 'monthly' | 'yearly'
+  billingPeriod String?    @map("billing_period")
+  // Licenses: how many seats/installs the contract covers.
+  seats     Int?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assets ContractAsset[]
+
+  @@index([tenantId, endDate])
+  @@map("contracts")
+}
+
+model ContractAsset {
+  tenantId   String   @map("tenant_id") @db.Uuid
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contractId String   @map("contract_id") @db.Uuid
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  assetId    String   @map("asset_id") @db.Uuid
+  asset      Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@id([contractId, assetId])
+  @@index([assetId])
+  @@map("contract_assets")
 }

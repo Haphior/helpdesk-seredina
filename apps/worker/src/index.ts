@@ -30,6 +30,8 @@ import { checkSlaBreach } from './sla/checkBreach';
 import { advanceEscalation } from './oncall/escalate';
 import { sendNotificationEmail } from './notifications/sendEmail';
 import { embedKbArticle } from './kb/embed';
+import { sendDueContractReminders } from './contracts/renewalCheck';
+import { redisLock } from './lib/lock';
 import { captureError, initErrorTracking } from './lib/errorTracking';
 
 initErrorTracking();
@@ -177,6 +179,27 @@ async function pollLoop() {
 }
 
 pollLoop();
+
+// Contract renewal reminders (docs/adr/0062-contracts.md). A few times a day
+// is plenty for date-granular deadlines; the lock keeps replicas from running
+// it at the same moment, and each reminder is claimed atomically anyway.
+const CONTRACT_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+async function contractReminderLoop() {
+  try {
+    await redisLock.runExclusive('seredina:contract-reminders', 10 * 60 * 1000, async () => {
+      const sent = await sendDueContractReminders();
+      if (sent > 0) console.log(`[worker] sent ${sent} contract renewal reminder(s)`);
+    });
+  } catch (err) {
+    console.error('[worker] contract reminder run failed:', err);
+    captureError(err);
+  } finally {
+    setTimeout(contractReminderLoop, CONTRACT_CHECK_INTERVAL_MS);
+  }
+}
+
+setTimeout(contractReminderLoop, 60_000);
 
 console.log(
   '[worker] listening on queues:',

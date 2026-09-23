@@ -558,7 +558,7 @@ export interface SavedView {
   createdAt: string;
 }
 
-export type NotificationEventType = 'TICKET_ASSIGNED' | 'NEW_REPLY';
+export type NotificationEventType = 'TICKET_ASSIGNED' | 'NEW_REPLY' | 'CONTRACT_EXPIRING';
 
 export interface AppNotification {
   id: string;
@@ -661,4 +661,26 @@ export interface AuditLogEntry {
   userAgent: string | null;
   metadata: Record<string, unknown> | null;
   createdAt: string;
+}
+
+export type ContractType = 'SUPPORT' | 'WARRANTY' | 'LICENSE' | 'LEASE' | 'SUBSCRIPTION' | 'OTHER';
+export type ContractStatus = 'active' | 'expiring' | 'expired' | 'no_end_date';
+
+export interface Contract {
+  id: string;
+  name: string;
+  type: ContractType;
+  supplier: string | null;
+  reference: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  renewalNoticeDays: number;
+  cost: number | null;
+  currency: string | null;
+  billingPeriod: 'one_time' | 'monthly' | 'yearly' | null;
+  seats: number | null;
+  notes: string | null;
+  status: ContractStatus;
+  daysUntilEnd: number | null;
+  assets: { id: string; name: string; assetType: AssetType }[];
 }

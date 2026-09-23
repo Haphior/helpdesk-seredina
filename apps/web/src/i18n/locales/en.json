@@ -89,7 +89,8 @@
       "branding": "Branding",
       "language": "Language",
       "auditLog": "Audit Log",
-      "sso": "Single Sign-On"
+      "sso": "Single Sign-On",
+      "contracts": "Contracts"
     }
   },
   "layout": {
@@ -634,6 +635,74 @@
         "label": "Apply automatically",
         "hint": "Set the priority and team right away — only if nobody set them already — and leave an internal note explaining why."
       }
+    }
+  },
+  "contracts": {
+    "title": "Contracts",
+    "new": "New contract",
+    "newTitle": "New contract",
+    "editTitle": "Edit contract",
+    "edit": "edit",
+    "delete": "delete",
+    "intro": "Support contracts, warranties, software licenses, leases and subscriptions, linked to the assets they cover. Everyone who manages assets gets a reminder before one ends.",
+    "loadFailed": "Failed to load contracts",
+    "saveFailed": "Failed to save the contract",
+    "confirmDelete": "Delete contract \"{{name}}\"? The linked assets stay.",
+    "empty": "No contracts yet.",
+    "searchPlaceholder": "Search name, supplier or number…",
+    "assetSearch": "Search assets to link…",
+    "noKeysHint": "Don't paste license keys or passwords here — these fields are visible to everyone who can see assets, and included in exports.",
+    "seatsCount_one": "{{count}} seat",
+    "seatsCount_other": "{{count}} seats",
+    "onAsset_one": "Contracts ({{count}})",
+    "onAsset_other": "Contracts ({{count}})",
+    "noneOnAsset": "No contract, warranty or license covers this asset yet. Add one on",
+    "summary": {
+      "expiring": "Ending soon",
+      "expired": "Expired",
+      "yearlyCost": "Recurring cost per year"
+    },
+    "filter": {
+      "all": "All",
+      "expiring": "Ending soon",
+      "expired": "Expired",
+      "active": "Active",
+      "no_end_date": "No end date"
+    },
+    "status": {
+      "expired": "Expired",
+      "expiringIn_one": "Ends in {{count}} day",
+      "expiringIn_other": "Ends in {{count}} days",
+      "active": "Active",
+      "no_end_date": "No end date"
+    },
+    "type": {
+      "SUPPORT": "Support",
+      "WARRANTY": "Warranty",
+      "LICENSE": "License",
+      "LEASE": "Lease",
+      "SUBSCRIPTION": "Subscription",
+      "OTHER": "Other"
+    },
+    "billing": {
+      "one_time": "One-time",
+      "monthly": "Monthly",
+      "yearly": "Yearly"
+    },
+    "fields": {
+      "name": "Name",
+      "type": "Type",
+      "supplier": "Supplier",
+      "reference": "Contract / order number",
+      "startDate": "Start",
+      "endDate": "End",
+      "noticeDays": "Remind days before",
+      "cost": "Cost",
+      "currency": "Currency",
+      "billing": "Billing",
+      "seats": "Seats / installs",
+      "assets": "Assets",
+      "notes": "Notes"
     }
   }
 }

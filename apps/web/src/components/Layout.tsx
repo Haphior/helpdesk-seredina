@@ -76,6 +76,7 @@ const navGroups: {
     items: [
       { to: '/assets', itemKey: 'assets', icon: AssetsIcon },
       { to: '/devices', itemKey: 'devices', icon: DevicesIcon, permission: 'assets:read' },
+      { to: '/contracts', itemKey: 'contracts', icon: CatalogIcon, permission: 'assets:read' },
       { to: '/equipment-catalog', itemKey: 'equipmentCatalog', icon: LayersIcon, permission: 'assets:manage' },
       { to: '/services', itemKey: 'services', icon: ServiceMapIcon, permission: 'assets:manage' },
     ],

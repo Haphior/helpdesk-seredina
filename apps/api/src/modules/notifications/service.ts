@@ -5,9 +5,10 @@ import { notificationEmailQueue } from '../../lib/queue';
 const EVENT_LABELS: Record<NotificationEventType, string> = {
   TICKET_ASSIGNED: 'A ticket is assigned to me',
   NEW_REPLY: 'A contact replies to a ticket assigned to me',
+  CONTRACT_EXPIRING: 'A contract, warranty or license is about to expire (users who manage assets)',
 };
 
-const EVENT_TYPES: NotificationEventType[] = ['TICKET_ASSIGNED', 'NEW_REPLY'];
+const EVENT_TYPES: NotificationEventType[] = ['TICKET_ASSIGNED', 'NEW_REPLY', 'CONTRACT_EXPIRING'];
 
 export async function listNotifications(tenantId: string, userId: string, unreadOnly = false) {
   return withTenantTx(prisma, tenantId, (tx) =>
