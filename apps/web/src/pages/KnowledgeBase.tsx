@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { KbArticle } from '../lib/types';
 import { useAuth } from '../auth/AuthContext';
@@ -23,6 +24,7 @@ interface KbPortalSettings {
 const PAGE_SIZE = 50;
 
 export function KnowledgeBase() {
+  const { t } = useTranslation();
   const { hasPermission } = useAuth();
   const canWrite = hasPermission('tickets:write');
   const canManagePortal = hasPermission('tickets:manage_all');
@@ -46,7 +48,7 @@ export function KnowledgeBase() {
         setArticles((prev) => (offset > 0 && prev ? [...prev, ...res.articles] : res.articles));
         setTotal(res.total);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load the knowledge base'))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('kb.loadFailed')))
       .finally(() => setLoadingMore(false));
   }
 
@@ -58,33 +60,33 @@ export function KnowledgeBase() {
   }, []);
 
   async function remove(article: KbArticle) {
-    if (!confirm(`Delete "${article.title}"?`)) return;
+    if (!confirm(t('kb.confirmDelete', { title: article.title }))) return;
     try {
       await apiDelete(`/kb-articles/${article.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete article');
+      setError(err instanceof ApiError ? err.message : t('kb.deleteFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Knowledge Base</h1>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('kb.title')}</h1>
         <div className="flex items-center gap-2">
           {canManagePortal && (
             <Button variant="secondary" onClick={() => setPortalSettingsOpen(true)}>
               <ShieldIcon width={14} height={14} />
-              Portal settings
+              {t('kb.portalSettings')}
             </Button>
           )}
-          {canWrite && <Button onClick={() => setEditing('new')}>New article</Button>}
+          {canWrite && <Button onClick={() => setEditing('new')}>{t('kb.newArticle')}</Button>}
         </div>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Published articles are visible to anyone at{' '}
-        {tenantSlug ? <code className="rounded bg-slate-100 px-1">/kb/{tenantSlug}</code> : 'your public self-service portal'}{' '}
-        — no account needed.
+        {t('kb.introBefore')}{' '}
+        {tenantSlug ? <code className="rounded bg-slate-100 px-1">/kb/{tenantSlug}</code> : t('kb.yourPortal')}{' '}
+        {t('kb.introAfter')}
       </p>
 
       <form
@@ -97,21 +99,21 @@ export function KnowledgeBase() {
         <div className="w-72">
           <Input
             hideLabel
-            aria-label="Search title or body"
+            aria-label={t('kb.search')}
             icon={<SearchIcon width={15} height={15} />}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search title or body…"
+            placeholder={t('kb.searchPlaceholder')}
           />
         </div>
         <Button type="submit" variant="secondary">
-          Search
+          {t('kb.searchButton')}
         </Button>
       </form>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {articles === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {articles?.length === 0 && <p className="text-sm text-slate-500">No articles found.</p>}
+      {articles === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {articles?.length === 0 && <p className="text-sm text-slate-500">{t('kb.empty')}</p>}
 
       {articles && articles.length > 0 && (
         <Card className="overflow-hidden p-0">
@@ -121,16 +123,16 @@ export function KnowledgeBase() {
                 <button onClick={() => setEditing(a)} className="min-w-0 text-left">
                   <div className="flex items-center gap-2">
                     <span className="text-[14px] font-semibold text-slate-800">{a.title}</span>
-                    <Badge tone={a.published ? 'emerald' : 'slate'}>{a.published ? 'Published' : 'Draft'}</Badge>
+                    <Badge tone={a.published ? 'emerald' : 'slate'}>{a.published ? t('kb.published') : t('kb.draft')}</Badge>
                   </div>
                   <div className="text-[12.5px] text-slate-400">
                     {a.author && <span>{a.author.name} · </span>}
-                    updated {formatDateTime(a.updatedAt)}
+                    {t('kb.updated', { when: formatDateTime(a.updatedAt) })}
                   </div>
                 </button>
                 {canWrite && (
                   <button onClick={() => remove(a)} className="flex-shrink-0 text-xs text-slate-400 hover:text-rose-600">
-                    delete
+                    {t('kb.delete')}
                   </button>
                 )}
               </div>
@@ -142,7 +144,7 @@ export function KnowledgeBase() {
       {articles && articles.length < total && (
         <div className="flex justify-center pt-4">
           <Button variant="secondary" onClick={() => load(q, articles.length)} isLoading={loadingMore}>
-            {loadingMore ? 'Loading…' : `Load more (${total - articles.length} remaining)`}
+            {loadingMore ? t('common.loading') : t('kb.loadMore', { count: total - articles.length })}
           </Button>
         </div>
       )}
@@ -157,6 +159,7 @@ export function KnowledgeBase() {
 }
 
 function PortalSettingsModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<KbPortalSettings | null>(null);
   const [portalEnabled, setPortalEnabled] = useState(true);
   const [accessCode, setAccessCode] = useState('');
@@ -169,7 +172,7 @@ function PortalSettingsModal({ onClose }: { onClose: () => void }) {
         setSettings(s);
         setPortalEnabled(s.portalEnabled);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load portal settings'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('kb.portal.loadFailed')));
   }, []);
 
   async function save() {
@@ -182,7 +185,7 @@ function PortalSettingsModal({ onClose }: { onClose: () => void }) {
       setSettings(updated);
       setAccessCode('');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save portal settings');
+      setError(err instanceof ApiError ? err.message : t('kb.portal.saveFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -195,15 +198,15 @@ function PortalSettingsModal({ onClose }: { onClose: () => void }) {
       const updated = await apiPatch<KbPortalSettings>('/kb-settings', { accessCode: null });
       setSettings(updated);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to remove the access code');
+      setError(err instanceof ApiError ? err.message : t('kb.portal.removeFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="Public portal settings" onClose={onClose}>
-      {!settings && !error && <p className="text-sm text-slate-500">Loading…</p>}
+    <Modal title={t('kb.portal.title')} onClose={onClose}>
+      {!settings && !error && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
       {settings && (
         <div className="space-y-4">
           <label className="flex items-start gap-2 text-[13px] text-slate-600">
@@ -214,29 +217,28 @@ function PortalSettingsModal({ onClose }: { onClose: () => void }) {
               className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
             />
             <span>
-              Public portal enabled — turn off if you don't want a public-facing knowledge base at all; published
-              articles stay visible to your agents in the console either way.
+              {t('kb.portal.enabled')}
             </span>
           </label>
 
           <div>
             {settings.hasAccessCode ? (
               <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
-                <span className="text-[13px] text-slate-600">An access code is set — visitors must enter it before browsing.</span>
+                <span className="text-[13px] text-slate-600">{t('kb.portal.codeSet')}</span>
                 <Button variant="dangerOutline" size="sm" onClick={clearAccessCode} isLoading={submitting}>
-                  Remove
+                  {t('kb.portal.remove')}
                 </Button>
               </div>
             ) : (
               <Input
-                label="Access code (optional)"
+                label={t('kb.portal.code')}
                 value={accessCode}
                 onChange={(e) => setAccessCode(e.target.value)}
-                placeholder="Leave empty for no code"
+                placeholder={t('kb.portal.codePlaceholder')}
               />
             )}
             <p className="mt-1.5 text-[12px] text-slate-400">
-              Not a login — a single shared code you hand out to whoever should be able to browse the portal.
+              {t('kb.portal.codeHint')}
             </p>
           </div>
 
@@ -244,10 +246,10 @@ function PortalSettingsModal({ onClose }: { onClose: () => void }) {
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>
-              Close
+              {t('kb.portal.close')}
             </Button>
             <Button onClick={save} isLoading={submitting}>
-              Save
+              {t('common.save')}
             </Button>
           </div>
         </div>
@@ -257,6 +259,7 @@ function PortalSettingsModal({ onClose }: { onClose: () => void }) {
 }
 
 function ArticleModal({ article, onClose, onSaved }: { article: KbArticle | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(article?.title ?? '');
   const [body, setBody] = useState(article?.body ?? '');
   const [published, setPublished] = useState(article?.published ?? false);
@@ -276,18 +279,18 @@ function ArticleModal({ article, onClose, onSaved }: { article: KbArticle | null
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save article');
+      setError(err instanceof ApiError ? err.message : t('kb.saveFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title={article ? 'Edit article' : 'New article'} onClose={onClose}>
+    <Modal title={article ? t('kb.editArticle') : t('kb.newArticle')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="How to reset your password" required />
+        <Input label={t('kb.fieldTitle')} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('kb.titlePlaceholder')} required />
 
-        <Textarea label="Body" value={body} onChange={(e) => setBody(e.target.value)} rows={10} required />
+        <Textarea label={t('kb.body')} value={body} onChange={(e) => setBody(e.target.value)} rows={10} required />
 
         <label className="flex items-center gap-2 text-[13px] text-slate-600">
           <input
@@ -296,17 +299,17 @@ function ArticleModal({ article, onClose, onSaved }: { article: KbArticle | null
             onChange={(e) => setPublished(e.target.checked)}
             className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
           />
-          Published — visible on the public self-service portal
+          {t('kb.publishedHint')}
         </label>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>
