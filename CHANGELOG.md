@@ -104,8 +104,19 @@ contain breaking changes).
     record instead of creating a new one. Enrolling a machine that was already
     discovered this way adopts that record.
 
+- CI now builds every Docker image and boots the full compose stack
+  (`scripts/compose-smoke.sh`, runnable locally too): migrations, console,
+  the API through the console's `/api` proxy, tenant sign-up and the worker.
+- The whole console is available in Spanish, including processes, the
+  knowledge base, assets, on-call, AI settings and users.
+
 ### Changed
 
+- The backup guide now uses `pg_dump -Fc` with a cron example, documents a
+  restore procedure that re-creates the `app_tenant` role and RLS policies,
+  and lists everything `ENCRYPTION_KEY` protects (OAuth tokens, SSO and MFA
+  secrets, AI keys) — restoring without it means reconnecting mailboxes and
+  resetting every user's MFA.
 - The console reaches the API at `/api` on its own address by default
   (`VITE_API_URL` now defaults to empty). Existing `.env` files that set it
   keep working.
@@ -125,6 +136,8 @@ contain breaking changes).
 
 ### Fixed
 
+- The `api`, `worker` and `mcp-server` Docker images failed to build: they
+  import `@seredina/ai-adapters` but never copied it into the image.
 - Tickets created from **email** now get their SLA due dates and fire the
   `ticket.created` webhook (so Slack/Teams notifications include them);
   both were skipped before.

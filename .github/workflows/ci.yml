@@ -106,3 +106,16 @@ jobs:
       - name: packages/ai-adapters test suite
         working-directory: packages/ai-adapters
         run: npx vitest run
+
+  # Builds every image in infra/docker-compose.yml and brings the real stack
+  # up (migrate -> api -> worker -> web), then registers a tenant through the
+  # console's /api proxy. Catches what the unit job can't: a Dockerfile that
+  # forgets a workspace package, a broken migrate entrypoint, nginx config.
+  compose-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and smoke-test the compose stack
+        run: bash scripts/compose-smoke.sh
