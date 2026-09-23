@@ -13,6 +13,7 @@ import {
   login,
   registerTenant,
   resetUserPassword,
+  SsoRequiredError,
   unlockUser,
   updateRole,
   updateUser,
@@ -142,7 +143,8 @@ export default async function authRoutes(app: FastifyInstance) {
           permissions: result.permissions,
         });
         return reply.send({ token });
-      } catch {
+      } catch (err) {
+        if (err instanceof SsoRequiredError) return reply.code(403).send({ error: err.message, ssoRequired: true });
         return reply.code(401).send({ error: 'invalid credentials' });
       }
     },

@@ -20,6 +20,29 @@ Permissions are granular (`tickets:read`, `tickets:write`,
 `users:manage`, `roles:manage`) — a custom role can combine them however
 you need, you're not tied to the three factory-default roles.
 
+## Single sign-on (SSO)
+
+**Administration → Single Sign-On** lets people sign in with their
+Microsoft 365 (Entra ID), Google Workspace, or any OpenID Connect account
+(Okta, Auth0, Keycloak, Authentik…) instead of a separate password. You
+register an app in your identity provider (the page shows the exact steps
+and the **redirect URI** to register, `<your address>/api/auth/sso/callback`)
+and paste its client ID and secret. For Microsoft, also paste the Directory
+(tenant) ID. Sign-in is pinned to that one directory.
+
+- **Allowed email domains**: only these domains may sign in via SSO.
+- **Create accounts automatically**: the first SSO sign-in from an allowed
+  domain creates the user with the role you choose. Otherwise, add people on
+  the Users page first (with any password); they then sign in via SSO with
+  the same email.
+- **Require single sign-on**: password sign-in stops working for everyone
+  except admins, who keep it as the way back in if the identity provider
+  has a problem.
+
+On the sign-in page, people type their organization and click **Sign in
+with single sign-on**. Two-factor sign-in for SSO users is your identity
+provider's job. Seredina doesn't ask for its own code on top.
+
 ## Two-factor sign-in
 
 Each user can turn on two-factor sign-in under **Account security** (the

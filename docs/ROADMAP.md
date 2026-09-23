@@ -1661,8 +1661,9 @@ way a mutating tool call already works, and whether it's worth the added AI-cost
 per-signup for a self-hosted operator who may have no AI provider configured at
 all (Phase 4's BYOK is opt-in, not guaranteed set up before first use).
 
-**Other**: mobile apps, voice/telephony, BPMN-style workflow automation, SSO/SAML,
-per-tenant data residency.
+**Other**: mobile apps, voice/telephony, BPMN-style workflow automation,
+per-tenant data residency. (SSO shipped as OpenID Connect, ADR 0060; SAML
+deliberately not added.)
 
 **Extensibility, decided 2026-09-16: integrations, not a plugin platform —
 in either deployment mode.** A self-hosted-only native plugin loader was

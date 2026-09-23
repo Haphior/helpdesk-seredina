@@ -40,6 +40,11 @@ contain breaking changes).
   shield icon in the sidebar), with one-time recovery codes. Admins can
   require it for the whole workspace (users set it up at their next sign-in)
   and reset it for someone who lost their phone.
+- **Single sign-on** (`docs/adr/0060-sso-oidc.md`): sign in with Microsoft
+  365 (Entra ID), Google Workspace, or any OpenID Connect provider
+  (Administration → Single Sign-On). Optional allowed domains, automatic
+  account creation with a chosen role, and "require SSO" (admins keep
+  password sign-in as a way back in).
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or

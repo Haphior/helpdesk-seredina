@@ -24,6 +24,8 @@ const Devices = lazy(() => import('./pages/Devices').then((m) => ({ default: m.D
 const AssetDetail = lazy(() => import('./pages/AssetDetail').then((m) => ({ default: m.AssetDetail })));
 const Users = lazy(() => import('./pages/Users').then((m) => ({ default: m.Users })));
 const Roles = lazy(() => import('./pages/Roles').then((m) => ({ default: m.Roles })));
+const SsoComplete = lazy(() => import('./pages/SsoComplete').then((m) => ({ default: m.SsoComplete })));
+const SsoSettings = lazy(() => import('./pages/SsoSettings').then((m) => ({ default: m.SsoSettings })));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity').then((m) => ({ default: m.AccountSecurity })));
 const AuditLog = lazy(() => import('./pages/AuditLog').then((m) => ({ default: m.AuditLog })));
 const EmailChannels = lazy(() => import('./pages/EmailChannels').then((m) => ({ default: m.EmailChannels })));
@@ -72,6 +74,7 @@ export function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/login/sso" element={<SsoComplete />} />
           <Route path="/register" element={<Register />} />
           <Route path="/kb/:tenantSlug" element={<PublicKb />} />
           <Route path="/kb/:tenantSlug/:slug" element={<PublicKbArticlePage />} />
@@ -93,6 +96,7 @@ export function App() {
               <Route path="/email-channels" element={<EmailChannels />} />
               <Route path="/audit-log" element={<AuditLog />} />
               <Route path="/account/security" element={<AccountSecurity />} />
+              <Route path="/sso" element={<SsoSettings />} />
               <Route path="/custom-fields" element={<CustomFields />} />
               <Route path="/equipment-catalog" element={<EquipmentCatalog />} />
               <Route path="/processes" element={<Processes />} />

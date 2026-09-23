@@ -74,6 +74,7 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   DeviceEnrollmentToken: 'tenantId',
   Device: 'tenantId',
   AuditLog: 'tenantId',
+  TenantSsoSettings: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

@@ -8,6 +8,7 @@ import {
   exchangeEmailOAuthCode,
   type EmailOAuthProvider,
 } from '@seredina/shared';
+import { apiPublicBase, webOrigin } from '../../lib/publicUrl';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 if (!ENCRYPTION_KEY) {
@@ -132,22 +133,16 @@ export async function deleteEmailChannel(tenantId: string, id: string) {
 // OAuth consent round trip
 // ---------------------------------------------------------------------------
 
-/**
- * The redirect URI the admin registers in their Google/Microsoft app. The
- * console and API share one address with the API under /api
- * (docs/adr/0054-server-address-and-tls.md), so WEB_ORIGIN + /api works when
- * API_PUBLIC_URL isn't set.
- */
+/** The redirect URI the admin registers in their Google/Microsoft app. */
 export function emailOAuthRedirectUri(): string | null {
-  const base = process.env.API_PUBLIC_URL?.replace(/\/$/, '') || (process.env.WEB_ORIGIN ? `${process.env.WEB_ORIGIN.replace(/\/$/, '')}/api` : null);
+  const base = apiPublicBase();
   return base ? `${base}/email-channels/oauth/callback` : null;
 }
 
 /** Where the callback sends the browser back to. */
 export function emailChannelsConsoleUrl(result: { connected: true } | { error: string }): string {
-  const origin = (process.env.WEB_ORIGIN ?? '').replace(/\/$/, '');
   const qs = 'connected' in result ? 'oauth=connected' : `oauth_error=${encodeURIComponent(result.error)}`;
-  return `${origin}/email-channels?${qs}`;
+  return `${webOrigin()}/email-channels?${qs}`;
 }
 
 const STATE_TTL_MS = 10 * 60 * 1000;

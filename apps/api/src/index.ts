@@ -47,6 +47,7 @@ import csatRoutes from './modules/csat/routes';
 import deviceRoutes from './modules/devices/routes';
 import liveRoutes from './modules/live/routes';
 import auditRoutes from './modules/audit/routes';
+import ssoRoutes from './modules/sso/routes';
 
 initErrorTracking();
 
@@ -112,6 +113,7 @@ export function buildApp() {
   app.register(deviceAuthPlugin);
   app.register(authRoutes);
   app.register(auditRoutes);
+  app.register(ssoRoutes);
   app.register(apiKeyRoutes);
   app.register(ticketRoutes);
   app.register(teamRoutes);

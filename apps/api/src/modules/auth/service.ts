@@ -111,7 +111,14 @@ export const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 // alone enumerates which emails have accounts.
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('seredina-login-timing-equalizer', 12);
 
-type LoginFailure = 'unknown_user' | 'account_inactive' | 'account_locked' | 'wrong_password';
+type LoginFailure = 'unknown_user' | 'account_inactive' | 'account_locked' | 'wrong_password' | 'sso_required';
+
+/**
+ * The password was right, but this workspace signs in through its identity
+ * provider (docs/adr/0060-sso-oidc.md). Only thrown after the password
+ * checked out, so it reveals nothing to someone guessing.
+ */
+export class SsoRequiredError extends Error {}
 
 export async function login(input: LoginInput, origin: RequestOrigin = { ipAddress: null, userAgent: null }): Promise<AuthResult> {
   const tenantId = await resolveTenantIdBySlug(input.tenantSlug);
@@ -159,6 +166,15 @@ export async function login(input: LoginInput, origin: RequestOrigin = { ipAddre
       return null;
     }
 
+    // SSO enforced: password sign-in is kept only for admins, as the way back in
+    // if the identity provider is down or misconfigured.
+    const sso = await tx.tenantSsoSettings.findUnique({ where: { tenantId }, select: { enabled: true, enforced: true } });
+    if (sso?.enabled && sso.enforced && user.role?.key !== 'admin') {
+      failure = 'sso_required';
+      failedUserId = user.id;
+      return null;
+    }
+
     const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { mfaRequired: true } });
     const mfa: AuthResult['mfa'] = user.mfaEnabledAt ? 'verify' : tenant.mfaRequired ? 'setup' : undefined;
 
@@ -193,6 +209,7 @@ export async function login(input: LoginInput, origin: RequestOrigin = { ipAddre
         ...origin,
       });
     }
+    if (failure === 'sso_required') throw new SsoRequiredError('This workspace signs in with single sign-on.');
     throw new Error('invalid credentials');
   }
 
@@ -227,7 +244,7 @@ export async function getActiveUserPermissions(tenantId: string, userId: string)
  * role) could assign 'admin' to itself or mint a new admin account. Throws if
  * the role carries any permission the caller lacks.
  */
-function assertCanAssignRole(rolePermissionKeys: string[], callerPermissions: readonly Permission[]) {
+export function assertCanAssignRole(rolePermissionKeys: string[], callerPermissions: readonly Permission[]) {
   const missing = rolePermissionKeys.filter((key) => !callerPermissions.includes(key as Permission));
   if (missing.length > 0) {
     throw new Error(`cannot assign a role with permissions you don't have: ${missing.join(', ')}`);

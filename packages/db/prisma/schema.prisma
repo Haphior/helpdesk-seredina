@@ -91,6 +91,7 @@ model Tenant {
   // Every user must set up two-factor sign-in before they can use the console
   // (docs/adr/0059-mfa-totp.md). Off by default; users can still opt in.
   mfaRequired Boolean @default(false) @map("mfa_required")
+  ssoSettings TenantSsoSettings?
 }
 
 model Role {
@@ -1529,4 +1530,32 @@ model AuditLog {
   @@index([tenantId, createdAt])
   @@index([tenantId, action, createdAt])
   @@map("audit_logs")
+}
+
+// Single sign-on over OpenID Connect (docs/adr/0060-sso-oidc.md), one per
+// tenant. Like the email OAuth app (ADR 0055) the identity-provider app is
+// the tenant's own; its client secret is encrypted with ENCRYPTION_KEY.
+model TenantSsoSettings {
+  id                    String   @id @default(uuid()) @db.Uuid
+  tenantId              String   @unique @map("tenant_id") @db.Uuid
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enabled               Boolean  @default(false)
+  // 'microsoft' | 'google' | 'oidc'
+  provider              String
+  // Microsoft: the directory (tenant) ID; Google: https://accounts.google.com;
+  // generic: the issuer URL whose /.well-known/openid-configuration is fetched.
+  issuer                String
+  clientId              String   @map("client_id")
+  clientSecretEncrypted String   @map("client_secret_encrypted")
+  // Lowercase email domains allowed to sign in; empty = any the IdP vouches for.
+  allowedDomains        String[] @default([]) @map("allowed_domains")
+  // Create a console user on first sign-in instead of requiring one to exist.
+  autoProvision         Boolean  @default(false) @map("auto_provision")
+  defaultRoleKey        String   @default("agent") @map("default_role_key")
+  // Password sign-in refused for everyone but admins (the break-glass path).
+  enforced              Boolean  @default(false)
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@map("tenant_sso_settings")
 }

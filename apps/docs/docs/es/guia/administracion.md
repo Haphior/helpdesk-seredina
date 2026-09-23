@@ -20,6 +20,31 @@ Los permisos son granulares (`tickets:read`, `tickets:write`,
 `users:manage`, `roles:manage`) — un rol personalizado puede combinarlos
 como necesites, no estás atado a los tres roles de fábrica.
 
+## Inicio de sesión único (SSO)
+
+**Administración → Inicio de sesión único** permite entrar con la cuenta de
+Microsoft 365 (Entra ID), Google Workspace o cualquier cuenta OpenID Connect
+(Okta, Auth0, Keycloak, Authentik…) en vez de una contraseña aparte.
+Registras una aplicación en tu proveedor de identidad (la página muestra los
+pasos exactos y el **URI de redirección** a registrar,
+`<tu dirección>/api/auth/sso/callback`) y pegas su ID y secreto de cliente.
+En Microsoft pega también el Id. de directorio (inquilino). El inicio de
+sesión queda fijado a ese directorio.
+
+- **Dominios de correo permitidos**: solo esos dominios pueden entrar por SSO.
+- **Crear cuentas automáticamente**: el primer inicio de sesión por SSO de un
+  dominio permitido crea el usuario con el rol que elijas. Si no, agrega a
+  las personas primero en Usuarios (con cualquier contraseña); luego entran
+  por SSO con el mismo correo.
+- **Exigir inicio de sesión único**: la contraseña deja de funcionar para
+  todos salvo los administradores, que la conservan como vía de acceso si el
+  proveedor de identidad tiene un problema.
+
+En la página de inicio de sesión, las personas escriben su organización y
+pulsan **Iniciar sesión con inicio de sesión único**. La verificación en dos
+pasos de los usuarios SSO queda a cargo de tu proveedor de identidad:
+Seredina no pide un código propio adicional.
+
 ## Verificación en dos pasos
 
 Cada usuario puede activar la verificación en dos pasos en **Seguridad de la

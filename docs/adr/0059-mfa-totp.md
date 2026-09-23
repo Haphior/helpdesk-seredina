@@ -76,7 +76,7 @@ in the audit log (ADR 0058).
 
 - An admin who loses both their phone and their recovery codes needs another
   admin to reset them. In a single-admin workspace, only direct database
-  access can reset them. The Users page tells admins to keep the recovery
-  codes safe.
+  access can reset them, which is why the recovery-codes screen asks people
+  to keep them in a password manager.
 - API keys, device credentials, and the MCP server are unaffected. They
   aren't interactive sign-ins.

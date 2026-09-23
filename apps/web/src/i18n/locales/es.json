@@ -38,7 +38,15 @@
       "email": "Correo electrónico",
       "password": "Contraseña"
     },
-    "copyright": "© Seredina — AGPL-3.0"
+    "copyright": "© Seredina — AGPL-3.0",
+    "sso": {
+      "button": "Iniciar sesión con inicio de sesión único (SSO)",
+      "needOrg": "Primero escribe tu organización y luego elige el inicio de sesión único.",
+      "required": "Este espacio de trabajo usa inicio de sesión único. Usa el botón de SSO de abajo.",
+      "completing": "Iniciando sesión…",
+      "missingToken": "Este enlace de inicio de sesión está incompleto. Vuelve a empezar.",
+      "failed": "Falló el inicio de sesión único. Inténtalo de nuevo."
+    }
   },
   "nav": {
     "groups": {
@@ -80,7 +88,8 @@
       "appearance": "Apariencia",
       "branding": "Marca",
       "language": "Idioma",
-      "auditLog": "Registro de auditoría"
+      "auditLog": "Registro de auditoría",
+      "sso": "Inicio de sesión único"
     }
   },
   "layout": {
@@ -451,7 +460,8 @@
       "kb_settings": "Portal de conocimiento",
       "tenant": "Espacio de trabajo",
       "telegram_channel": "Telegram",
-      "device_enrollment_token": "Token de inscripción"
+      "device_enrollment_token": "Token de inscripción",
+      "sso_settings": "Inicio de sesión único"
     },
     "action": {
       "auth.login_succeeded": "Inicio de sesión",
@@ -493,7 +503,9 @@
       "auth.mfa_recovery_code_used": "Inicio de sesión con código de recuperación",
       "auth.mfa_recovery_codes_regenerated": "Nuevos códigos de recuperación",
       "user.mfa_reset": "Verificación en dos pasos restablecida por un administrador",
-      "tenant.mfa_policy_changed": "Cambió la exigencia de verificación en dos pasos"
+      "tenant.mfa_policy_changed": "Cambió la exigencia de verificación en dos pasos",
+      "sso.settings_updated": "Configuración de inicio de sesión único modificada",
+      "sso.settings_deleted": "Inicio de sesión único quitado"
     }
   },
   "mfa": {
@@ -564,5 +576,39 @@
       "confirmRequire": "¿Exigir la verificación en dos pasos a todos? A quienes no la tengan se les pedirá configurarla en su próximo inicio de sesión.",
       "policyFailed": "No se pudo cambiar la política de verificación en dos pasos"
     }
+  },
+  "sso": {
+    "title": "Inicio de sesión único",
+    "intro": "Permite que las personas entren con su cuenta de Microsoft 365, Google Workspace u otra de OpenID Connect en vez de una contraseña aparte de Seredina. La verificación en dos pasos queda entonces a cargo de tu proveedor de identidad.",
+    "loadFailed": "No se pudo cargar la configuración de inicio de sesión único",
+    "saveFailed": "No se pudo guardar",
+    "saved": "Guardado. Pruébalo desde la página de inicio de sesión en una ventana privada antes de hacerlo obligatorio.",
+    "confirmRemove": "¿Quitar el inicio de sesión único? Todos volverán a entrar con contraseña.",
+    "remove": "Quitar inicio de sesión único",
+    "provider": {
+      "microsoft": "Microsoft Entra ID",
+      "google": "Google Workspace",
+      "oidc": "Otro (OpenID Connect)"
+    },
+    "setup": {
+      "microsoft": "En el portal de Azure: Microsoft Entra ID → Registros de aplicaciones → Nuevo registro, inquilino único, URI de redirección de tipo \"Web\" = el URI de abajo. Crea un secreto de cliente en Certificados y secretos. Copia el Id. de aplicación (cliente) y el Id. de directorio (inquilino).",
+      "google": "En la consola de Google Cloud: configura la pantalla de consentimiento OAuth (Interna) y luego Credenciales → Crear credenciales → ID de cliente OAuth → Aplicación web, con el URI de redirección de abajo.",
+      "oidc": "Registra un cliente confidencial \"web\" en tu proveedor de identidad (Keycloak, Authentik, Okta, Auth0…) con el URI de redirección de abajo y los alcances openid, email y profile. La URL del emisor es aquella cuya /.well-known/openid-configuration publica el proveedor."
+    },
+    "redirectUri": "URI de redirección a registrar",
+    "redirectUriMissing": "El servidor no tiene una dirección pública configurada (WEB_ORIGIN o API_PUBLIC_URL).",
+    "directoryId": "Id. de directorio (inquilino)",
+    "issuerUrl": "URL del emisor",
+    "clientId": "Id. de cliente (aplicación)",
+    "clientSecret": "Secreto de cliente",
+    "clientSecretKeep": "Secreto de cliente (déjalo vacío para mantener el guardado)",
+    "allowedDomains": "Dominios de correo permitidos (opcional, separados por comas)",
+    "autoProvision": "Crear cuentas automáticamente",
+    "autoProvisionHint": "La primera vez que alguien de un dominio permitido inicie sesión, se le crea una cuenta con el rol de abajo. Si no, un administrador debe agregarlo antes en Usuarios.",
+    "defaultRole": "Rol para cuentas nuevas",
+    "enabled": "Activar inicio de sesión único",
+    "enabledHint": "Agrega un botón \"Iniciar sesión con SSO\" a la página de inicio de sesión. Las contraseñas siguen funcionando.",
+    "enforced": "Exigir inicio de sesión único",
+    "enforcedHint": "Solo los administradores pueden seguir entrando con contraseña: es la vía de acceso si el proveedor de identidad tiene un problema."
   }
 }

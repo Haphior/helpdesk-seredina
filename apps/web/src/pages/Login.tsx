@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { AuthLayout, Field } from '../components/AuthLayout';
 import { CodeInput, MfaEnroll, RecoveryCodes, type MfaSetupData } from '../components/MfaSetup';
-import { apiPost, ApiError } from '../lib/api';
+import { API_URL, apiPost, ApiError } from '../lib/api';
 
 type Step =
   | { kind: 'password' }
@@ -21,8 +21,20 @@ export function Login() {
   const [tenantSlug, setTenantSlug] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  // Set by the API when a single sign-on attempt comes back with a problem.
+  const [error, setError] = useState<string | null>(params.get('sso_error'));
   const [submitting, setSubmitting] = useState(false);
+
+  function signInWithSso() {
+    if (!tenantSlug.trim()) {
+      setError(t('auth.sso.needOrg'));
+      return;
+    }
+    const qs = new URLSearchParams({ tenantSlug: tenantSlug.trim() });
+    if (email) qs.set('email', email);
+    window.location.assign(`${API_URL}/auth/sso/start?${qs.toString()}`);
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -40,7 +52,13 @@ export function Login() {
         setStep({ kind: 'mfa_setup', mfaToken: outcome.mfaToken, setup });
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('auth.login.failed'));
+      setError(
+        err instanceof ApiError && err.status === 403
+          ? t('auth.sso.required')
+          : err instanceof ApiError
+            ? err.message
+            : t('auth.login.failed'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -159,6 +177,14 @@ export function Login() {
           className="w-full rounded-[9px] bg-indigo-600 px-4 py-2.5 text-[13.5px] font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
         >
           {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
+        </button>
+
+        <button
+          type="button"
+          onClick={signInWithSso}
+          className="-mt-2 w-full rounded-[9px] border border-slate-200 px-4 py-2.5 text-[13.5px] font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          {t('auth.sso.button')}
         </button>
 
         <p className="text-center text-[13px] text-slate-400">

@@ -38,7 +38,15 @@
       "email": "Email",
       "password": "Password"
     },
-    "copyright": "© Seredina — AGPL-3.0"
+    "copyright": "© Seredina — AGPL-3.0",
+    "sso": {
+      "button": "Sign in with single sign-on (SSO)",
+      "needOrg": "Enter your organization first, then choose single sign-on.",
+      "required": "This workspace signs in with single sign-on. Use the SSO button below.",
+      "completing": "Signing you in…",
+      "missingToken": "This sign-in link is incomplete. Start again.",
+      "failed": "Single sign-on failed. Try again."
+    }
   },
   "nav": {
     "groups": {
@@ -80,7 +88,8 @@
       "appearance": "Appearance",
       "branding": "Branding",
       "language": "Language",
-      "auditLog": "Audit Log"
+      "auditLog": "Audit Log",
+      "sso": "Single Sign-On"
     }
   },
   "layout": {
@@ -451,7 +460,8 @@
       "kb_settings": "Knowledge base portal",
       "tenant": "Workspace",
       "telegram_channel": "Telegram",
-      "device_enrollment_token": "Enrollment token"
+      "device_enrollment_token": "Enrollment token",
+      "sso_settings": "Single sign-on"
     },
     "action": {
       "auth.login_succeeded": "Signed in",
@@ -493,7 +503,9 @@
       "auth.mfa_recovery_code_used": "Signed in with a recovery code",
       "auth.mfa_recovery_codes_regenerated": "New recovery codes created",
       "user.mfa_reset": "Two-factor sign-in reset by admin",
-      "tenant.mfa_policy_changed": "Two-factor requirement changed"
+      "tenant.mfa_policy_changed": "Two-factor requirement changed",
+      "sso.settings_updated": "Single sign-on settings changed",
+      "sso.settings_deleted": "Single sign-on removed"
     }
   },
   "mfa": {
@@ -564,5 +576,39 @@
       "confirmRequire": "Require two-factor sign-in for everyone? Users who haven't set it up will be asked to at their next sign-in.",
       "policyFailed": "Failed to change the two-factor policy"
     }
+  },
+  "sso": {
+    "title": "Single sign-on",
+    "intro": "Let people sign in with their Microsoft 365, Google Workspace or other OpenID Connect account instead of a separate Seredina password. Two-factor sign-in is then up to your identity provider.",
+    "loadFailed": "Failed to load single sign-on settings",
+    "saveFailed": "Failed to save",
+    "saved": "Saved. Try it from the sign-in page in a private window before requiring it.",
+    "confirmRemove": "Remove single sign-on? Everyone goes back to signing in with a password.",
+    "remove": "Remove single sign-on",
+    "provider": {
+      "microsoft": "Microsoft Entra ID",
+      "google": "Google Workspace",
+      "oidc": "Other (OpenID Connect)"
+    },
+    "setup": {
+      "microsoft": "In the Azure portal: Microsoft Entra ID → App registrations → New registration, single tenant, redirect URI of type \"Web\" = the URI below. Create a client secret under Certificates & secrets. Copy the Application (client) ID and the Directory (tenant) ID.",
+      "google": "In the Google Cloud console: configure the OAuth consent screen (Internal), then Credentials → Create credentials → OAuth client ID → Web application, with the redirect URI below.",
+      "oidc": "Register a confidential \"web\" client in your identity provider (Keycloak, Authentik, Okta, Auth0…) with the redirect URI below and the scopes openid, email and profile. The issuer URL is the one whose /.well-known/openid-configuration the provider publishes."
+    },
+    "redirectUri": "Redirect URI to register",
+    "redirectUriMissing": "The server has no public address configured (WEB_ORIGIN or API_PUBLIC_URL).",
+    "directoryId": "Directory (tenant) ID",
+    "issuerUrl": "Issuer URL",
+    "clientId": "Client (application) ID",
+    "clientSecret": "Client secret",
+    "clientSecretKeep": "Client secret (leave empty to keep the saved one)",
+    "allowedDomains": "Allowed email domains (optional, comma-separated)",
+    "autoProvision": "Create accounts automatically",
+    "autoProvisionHint": "The first time someone from an allowed domain signs in, give them an account with the role below. Otherwise an admin must add them on the Users page first.",
+    "defaultRole": "Role for new accounts",
+    "enabled": "Turn on single sign-on",
+    "enabledHint": "Adds a \"Sign in with SSO\" button to the sign-in page. Passwords keep working.",
+    "enforced": "Require single sign-on",
+    "enforcedHint": "Only admins can still sign in with a password — the way back in if the identity provider has a problem."
   }
 }
