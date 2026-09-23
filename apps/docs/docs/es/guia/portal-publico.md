@@ -1,7 +1,8 @@
 # Portal público
 
-Dos páginas públicas, sin cuenta ni login, en la URL de tu instancia —
-para tus clientes, no para tus agentes.
+Páginas públicas en la URL de tu instancia — para tus clientes, no para
+tus agentes. La base de conocimiento y la página de estado no piden inicio
+de sesión; el portal de clientes usa un enlace enviado por correo.
 
 
 ## Portal de clientes
