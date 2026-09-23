@@ -4,6 +4,10 @@ import { prisma, withTenantTx, type EmailChannel } from '@seredina/db';
 import { ingestInboundEmail } from './ingest';
 import { EmailChannelNeedsReconnectError, resolveMailAuth } from './credentials';
 import { notifyUser } from '../notifications/notify';
+import { redisLock, type Lock } from '../lib/lock';
+
+// Longer than any sane poll of one mailbox; only matters if a replica dies holding it.
+const POLL_LOCK_TTL_MS = 5 * 60 * 1000;
 
 async function pollEmailChannel(channel: EmailChannel): Promise<void> {
   const auth = await resolveMailAuth(channel, 'imap');
@@ -90,16 +94,21 @@ async function pollEmailChannel(channel: EmailChannel): Promise<void> {
  * channel's full row (including the still-encrypted password) is then fetched
  * through the normal tenant-scoped path.
  */
-export async function pollActiveEmailChannels(): Promise<void> {
+export async function pollActiveEmailChannels(lock: Lock = redisLock): Promise<void> {
   const channels = await prisma.$queryRaw<{ id: string; tenant_id: string }[]>`
     SELECT id, tenant_id FROM list_active_email_channels()
   `;
 
   for (const { id, tenant_id: tenantId } of channels) {
     try {
-      const channel = await withTenantTx(prisma, tenantId, (tx) => tx.emailChannel.findUnique({ where: { id } }));
-      if (!channel) continue; // deleted between the list and the fetch -- fine, skip it
-      await pollEmailChannel(channel);
+      // One replica per mailbox at a time: with several worker replicas, each
+      // walks the same list and skips whatever another is already polling --
+      // see docs/adr/0057-email-poll-lock.md.
+      await lock.runExclusive(`seredina:email-poll:${id}`, POLL_LOCK_TTL_MS, async () => {
+        const channel = await withTenantTx(prisma, tenantId, (tx) => tx.emailChannel.findUnique({ where: { id } }));
+        if (!channel) return; // deleted between the list and the fetch -- fine, skip it
+        await pollEmailChannel(channel);
+      });
     } catch (err) {
       if (err instanceof EmailChannelNeedsReconnectError) {
         // Already flagged for the console; it drops out of the list next cycle.

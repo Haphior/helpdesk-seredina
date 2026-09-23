@@ -160,10 +160,9 @@ telegramSendWorker.on('failed', (job, err) => {
 // Inbound email is a plain interval loop across every tenant's channels, not a
 // per-channel BullMQ repeatable job -- see docs/adr/0004-email-channel.md for why
 // (mainly: registering/deregistering repeatable jobs in step with channel CRUD is
-// real complexity this v1 doesn't need yet with one worker instance). Known
-// consequence, not an oversight: running multiple worker replicas would double-poll
-// every mailbox -- fine for now, a real problem only once horizontal scaling matters
-// (Phase 4).
+// real complexity this doesn't need). Safe with several worker replicas: each
+// mailbox is polled under a per-channel Redis lock, and ingestion is idempotent
+// on Message-ID -- see docs/adr/0057-email-poll-lock.md.
 const EMAIL_POLL_INTERVAL_MS = Number(process.env.EMAIL_POLL_INTERVAL_MS ?? 30_000);
 
 async function pollLoop() {

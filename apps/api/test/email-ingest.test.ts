@@ -4,6 +4,7 @@ import { prisma, withTenantTx } from '@seredina/db';
 import { MAX_ATTACHMENT_SIZE_BYTES, MAX_ATTACHMENTS_PER_MESSAGE } from '@seredina/shared';
 import { ingestInboundEmail, selectInboundAttachments, type InboundAttachment } from '../../worker/src/email/ingest';
 import { pickSendChannel } from '../../worker/src/email/transport';
+import { redisLock } from '../../worker/src/lib/lock';
 import { createEmailChannel } from '../src/modules/emailchannels/service';
 import { seedDefaultTicketStatuses } from '../src/modules/tickets/service';
 
@@ -50,6 +51,30 @@ describe('pickSendChannel', () => {
     expect(pickSendChannel(channels, 'c')?.id).toBe('a');
     expect(pickSendChannel(channels, null)?.id).toBe('a');
     expect(pickSendChannel([channels[2]], null)).toBeNull();
+  });
+});
+
+describe.skipIf(!process.env.REDIS_URL)('email poll lock', () => {
+  it('lets only one caller hold a mailbox at a time, and frees it afterwards', async () => {
+    const key = `seredina:test-lock:${randomUUID()}`;
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    const runs: string[] = [];
+
+    const first = redisLock.runExclusive(key, 10_000, async () => {
+      runs.push('first');
+      await held;
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    const second = await redisLock.runExclusive(key, 10_000, async () => {
+      runs.push('second');
+    });
+    expect(second).toBe(false);
+
+    release();
+    expect(await first).toBe(true);
+    expect(await redisLock.runExclusive(key, 10_000, async () => void runs.push('third'))).toBe(true);
+    expect(runs).toEqual(['first', 'third']);
   });
 });
 
@@ -105,5 +130,24 @@ describe.skipIf(!hasDb)('inbound email ingestion', () => {
     expect(ticket.messages[0].attachments.map((a) => a.filename)).toEqual(['screen.png']);
     expect(ticket.messages[0].attachments[0].data.toString()).toBe('png-bytes');
     expect(ticket.messages[0].body).toContain('too-big.iso');
+  });
+
+  it('ignores the same Message-ID a second time', async () => {
+    const email = {
+      tenantId,
+      fromAddress: 'dup@example.com',
+      fromName: 'Dup',
+      subject: 'Once only',
+      text: 'hello',
+      messageId: `<${randomUUID()}@mail.example.com>`,
+      inReplyTo: null,
+      references: [],
+      emailChannelId: channelId,
+    };
+    const first = await ingestInboundEmail(email);
+    const second = await ingestInboundEmail(email);
+    expect(second.ticketId).toBe(first.ticketId);
+    const count = await withTenantTx(prisma, tenantId, (tx) => tx.message.count({ where: { externalId: email.messageId } }));
+    expect(count).toBe(1);
   });
 });

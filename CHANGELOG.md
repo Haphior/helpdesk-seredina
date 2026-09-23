@@ -25,6 +25,9 @@ contain breaking changes).
   instead of disappearing.
 - **Replies go out from the mailbox the customer wrote to**, when a tenant
   has more than one email channel, instead of always from the first one.
+- **`worker` can run as several replicas**: each mailbox is polled under a
+  per-mailbox lock and a repeated Message-ID is ignored, so emails no longer
+  turn into duplicate tickets (`docs/adr/0057-email-poll-lock.md`).
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or

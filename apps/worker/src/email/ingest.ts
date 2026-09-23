@@ -50,7 +50,19 @@ export interface IngestResult {
 export async function ingestInboundEmail(email: InboundEmail): Promise<IngestResult> {
   let createdTicket = false;
   const { kept, skippedNote } = selectInboundAttachments(email.attachments ?? []);
+  let duplicate = false;
   const result = await withTenantTx(prisma, email.tenantId, async (tx) => {
+    // Idempotent on Message-ID: a replica that dies after ingesting but before
+    // flagging the mail \Seen would otherwise create it again on the next poll.
+    const alreadyIngested = await tx.message.findFirst({
+      where: { externalId: email.messageId, authorType: 'CONTACT' },
+      select: { ticketId: true },
+    });
+    if (alreadyIngested) {
+      duplicate = true;
+      return { ticketId: alreadyIngested.ticketId, assigneeToNotify: null };
+    }
+
     const candidateIds = [email.inReplyTo, ...email.references].filter((v): v is string => Boolean(v));
 
     const existingMessage =
@@ -141,6 +153,8 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<IngestRes
 
     return { ticketId, assigneeToNotify };
   });
+
+  if (duplicate) return result;
 
   // After the commit, never inside it -- see docs/adr/0053-live-updates.md.
   await publishLive(email.tenantId, { type: createdTicket ? 'ticket.created' : 'message.created', ticketId: result.ticketId });

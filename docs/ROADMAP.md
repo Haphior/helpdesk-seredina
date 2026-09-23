@@ -1702,10 +1702,9 @@ self-hosted, full stop.
   overlook since it's a newer env var; back it up like a database password, document
   this prominently before any real self-hosted deployment. See
   `docs/adr/0004-email-channel.md`.
-- Multiple `worker` replicas would double-poll every tenant's email channels (the
-  interval-loop design isn't coordinated across instances) — a real constraint on
-  horizontal scaling, not yet solved, deferred to Phase 4 alongside the equivalent
-  discovery-worker scaling question.
+- ~~Multiple `worker` replicas would double-poll every tenant's email channels~~ —
+  resolved: per-mailbox Redis lock plus Message-ID-idempotent ingestion, see
+  `docs/adr/0057-email-poll-lock.md`.
 - Phase 5's endpoint agent is a categorically bigger trust boundary than anything
   else in this project — everything before it runs inside Seredina's own
   infrastructure; an agent runs with real privilege on a customer's real machine.
