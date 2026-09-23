@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiGet, apiPatch, ApiError } from '../lib/api';
 import { ChannelGlyph } from '../components/ChannelGlyph';
 import { useTheme, type UiTheme } from '../theme/ThemeContext';
@@ -29,6 +30,7 @@ function ThemeSwatch({ theme }: { theme: UiTheme }) {
 }
 
 export function ThemeSettings() {
+  const { t } = useTranslation();
   const { theme, applyTheme } = useTheme();
   const [options, setOptions] = useState<ThemeOption[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export function ThemeSettings() {
   useEffect(() => {
     apiGet<{ themes: ThemeOption[] }>('/ui-settings/themes')
       .then((res) => setOptions(res.themes))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load theme options'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('theme.loadFailed')));
   }, []);
 
   async function choose(next: UiTheme) {
@@ -50,7 +52,7 @@ export function ThemeSettings() {
       await apiPatch('/ui-settings', { theme: next });
     } catch (err) {
       applyTheme(previous);
-      setError(err instanceof ApiError ? err.message : 'Failed to save theme — reverted');
+      setError(err instanceof ApiError ? err.message : t('theme.saveFailed'));
     } finally {
       setSavingTheme(null);
     }
@@ -58,13 +60,13 @@ export function ThemeSettings() {
 
   return (
     <div className="px-8 py-7">
-      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">Appearance</h1>
+      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">{t('theme.title')}</h1>
       <p className="mb-6 max-w-xl text-[13.5px] text-slate-500">
-        Pick how Seredina looks for everyone in this tenant. Takes effect immediately for anyone with the app open.
+        {t('theme.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {!options && !error && <p className="text-sm text-slate-500">Loading…</p>}
+      {!options && !error && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
 
       {options && (
         <div className="grid max-w-2xl grid-cols-2 gap-4">
@@ -81,11 +83,11 @@ export function ThemeSettings() {
               >
                 <ThemeSwatch theme={opt.key} />
                 <div className="mt-3 flex items-center gap-2">
-                  <span className="text-[13.5px] font-semibold text-slate-800">{opt.name}</span>
+                  <span className="text-[13.5px] font-semibold text-slate-800">{t(`theme.options.${opt.key}.name`, { defaultValue: opt.name })}</span>
                   {opt.key === 'middle' && <ChannelGlyph channel="email" />}
-                  {selected && <span className="ml-auto text-[11px] font-semibold uppercase tracking-wide text-indigo-600">Active</span>}
+                  {selected && <span className="ml-auto text-[11px] font-semibold uppercase tracking-wide text-indigo-600">{t('theme.active')}</span>}
                 </div>
-                <p className="mt-1 text-[12.5px] text-slate-500">{opt.description}</p>
+                <p className="mt-1 text-[12.5px] text-slate-500">{t(`theme.options.${opt.key}.description`, { defaultValue: opt.description })}</p>
               </button>
             );
           })}

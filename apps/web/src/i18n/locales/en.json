@@ -177,7 +177,9 @@
     "creating": "Creating…",
     "remove": "remove",
     "link": "Link",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "copied": "Copied",
+    "copy": "Copy"
   },
   "tickets": {
     "title": "Tickets",
@@ -744,5 +746,328 @@
     "turnOn": "Turn on",
     "turnOff": "Turn off",
     "needsEmail": "Sign-in links are sent by email, so connect a mailbox first:"
+  },
+  "dataExport": {
+    "title": "Data Export",
+    "failed": "Failed to download export",
+    "intro": "Download every tenant table — tickets, messages, assets, macros, SLA policies, contracts, the audit log and the rest — as a single open JSON file. No lock-in: this is the same file you'd hand to any other system, or use to self-host a backup. Secrets (passwords, API key hashes, webhook signing secrets, OAuth secrets) are never included.",
+    "preparing": "Preparing download…",
+    "download": "Download export (JSON)"
+  },
+  "notificationSettings": {
+    "title": "Notification Settings",
+    "loadFailed": "Failed to load notification settings",
+    "saveFailed": "Failed to save",
+    "intro": "How you're told about activity — in-app always shows in the bell, email needs a connected email channel to actually send.",
+    "event": "Event",
+    "inApp": "In-app",
+    "email": "Email",
+    "events": {
+      "TICKET_ASSIGNED": "A ticket is assigned to me",
+      "NEW_REPLY": "A contact replies to a ticket assigned to me",
+      "CONTRACT_EXPIRING": "A contract, warranty or license is about to expire (users who manage assets)"
+    }
+  },
+  "kbGate": {
+    "incorrect": "Incorrect access code.",
+    "failed": "Something went wrong — try again.",
+    "title": "This help center requires an access code",
+    "code": "Access code",
+    "checking": "Checking…",
+    "continue": "Continue"
+  },
+  "publicKb": {
+    "loadFailed": "Failed to load the help center",
+    "helpCenter": "Help Center",
+    "search": "Search articles",
+    "searchPlaceholder": "Search articles…",
+    "searchButton": "Search",
+    "noArticles": "No articles found.",
+    "articleNotFound": "Article not found",
+    "allArticles": "All articles",
+    "updated": "Updated {{when}}"
+  },
+  "publicStatus": {
+    "loadFailed": "Failed to load status",
+    "title": "System Status",
+    "noServices": "No services are published on this status page yet.",
+    "overall": {
+      "operational": "All systems operational",
+      "degraded": "Some systems experiencing degraded performance",
+      "outage": "Major outage affecting one or more systems"
+    },
+    "level": {
+      "operational": "Operational",
+      "degraded": "Degraded performance",
+      "outage": "Outage"
+    },
+    "incidents_one": "{{count}} active incident",
+    "incidents_other": "{{count}} active incidents"
+  },
+  "csat": {
+    "rating": "Rating",
+    "stars_one": "{{count}} star",
+    "stars_other": "{{count}} stars",
+    "invalid": "This survey link is not valid.",
+    "submitFailed": "Failed to submit your rating.",
+    "title": "How did we do?",
+    "thanks": "Thanks for your feedback!",
+    "rate": "Rate your experience",
+    "commentPlaceholder": "Anything you'd like to add? (optional)",
+    "submit": "Submit"
+  },
+  "bell": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "settings": "Settings",
+    "empty": "No notifications yet.",
+    "markRead": "Mark read"
+  },
+  "theme": {
+    "loadFailed": "Failed to load theme options",
+    "saveFailed": "Failed to save theme — reverted",
+    "title": "Appearance",
+    "intro": "Pick how Seredina looks for everyone in this workspace. Takes effect immediately for anyone with the app open.",
+    "active": "Active"
+  },
+  "aiUsage": {
+    "loadFailed": "Failed to load AI usage",
+    "title": "AI Usage",
+    "intro": "What every AI call has actually cost, in real dollars — with your own key, Seredina never marks this up.",
+    "totalCost": "Total cost",
+    "totalCalls": "Total AI calls",
+    "calls_one": "{{count}} call",
+    "calls_other": "{{count}} calls",
+    "recent": "Recent activity",
+    "empty": "No AI activity yet.",
+    "when": "When",
+    "ticket": "Ticket",
+    "action": "Action",
+    "model": "Model",
+    "tokens": "Tokens",
+    "cost": "Cost",
+    "actions": {
+      "suggest_reply": "Suggest reply",
+      "summarize": "Summarize",
+      "triage": "Triage",
+      "autonomous": "Autonomous run"
+    }
+  },
+  "telegram": {
+    "loadFailed": "Failed to load Telegram settings",
+    "connectFailed": "Failed to connect this bot",
+    "confirmDisconnect": "Disconnect @{{bot}}? Existing Telegram tickets stay, but no new messages will come in until you reconnect.",
+    "disconnectFailed": "Failed to disconnect",
+    "introBefore": "Connect a Telegram bot so a message to it becomes a ticket, and an agent's reply goes back as a real Telegram message. Create a bot with",
+    "introAfter": "and paste its token below.",
+    "connected": "Connected",
+    "disconnect": "Disconnect",
+    "botToken": "Bot token",
+    "connect": "Connect"
+  },
+  "apiKeys": {
+    "loadFailed": "Failed to load API keys",
+    "createFailed": "Failed to create API key",
+    "confirmRevoke": "Revoke \"{{name}}\"? Anything using this key stops working immediately.",
+    "revokeFailed": "Failed to revoke API key",
+    "title": "API Keys",
+    "introBefore": "Authenticates the API channel",
+    "introAfter": ", the way an external integration creates tickets in Seredina.",
+    "copyNow": "Copy this key now. It won't be shown again.",
+    "keyName": "Key name",
+    "keyNamePlaceholder": "Key name (e.g. widget-integration)",
+    "create": "Create key",
+    "empty": "No API keys yet.",
+    "created": "Created {{when}}",
+    "lastUsed": "Last used {{when}}",
+    "neverUsed": "Never used",
+    "revoke": "revoke"
+  },
+  "branding": {
+    "badColor": "Accent color must be a hex code like #4f46e5.",
+    "saveFailed": "Failed to save branding",
+    "title": "Branding",
+    "intro": "Show your own logo and color on your customer portal, help center and status page — the pages your customers see, not the console your agents use.",
+    "logoUrl": "Logo URL",
+    "accentColor": "Accent color",
+    "saved": "Saved.",
+    "preview": "Preview",
+    "previewHint": "How the portal header looks with your logo and color."
+  },
+  "businessHours": {
+    "loadFailed": "Failed to load business hours",
+    "saveFailed": "Failed to save business hours",
+    "title": "Business Hours",
+    "intro": "Only used by an SLA policy with \"business hours only\" checked — its due dates skip the closed hours below instead of counting straight calendar time. One window per day.",
+    "timezone": "Timezone",
+    "timezonePlaceholder": "e.g. America/Santiago",
+    "timezoneHint": "IANA name (America/Santiago, UTC, Etc/GMT+5, …)",
+    "startOf": "{{day}} start time",
+    "endOf": "{{day}} end time",
+    "to": "to",
+    "closed": "Closed",
+    "saved": "Saved.",
+    "days": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    }
+  },
+  "roles": {
+    "loadFailed": "Failed to load roles",
+    "confirmDelete": "Delete the \"{{name}}\" role?",
+    "deleteFailed": "Failed to delete role",
+    "saveFailed": "Failed to save role",
+    "title": "Roles",
+    "new": "New role",
+    "edit": "Edit role",
+    "intro": "Every role here is available immediately when assigning a user (Administration → Users) — no restart, no fixed list.",
+    "delete": "delete",
+    "key": "Key",
+    "keyHint": "Lowercase, alphanumeric and underscores. Can't be changed later.",
+    "name": "Name",
+    "permissionsLabel": "Permissions",
+    "permissions": {
+      "tickets:read": "See tickets",
+      "tickets:write": "Work on tickets",
+      "tickets:manage_all": "Manage tickets and workspace settings",
+      "assets:read": "See assets",
+      "assets:manage": "Manage assets",
+      "channels:manage": "Manage channels",
+      "users:manage": "Manage users",
+      "roles:manage": "Manage roles",
+      "audit:read": "See the audit log"
+    }
+  },
+  "equipment": {
+    "loadFailed": "Failed to load equipment catalog",
+    "confirmDelete": "Delete model \"{{name}}\"? Assets linked to it keep their data, just lose the catalog link.",
+    "deleteFailed": "Failed to delete model",
+    "createFailed": "Failed to create model",
+    "title": "Equipment Catalog",
+    "newModel": "New model",
+    "newTitle": "New equipment model",
+    "intro": "Manufacturer/model reference list — pick one when adding an asset instead of retyping specs every time.",
+    "empty": "No models cataloged yet.",
+    "delete": "delete",
+    "manufacturer": "Manufacturer",
+    "newManufacturerOption": "+ New manufacturer…",
+    "newManufacturerName": "New manufacturer name",
+    "modelName": "Model name",
+    "defaultType": "Default type"
+  },
+  "assetType": {
+    "SERVER": "Server",
+    "WORKSTATION": "Workstation",
+    "NETWORK_DEVICE": "Network device",
+    "PRINTER": "Printer",
+    "MOBILE_DEVICE": "Mobile device",
+    "OTHER": "Other"
+  },
+  "priority": {
+    "LOW": "Low",
+    "NORMAL": "Normal",
+    "HIGH": "High",
+    "URGENT": "Urgent"
+  },
+  "sla": {
+    "loadFailed": "Failed to load SLA policies",
+    "saveFailed": "Failed to save SLA policy",
+    "removeFailed": "Failed to remove SLA policy",
+    "confirmRemove": "Remove the SLA policy for {{priority}} priority? Tickets at this priority will no longer get due dates.",
+    "title": "SLA Policies",
+    "intro": "First response and resolution targets, per priority. A priority with no policy here gets no due dates at all — SLA tracking is opt-in. Business-hours-only targets use the schedule set on the Business Hours page.",
+    "firstResponse": "First response",
+    "firstResponseAria": "First response minutes for {{priority}} priority",
+    "resolution": "Resolution",
+    "resolutionAria": "Resolution minutes for {{priority}} priority",
+    "placeholder": "e.g. 30",
+    "min": "min",
+    "businessHoursOnly": "Business hours only",
+    "remove": "remove",
+    "update": "Update"
+  },
+  "assetStatus": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive",
+    "RETIRED": "Retired"
+  },
+  "assetForm": {
+    "saveFailed": "Failed to save asset",
+    "edit": "Edit asset",
+    "new": "New asset",
+    "name": "Name",
+    "type": "Type",
+    "status": "Status",
+    "ip": "IP address",
+    "mac": "MAC address",
+    "hostname": "Hostname",
+    "catalogModel": "Catalog model",
+    "catalogPick": "— pick to prefill manufacturer/model/type —",
+    "manufacturer": "Manufacturer",
+    "model": "Model",
+    "serial": "Serial number",
+    "os": "Operating system"
+  },
+  "monitoring": {
+    "title": "Monitoring Integrations",
+    "intro": "Turn alerts from a monitoring or alerting tool you already run into tickets here. Seredina integrates with these tools rather than replacing them — see <apiKeys>API Keys</apiKeys> for the generic API too.",
+    "createKey": "<apiKeys>Create an API key</apiKeys> for this integration (any name — e.g. \"{{name}}\").",
+    "webhookUrl": "Webhook URL",
+    "grafana": {
+      "summary": "Works with Grafana's default alert notification payload — no custom notification template needed on the Grafana side.",
+      "step2": "In Grafana, go to <strong>Alerting → Contact points → Add contact point</strong>, choose <strong>Webhook</strong> as the integration, and paste in the URL below.",
+      "step3": "Under the webhook's <strong>HTTP settings</strong>, add a custom header named <code>Authorization</code> with the value <code>Bearer &lt;your API key&gt;</code>.",
+      "step4": "Attach this contact point to whichever alert rules/notification policy you want flowing into Seredina.",
+      "footer": "A <code>severity</code> label on an alert rule (e.g. \"critical\", \"warning\", \"info\") maps to Seredina's priority automatically; alerts with no severity label default to Normal priority. Re-firing and resolved notifications for the same alert group fold into the same ticket while it's still open, instead of creating a new one each time."
+    },
+    "zabbix": {
+      "summary": "Unlike Grafana, Zabbix's webhook has no default payload shape of its own — it always runs a script you provide. Paste the one below into a new Webhook media type; it already speaks Seredina's generic alerts API, no changes needed.",
+      "step2": "In Zabbix, go to <strong>Alerts → Media types → Create media type</strong>, set the type to <strong>Webhook</strong>, and paste the script below into its <strong>Script</strong> field.",
+      "step3": "Add these <strong>Parameters</strong> (name → value) to the media type — the script reads them, so the names must match exactly:",
+      "apiKeyValue": "your API key from step 1",
+      "step4": "Create a Zabbix user with this media type attached, then an <strong>Action</strong> (under <strong>Alerts → Actions → Trigger actions</strong>) with condition <strong>Event type = Problem</strong> that notifies it. Restricting to Problem events there — not in the script — is Zabbix's documented way to do it, so resolved/OK notifications never reach the script at all.",
+      "apiUrl": "Seredina alerts API URL",
+      "script": "Webhook script",
+      "footer": "Zabbix's own severity scale (Not classified/Information/Warning/Average/High/Disaster) maps to Seredina's priority automatically. A re-fired problem for the same event id folds into the same open ticket instead of creating a new one each time."
+    }
+  },
+  "channel": {
+    "via": {
+      "email": "Via email",
+      "api": "Via API",
+      "catalog": "Via service catalog",
+      "widget": "Via chat widget",
+      "telegram": "Via Telegram",
+      "alert": "Via monitoring alert",
+      "agent": "Logged by an agent",
+      "portal": "Via customer portal"
+    },
+    "viaOther": "Via {{channel}}"
+  },
+  "catalog": {
+    "loadFailed": "Failed to load the service catalog",
+    "confirmDelete": "Delete \"{{name}}\"? Tickets already created from it are kept.",
+    "deleteFailed": "Failed to delete item",
+    "saveFailed": "Failed to save item",
+    "title": "Service Catalog",
+    "newItem": "New item",
+    "intro": "Requestable things — \"new laptop,\" \"VPN access,\" \"onboard a contractor.\" Agents request one from the Tickets page, and customers from the customer portal; it creates a ticket pre-filled with the fields you choose here.",
+    "empty": "No catalog items yet.",
+    "fields_one": "{{count}} field",
+    "fields_other": "{{count}} fields",
+    "edit": "edit",
+    "delete": "delete",
+    "editTitle": "Edit \"{{name}}\"",
+    "newTitle": "New catalog item",
+    "icon": "Icon",
+    "name": "Name",
+    "namePlaceholder": "New laptop",
+    "description": "Description (optional)",
+    "fieldsToAsk": "Fields to ask for"
   }
 }

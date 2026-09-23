@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiGet } from '../lib/api';
 import { Modal } from './Modal';
 import { Button } from './Button';
@@ -48,6 +49,7 @@ export function AssetFormModal({
   onClose: () => void;
   onSubmit: (values: AssetFormValues) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<AssetFormValues>(() => toFormValues(asset));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -87,29 +89,29 @@ export function AssetFormModal({
       await onSubmit(values);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save asset');
+      setError(err instanceof Error ? err.message : t('assetForm.saveFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title={asset ? 'Edit asset' : 'New asset'} onClose={onClose}>
+    <Modal title={asset ? t('assetForm.edit') : t('assetForm.new')} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <Input label="Name" value={values.name} onChange={(e) => setField('name', e.target.value)} required />
+        <Input label={t('assetForm.name')} value={values.name} onChange={(e) => setField('name', e.target.value)} required />
 
         <div className="grid grid-cols-2 gap-2">
-          <Select label="Type" value={values.assetType} onChange={(e) => setField('assetType', e.target.value as AssetType)}>
+          <Select label={t('assetForm.type')} value={values.assetType} onChange={(e) => setField('assetType', e.target.value as AssetType)}>
             {ASSET_TYPES.map((o) => (
               <option key={o} value={o}>
-                {o}
+                {t(`assetType.${o}`)}
               </option>
             ))}
           </Select>
-          <Select label="Status" value={values.status} onChange={(e) => setField('status', e.target.value as AssetStatus)}>
+          <Select label={t('assetForm.status')} value={values.status} onChange={(e) => setField('status', e.target.value as AssetStatus)}>
             {ASSET_STATUSES.map((o) => (
               <option key={o} value={o}>
-                {o}
+                {t(`assetStatus.${o}`)}
               </option>
             ))}
           </Select>
@@ -117,19 +119,19 @@ export function AssetFormModal({
 
         <div className="grid grid-cols-2 gap-2">
           <Input
-            label="IP address"
+            label={t('assetForm.ip')}
             value={values.ipAddress ?? ''}
             onChange={(e) => setField('ipAddress', e.target.value || null)}
             placeholder="192.168.1.10"
           />
-          <Input label="MAC address" value={values.macAddress ?? ''} onChange={(e) => setField('macAddress', e.target.value || null)} />
+          <Input label={t('assetForm.mac')} value={values.macAddress ?? ''} onChange={(e) => setField('macAddress', e.target.value || null)} />
         </div>
 
-        <Input label="Hostname" value={values.hostname ?? ''} onChange={(e) => setField('hostname', e.target.value || null)} />
+        <Input label={t('assetForm.hostname')} value={values.hostname ?? ''} onChange={(e) => setField('hostname', e.target.value || null)} />
 
         {catalogModels.length > 0 && (
-          <Select label="Catalog model" value={values.modelId ?? ''} onChange={(e) => pickCatalogModel(e.target.value)}>
-            <option value="">— pick to prefill manufacturer/model/type —</option>
+          <Select label={t('assetForm.catalogModel')} value={values.modelId ?? ''} onChange={(e) => pickCatalogModel(e.target.value)}>
+            <option value="">{t('assetForm.catalogPick')}</option>
             {catalogModels.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.manufacturer.name} / {m.name}
@@ -140,21 +142,21 @@ export function AssetFormModal({
 
         <div className="grid grid-cols-2 gap-2">
           <Input
-            label="Manufacturer"
+            label={t('assetForm.manufacturer')}
             value={values.manufacturer ?? ''}
             onChange={(e) => setField('manufacturer', e.target.value || null)}
           />
-          <Input label="Model" value={values.model ?? ''} onChange={(e) => setField('model', e.target.value || null)} />
+          <Input label={t('assetForm.model')} value={values.model ?? ''} onChange={(e) => setField('model', e.target.value || null)} />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <Input
-            label="Serial number"
+            label={t('assetForm.serial')}
             value={values.serialNumber ?? ''}
             onChange={(e) => setField('serialNumber', e.target.value || null)}
           />
           <Input
-            label="Operating system"
+            label={t('assetForm.os')}
             value={values.operatingSystem ?? ''}
             onChange={(e) => setField('operatingSystem', e.target.value || null)}
           />
@@ -164,10 +166,10 @@ export function AssetFormModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

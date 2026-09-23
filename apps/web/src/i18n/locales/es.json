@@ -177,7 +177,9 @@
     "creating": "Creando…",
     "remove": "quitar",
     "link": "Vincular",
-    "unassigned": "Sin asignar"
+    "unassigned": "Sin asignar",
+    "copied": "Copiado",
+    "copy": "Copiar"
   },
   "tickets": {
     "title": "Tickets",
@@ -744,5 +746,328 @@
     "turnOn": "Activar",
     "turnOff": "Desactivar",
     "needsEmail": "Los enlaces de acceso se envían por correo, así que primero conecta un buzón:"
+  },
+  "dataExport": {
+    "title": "Exportación de datos",
+    "failed": "No se pudo descargar la exportación",
+    "intro": "Descarga todas las tablas del espacio de trabajo — tickets, mensajes, activos, macros, políticas de SLA, contratos, el registro de auditoría y el resto — en un único archivo JSON abierto. Sin dependencia del proveedor: es el mismo archivo que le darías a cualquier otro sistema, o que puedes usar como respaldo. Los secretos (contraseñas, hashes de claves de API, secretos de firma de webhooks, secretos OAuth) nunca se incluyen.",
+    "preparing": "Preparando la descarga…",
+    "download": "Descargar exportación (JSON)"
+  },
+  "notificationSettings": {
+    "title": "Configuración de notificaciones",
+    "loadFailed": "No se pudo cargar la configuración de notificaciones",
+    "saveFailed": "No se pudo guardar",
+    "intro": "Cómo te avisamos de la actividad — en la aplicación siempre aparece en la campana; el correo necesita un canal de correo conectado para enviarse.",
+    "event": "Evento",
+    "inApp": "En la app",
+    "email": "Correo",
+    "events": {
+      "TICKET_ASSIGNED": "Se me asigna un ticket",
+      "NEW_REPLY": "Un contacto responde un ticket asignado a mí",
+      "CONTRACT_EXPIRING": "Un contrato, garantía o licencia está por vencer (usuarios que gestionan activos)"
+    }
+  },
+  "kbGate": {
+    "incorrect": "Código de acceso incorrecto.",
+    "failed": "Algo salió mal — inténtalo de nuevo.",
+    "title": "Este centro de ayuda requiere un código de acceso",
+    "code": "Código de acceso",
+    "checking": "Verificando…",
+    "continue": "Continuar"
+  },
+  "publicKb": {
+    "loadFailed": "No se pudo cargar el centro de ayuda",
+    "helpCenter": "Centro de ayuda",
+    "search": "Buscar artículos",
+    "searchPlaceholder": "Buscar artículos…",
+    "searchButton": "Buscar",
+    "noArticles": "No se encontraron artículos.",
+    "articleNotFound": "Artículo no encontrado",
+    "allArticles": "Todos los artículos",
+    "updated": "Actualizado {{when}}"
+  },
+  "publicStatus": {
+    "loadFailed": "No se pudo cargar el estado",
+    "title": "Estado del sistema",
+    "noServices": "Todavía no hay servicios publicados en esta página de estado.",
+    "overall": {
+      "operational": "Todos los sistemas operativos",
+      "degraded": "Algunos sistemas presentan un rendimiento degradado",
+      "outage": "Interrupción importante en uno o más sistemas"
+    },
+    "level": {
+      "operational": "Operativo",
+      "degraded": "Rendimiento degradado",
+      "outage": "Interrupción"
+    },
+    "incidents_one": "{{count}} incidente activo",
+    "incidents_other": "{{count}} incidentes activos"
+  },
+  "csat": {
+    "rating": "Calificación",
+    "stars_one": "{{count}} estrella",
+    "stars_other": "{{count}} estrellas",
+    "invalid": "Este enlace de encuesta no es válido.",
+    "submitFailed": "No se pudo enviar tu calificación.",
+    "title": "¿Cómo lo hicimos?",
+    "thanks": "¡Gracias por tu opinión!",
+    "rate": "Califica tu experiencia",
+    "commentPlaceholder": "¿Algo que quieras agregar? (opcional)",
+    "submit": "Enviar"
+  },
+  "bell": {
+    "title": "Notificaciones",
+    "markAllRead": "Marcar todas como leídas",
+    "settings": "Configuración",
+    "empty": "Todavía no hay notificaciones.",
+    "markRead": "Marcar como leída"
+  },
+  "theme": {
+    "loadFailed": "No se pudieron cargar los temas",
+    "saveFailed": "No se pudo guardar el tema — se revirtió",
+    "title": "Apariencia",
+    "intro": "Elige cómo se ve Seredina para todos en este espacio de trabajo. Se aplica al instante para cualquiera que tenga la aplicación abierta.",
+    "active": "Activo"
+  },
+  "aiUsage": {
+    "loadFailed": "No se pudo cargar el uso de IA",
+    "title": "Uso de IA",
+    "intro": "Lo que realmente ha costado cada llamada de IA, en dólares reales — con tu propia clave, Seredina nunca le agrega margen.",
+    "totalCost": "Costo total",
+    "totalCalls": "Llamadas de IA",
+    "calls_one": "{{count}} llamada",
+    "calls_other": "{{count}} llamadas",
+    "recent": "Actividad reciente",
+    "empty": "Todavía no hay actividad de IA.",
+    "when": "Cuándo",
+    "ticket": "Ticket",
+    "action": "Acción",
+    "model": "Modelo",
+    "tokens": "Tokens",
+    "cost": "Costo",
+    "actions": {
+      "suggest_reply": "Sugerir respuesta",
+      "summarize": "Resumir",
+      "triage": "Clasificación",
+      "autonomous": "Ejecución autónoma"
+    }
+  },
+  "telegram": {
+    "loadFailed": "No se pudo cargar la configuración de Telegram",
+    "connectFailed": "No se pudo conectar este bot",
+    "confirmDisconnect": "¿Desconectar @{{bot}}? Los tickets de Telegram existentes se mantienen, pero no llegarán mensajes nuevos hasta que lo reconectes.",
+    "disconnectFailed": "No se pudo desconectar",
+    "introBefore": "Conecta un bot de Telegram para que cada mensaje que reciba se convierta en un ticket, y la respuesta del agente vuelva como un mensaje real de Telegram. Crea un bot con",
+    "introAfter": "y pega su token abajo.",
+    "connected": "Conectado",
+    "disconnect": "Desconectar",
+    "botToken": "Token del bot",
+    "connect": "Conectar"
+  },
+  "apiKeys": {
+    "loadFailed": "No se pudieron cargar las claves de API",
+    "createFailed": "No se pudo crear la clave de API",
+    "confirmRevoke": "¿Revocar \"{{name}}\"? Todo lo que use esta clave dejará de funcionar de inmediato.",
+    "revokeFailed": "No se pudo revocar la clave de API",
+    "title": "Claves de API",
+    "introBefore": "Autentica el canal de API",
+    "introAfter": ", la forma en que una integración externa crea tickets en Seredina.",
+    "copyNow": "Copia esta clave ahora. No se volverá a mostrar.",
+    "keyName": "Nombre de la clave",
+    "keyNamePlaceholder": "Nombre de la clave (p. ej. integracion-widget)",
+    "create": "Crear clave",
+    "empty": "Todavía no hay claves de API.",
+    "created": "Creada {{when}}",
+    "lastUsed": "Último uso {{when}}",
+    "neverUsed": "Nunca usada",
+    "revoke": "revocar"
+  },
+  "branding": {
+    "badColor": "El color de acento debe ser un código hexadecimal como #4f46e5.",
+    "saveFailed": "No se pudo guardar la marca",
+    "title": "Marca",
+    "intro": "Muestra tu propio logo y color en el portal de clientes, el centro de ayuda y la página de estado — las páginas que ven tus clientes, no la consola que usan tus agentes.",
+    "logoUrl": "URL del logo",
+    "accentColor": "Color de acento",
+    "saved": "Guardado.",
+    "preview": "Vista previa",
+    "previewHint": "Así se ve el encabezado del portal con tu logo y color."
+  },
+  "businessHours": {
+    "loadFailed": "No se pudo cargar el horario laboral",
+    "saveFailed": "No se pudo guardar el horario laboral",
+    "title": "Horario laboral",
+    "intro": "Solo lo usan las políticas de SLA con \"solo horario laboral\" marcado — sus vencimientos saltan las horas cerradas de abajo en vez de contar tiempo corrido. Un tramo por día.",
+    "timezone": "Zona horaria",
+    "timezonePlaceholder": "p. ej. America/Santiago",
+    "timezoneHint": "Nombre IANA (America/Santiago, UTC, Etc/GMT+5, …)",
+    "startOf": "Hora de inicio del {{day}}",
+    "endOf": "Hora de término del {{day}}",
+    "to": "a",
+    "closed": "Cerrado",
+    "saved": "Guardado.",
+    "days": {
+      "mon": "lunes",
+      "tue": "martes",
+      "wed": "miércoles",
+      "thu": "jueves",
+      "fri": "viernes",
+      "sat": "sábado",
+      "sun": "domingo"
+    }
+  },
+  "roles": {
+    "loadFailed": "No se pudieron cargar los roles",
+    "confirmDelete": "¿Eliminar el rol \"{{name}}\"?",
+    "deleteFailed": "No se pudo eliminar el rol",
+    "saveFailed": "No se pudo guardar el rol",
+    "title": "Roles",
+    "new": "Nuevo rol",
+    "edit": "Editar rol",
+    "intro": "Cada rol de aquí está disponible de inmediato al asignarle uno a un usuario (Administración → Usuarios) — sin reiniciar, sin una lista fija.",
+    "delete": "eliminar",
+    "key": "Clave",
+    "keyHint": "Minúsculas, letras, números y guiones bajos. No se puede cambiar después.",
+    "name": "Nombre",
+    "permissionsLabel": "Permisos",
+    "permissions": {
+      "tickets:read": "Ver tickets",
+      "tickets:write": "Trabajar tickets",
+      "tickets:manage_all": "Gestionar tickets y configuración",
+      "assets:read": "Ver activos",
+      "assets:manage": "Gestionar activos",
+      "channels:manage": "Gestionar canales",
+      "users:manage": "Gestionar usuarios",
+      "roles:manage": "Gestionar roles",
+      "audit:read": "Ver el registro de auditoría"
+    }
+  },
+  "equipment": {
+    "loadFailed": "No se pudo cargar el catálogo de equipos",
+    "confirmDelete": "¿Eliminar el modelo \"{{name}}\"? Los activos vinculados conservan sus datos, solo pierden el vínculo con el catálogo.",
+    "deleteFailed": "No se pudo eliminar el modelo",
+    "createFailed": "No se pudo crear el modelo",
+    "title": "Catálogo de equipos",
+    "newModel": "Nuevo modelo",
+    "newTitle": "Nuevo modelo de equipo",
+    "intro": "Lista de referencia de fabricantes y modelos — elige uno al agregar un activo en vez de escribir las especificaciones cada vez.",
+    "empty": "Todavía no hay modelos en el catálogo.",
+    "delete": "eliminar",
+    "manufacturer": "Fabricante",
+    "newManufacturerOption": "+ Nuevo fabricante…",
+    "newManufacturerName": "Nombre del nuevo fabricante",
+    "modelName": "Nombre del modelo",
+    "defaultType": "Tipo por defecto"
+  },
+  "assetType": {
+    "SERVER": "Servidor",
+    "WORKSTATION": "Estación de trabajo",
+    "NETWORK_DEVICE": "Dispositivo de red",
+    "PRINTER": "Impresora",
+    "MOBILE_DEVICE": "Dispositivo móvil",
+    "OTHER": "Otro"
+  },
+  "priority": {
+    "LOW": "Baja",
+    "NORMAL": "Normal",
+    "HIGH": "Alta",
+    "URGENT": "Urgente"
+  },
+  "sla": {
+    "loadFailed": "No se pudieron cargar las políticas de SLA",
+    "saveFailed": "No se pudo guardar la política de SLA",
+    "removeFailed": "No se pudo quitar la política de SLA",
+    "confirmRemove": "¿Quitar la política de SLA de prioridad {{priority}}? Los tickets con esa prioridad dejarán de tener fechas de vencimiento.",
+    "title": "Políticas de SLA",
+    "intro": "Objetivos de primera respuesta y resolución por prioridad. Una prioridad sin política no tiene vencimientos — el seguimiento de SLA es opcional. Los objetivos \"solo horario laboral\" usan el horario de la página Horario laboral.",
+    "firstResponse": "Primera respuesta",
+    "firstResponseAria": "Minutos de primera respuesta para prioridad {{priority}}",
+    "resolution": "Resolución",
+    "resolutionAria": "Minutos de resolución para prioridad {{priority}}",
+    "placeholder": "p. ej. 30",
+    "min": "min",
+    "businessHoursOnly": "Solo horario laboral",
+    "remove": "quitar",
+    "update": "Actualizar"
+  },
+  "assetStatus": {
+    "ACTIVE": "Activo",
+    "INACTIVE": "Inactivo",
+    "RETIRED": "Dado de baja"
+  },
+  "assetForm": {
+    "saveFailed": "No se pudo guardar el activo",
+    "edit": "Editar activo",
+    "new": "Nuevo activo",
+    "name": "Nombre",
+    "type": "Tipo",
+    "status": "Estado",
+    "ip": "Dirección IP",
+    "mac": "Dirección MAC",
+    "hostname": "Nombre de host",
+    "catalogModel": "Modelo del catálogo",
+    "catalogPick": "— elige uno para completar fabricante/modelo/tipo —",
+    "manufacturer": "Fabricante",
+    "model": "Modelo",
+    "serial": "Número de serie",
+    "os": "Sistema operativo"
+  },
+  "monitoring": {
+    "title": "Integraciones de monitoreo",
+    "intro": "Convierte en tickets las alertas de una herramienta de monitoreo o alertas que ya usas. Seredina se integra con estas herramientas en vez de reemplazarlas — revisa también <apiKeys>Claves de API</apiKeys> para la API genérica.",
+    "createKey": "<apiKeys>Crea una clave de API</apiKeys> para esta integración (cualquier nombre — p. ej. \"{{name}}\").",
+    "webhookUrl": "URL del webhook",
+    "grafana": {
+      "summary": "Funciona con el formato de notificación por defecto de Grafana — no hace falta una plantilla personalizada en Grafana.",
+      "step2": "En Grafana, ve a <strong>Alerting → Contact points → Add contact point</strong>, elige <strong>Webhook</strong> como integración y pega la URL de abajo.",
+      "step3": "En <strong>HTTP settings</strong> del webhook, agrega un encabezado personalizado llamado <code>Authorization</code> con el valor <code>Bearer &lt;tu clave de API&gt;</code>.",
+      "step4": "Asocia este punto de contacto a las reglas de alerta o políticas de notificación que quieras enviar a Seredina.",
+      "footer": "Una etiqueta <code>severity</code> en la regla de alerta (p. ej. \"critical\", \"warning\", \"info\") se traduce automáticamente a la prioridad de Seredina; sin esa etiqueta la prioridad es Normal. Las notificaciones repetidas y de resolución del mismo grupo de alertas se agregan al mismo ticket mientras siga abierto, en vez de crear uno nuevo cada vez."
+    },
+    "zabbix": {
+      "summary": "A diferencia de Grafana, el webhook de Zabbix no tiene un formato propio — siempre ejecuta un script que tú entregas. Pega el de abajo en un nuevo tipo de medio Webhook; ya habla la API genérica de alertas de Seredina, sin cambios.",
+      "step2": "En Zabbix, ve a <strong>Alerts → Media types → Create media type</strong>, elige el tipo <strong>Webhook</strong> y pega el script de abajo en su campo <strong>Script</strong>.",
+      "step3": "Agrega estos <strong>Parameters</strong> (nombre → valor) al tipo de medio — el script los lee, así que los nombres deben coincidir exactamente:",
+      "apiKeyValue": "tu clave de API del paso 1",
+      "step4": "Crea un usuario de Zabbix con este tipo de medio y luego una <strong>Action</strong> (en <strong>Alerts → Actions → Trigger actions</strong>) con la condición <strong>Event type = Problem</strong> que lo notifique. Filtrar los eventos Problem ahí — no en el script — es la forma documentada por Zabbix, así las notificaciones de resolución nunca llegan al script.",
+      "apiUrl": "URL de la API de alertas de Seredina",
+      "script": "Script del webhook",
+      "footer": "La escala de severidad de Zabbix (Not classified/Information/Warning/Average/High/Disaster) se traduce automáticamente a la prioridad de Seredina. Un problema que se repite con el mismo id de evento se agrega al mismo ticket abierto en vez de crear uno nuevo cada vez."
+    }
+  },
+  "channel": {
+    "via": {
+      "email": "Por correo",
+      "api": "Por API",
+      "catalog": "Por catálogo de servicios",
+      "widget": "Por widget de chat",
+      "telegram": "Por Telegram",
+      "alert": "Por alerta de monitoreo",
+      "agent": "Registrado por un agente",
+      "portal": "Por portal de clientes"
+    },
+    "viaOther": "Por {{channel}}"
+  },
+  "catalog": {
+    "loadFailed": "No se pudo cargar el catálogo de servicios",
+    "confirmDelete": "¿Eliminar \"{{name}}\"? Los tickets ya creados desde él se mantienen.",
+    "deleteFailed": "No se pudo eliminar el ítem",
+    "saveFailed": "No se pudo guardar el ítem",
+    "title": "Catálogo de servicios",
+    "newItem": "Nuevo ítem",
+    "intro": "Cosas que se pueden solicitar — \"notebook nuevo\", \"acceso VPN\", \"alta de un contratista\". Los agentes las solicitan desde Tickets y los clientes desde el portal de clientes; se crea un ticket con los campos que elijas aquí.",
+    "empty": "Todavía no hay ítems en el catálogo.",
+    "fields_one": "{{count}} campo",
+    "fields_other": "{{count}} campos",
+    "edit": "editar",
+    "delete": "eliminar",
+    "editTitle": "Editar \"{{name}}\"",
+    "newTitle": "Nuevo ítem del catálogo",
+    "icon": "Ícono",
+    "name": "Nombre",
+    "namePlaceholder": "Notebook nuevo",
+    "description": "Descripción (opcional)",
+    "fieldsToAsk": "Campos a solicitar"
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
 import type { AssetModel, AssetType, Manufacturer } from '../lib/types';
 import { Modal } from '../components/Modal';
@@ -11,6 +12,7 @@ import { Card } from '../components/Card';
 const ASSET_TYPES: AssetType[] = ['SERVER', 'WORKSTATION', 'NETWORK_DEVICE', 'PRINTER', 'MOBILE_DEVICE', 'OTHER'];
 
 export function EquipmentCatalog() {
+  const { t } = useTranslation();
   const [manufacturers, setManufacturers] = useState<Manufacturer[] | null>(null);
   const [models, setModels] = useState<AssetModel[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,34 +27,34 @@ export function EquipmentCatalog() {
         setManufacturers(m.manufacturers);
         setModels(am.assetModels);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load equipment catalog'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('equipment.loadFailed')));
   }
 
   useEffect(load, []);
 
   async function removeModel(model: AssetModel) {
-    if (!confirm(`Delete model "${model.name}"? Assets linked to it keep their data, just lose the catalog link.`)) return;
+    if (!confirm(t('equipment.confirmDelete', { name: model.name }))) return;
     try {
       await apiDelete(`/asset-models/${model.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete model');
+      setError(err instanceof ApiError ? err.message : t('equipment.deleteFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Equipment Catalog</h1>
-        <Button onClick={() => setShowCreate(true)}>New model</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('equipment.title')}</h1>
+        <Button onClick={() => setShowCreate(true)}>{t('equipment.newModel')}</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Manufacturer/model reference list — pick one when adding an asset instead of retyping specs every time.
+        {t('equipment.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {models === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {models?.length === 0 && <p className="text-sm text-slate-500">No models cataloged yet.</p>}
+      {models === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {models?.length === 0 && <p className="text-sm text-slate-500">{t('equipment.empty')}</p>}
 
       {models && models.length > 0 && (
         <Card className="overflow-hidden p-0">
@@ -65,9 +67,9 @@ export function EquipmentCatalog() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge tone="slate">{m.assetType}</Badge>
+                  <Badge tone="slate">{t(`assetType.${m.assetType}`)}</Badge>
                   <button onClick={() => removeModel(m)} className="text-xs text-slate-400 hover:text-rose-600">
-                    delete
+                    {t('equipment.delete')}
                   </button>
                 </div>
               </div>
@@ -92,6 +94,7 @@ function CreateModelModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const { t } = useTranslation();
   const [manufacturerId, setManufacturerId] = useState(manufacturers[0]?.id ?? '__new__');
   const [newManufacturerName, setNewManufacturerName] = useState('');
   const [name, setName] = useState('');
@@ -115,27 +118,27 @@ function CreateModelModal({
       onCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create model');
+      setError(err instanceof ApiError ? err.message : t('equipment.createFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="New equipment model" onClose={onClose}>
+    <Modal title={t('equipment.newTitle')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Select label="Manufacturer" value={manufacturerId} onChange={(e) => setManufacturerId(e.target.value)}>
+        <Select label={t('equipment.manufacturer')} value={manufacturerId} onChange={(e) => setManufacturerId(e.target.value)}>
           {manufacturers.map((m) => (
             <option key={m.id} value={m.id}>
               {m.name}
             </option>
           ))}
-          <option value="__new__">+ New manufacturer…</option>
+          <option value="__new__">{t('equipment.newManufacturerOption')}</option>
         </Select>
 
         {creatingNewManufacturer && (
           <Input
-            label="New manufacturer name"
+            label={t('equipment.newManufacturerName')}
             value={newManufacturerName}
             onChange={(e) => setNewManufacturerName(e.target.value)}
             placeholder="Dell"
@@ -143,12 +146,12 @@ function CreateModelModal({
           />
         )}
 
-        <Input label="Model name" value={name} onChange={(e) => setName(e.target.value)} placeholder="OptiPlex 7090" required />
+        <Input label={t('equipment.modelName')} value={name} onChange={(e) => setName(e.target.value)} placeholder="OptiPlex 7090" required />
 
-        <Select label="Default type" value={assetType} onChange={(e) => setAssetType(e.target.value as AssetType)}>
-          {ASSET_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
+        <Select label={t('equipment.defaultType')} value={assetType} onChange={(e) => setAssetType(e.target.value as AssetType)}>
+          {ASSET_TYPES.map((ty) => (
+            <option key={ty} value={ty}>
+              {t(`assetType.${ty}`)}
             </option>
           ))}
         </Select>
@@ -157,10 +160,10 @@ function CreateModelModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting} disabled={creatingNewManufacturer && !newManufacturerName.trim()}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>
