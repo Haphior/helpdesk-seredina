@@ -461,7 +461,9 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
     const shouldNotifyCustomer = authorType !== 'CONTACT' && !input.isPrivateNote;
     return {
       message,
-      shouldEmail: ticket.channel === 'email' && shouldNotifyCustomer,
+      // Portal tickets (docs/adr/0063-customer-portal.md) get agent replies by
+      // email too, so the customer doesn't have to keep checking the portal.
+      shouldEmail: (ticket.channel === 'email' || ticket.channel === 'portal') && shouldNotifyCustomer,
       shouldTelegram: ticket.channel === 'telegram' && shouldNotifyCustomer,
     };
   });

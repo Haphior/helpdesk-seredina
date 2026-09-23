@@ -27,3 +27,17 @@ export interface TicketFollowupJobPayload {
   ticketId: string;
   finalize: boolean;
 }
+
+/**
+ * A one-off email to a contact that isn't a ticket reply -- the customer
+ * portal's sign-in link (docs/adr/0063-customer-portal.md). Sent through the
+ * tenant's first connected email channel, like notification emails.
+ */
+export const CONTACT_EMAIL_QUEUE_NAME = 'contact-email';
+
+export interface ContactEmailJobPayload {
+  tenantId: string;
+  to: string;
+  subject: string;
+  text: string;
+}

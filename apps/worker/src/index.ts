@@ -4,6 +4,7 @@ import './lib/startupCheck';
 import IORedis from 'ioredis';
 import { Worker } from 'bullmq';
 import {
+  CONTACT_EMAIL_QUEUE_NAME,
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
   EMBED_KB_ARTICLE_QUEUE_NAME,
@@ -12,6 +13,7 @@ import {
   SLA_BREACH_QUEUE_NAME,
   TELEGRAM_SEND_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
+  type ContactEmailJobPayload,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
   type EmbedKbArticleJobPayload,
@@ -24,6 +26,7 @@ import {
 import { runDiscoveryJob } from './discovery/processor';
 import { pollActiveEmailChannels } from './email/poll';
 import { sendEmailMessage } from './email/send';
+import { sendContactEmail } from './email/sendContactEmail';
 import { sendTelegramMessage } from './telegram/send';
 import { deliverWebhook, markWebhookDeliveryFailed } from './webhooks/deliver';
 import { checkSlaBreach } from './sla/checkBreach';
@@ -62,6 +65,18 @@ const emailSendWorker = new Worker<EmailSendJobPayload>(
   },
   { connection, concurrency: 4 },
 );
+
+const contactEmailWorker = new Worker<ContactEmailJobPayload>(
+  CONTACT_EMAIL_QUEUE_NAME,
+  async (job) => {
+    await sendContactEmail(job.data);
+  },
+  { connection, concurrency: 4 },
+);
+contactEmailWorker.on('failed', (job, err) => {
+  console.error(`[worker] contact email ${job?.id} failed:`, err);
+  captureError(err);
+});
 
 // Retry/backoff (5 attempts, exponential) is set on the job at enqueue time --
 // see lib/webhookDispatch.ts -- not here; Worker's own options have no such
@@ -205,6 +220,7 @@ console.log(
   '[worker] listening on queues:',
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
+  CONTACT_EMAIL_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
   ESCALATION_ADVANCE_QUEUE_NAME,

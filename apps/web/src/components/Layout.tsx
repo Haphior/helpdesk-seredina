@@ -115,6 +115,7 @@ const navGroups: {
       { to: '/email-channels', itemKey: 'emailChannels', icon: MailIcon, permission: 'channels:manage' },
       { to: '/telegram', itemKey: 'telegram', icon: PaperPlaneIcon, permission: 'channels:manage' },
       { to: '/monitoring-integrations', itemKey: 'monitoringIntegrations', icon: WarningIcon, permission: 'channels:manage' },
+      { to: '/customer-portal', itemKey: 'customerPortal', icon: UsersIcon, permission: 'tickets:manage_all' },
       { to: '/appearance', itemKey: 'appearance', icon: PaletteIcon, permission: 'tickets:manage_all' },
       { to: '/branding', itemKey: 'branding', icon: BrandIcon, permission: 'tickets:manage_all' },
     ],

@@ -90,7 +90,8 @@
       "language": "Idioma",
       "auditLog": "Registro de auditoría",
       "sso": "Inicio de sesión único",
-      "contracts": "Contratos"
+      "contracts": "Contratos",
+      "customerPortal": "Portal de clientes"
     }
   },
   "layout": {
@@ -512,7 +513,8 @@
       "tenant.mfa_policy_changed": "Cambió la exigencia de verificación en dos pasos",
       "sso.settings_updated": "Configuración de inicio de sesión único modificada",
       "sso.settings_deleted": "Inicio de sesión único quitado",
-      "ai_settings.triage_mode_changed": "Modo de clasificación por IA modificado"
+      "ai_settings.triage_mode_changed": "Modo de clasificación por IA modificado",
+      "portal.settings_updated": "Portal de clientes activado/desactivado"
     }
   },
   "mfa": {
@@ -704,5 +706,43 @@
       "assets": "Activos",
       "notes": "Notas"
     }
+  },
+  "portal": {
+    "title": "Portal de soporte",
+    "signOut": "Cerrar sesión",
+    "notAvailable": "Este portal no está disponible.",
+    "failed": "Algo salió mal. Inténtalo de nuevo.",
+    "signInTitle": "Iniciar sesión",
+    "signInIntro": "Escribe tu correo y te enviaremos un enlace para ver y responder tus solicitudes. No necesitas contraseña.",
+    "email": "Correo",
+    "sendLink": "Enviarme un enlace de acceso",
+    "checkEmailTitle": "Revisa tu correo",
+    "checkEmail": "Si {{email}} puede usar este portal, ya va en camino un enlace de acceso. Funciona una vez y vence en 20 minutos.",
+    "linkIncomplete": "Este enlace de acceso está incompleto.",
+    "requestNewLink": "Pedir un enlace nuevo",
+    "signingIn": "Iniciando sesión…",
+    "myRequests": "Mis solicitudes",
+    "newRequest": "Nueva solicitud",
+    "noRequests": "Todavía no tienes solicitudes.",
+    "updated": "actualizada {{when}}",
+    "catalog": "Solicitar algo",
+    "confirmCatalogRequest": "¿Solicitar \"{{name}}\"?",
+    "subject": "Asunto",
+    "describe": "Describe lo que necesitas",
+    "send": "Enviar",
+    "back": "Todas mis solicitudes",
+    "you": "Tú",
+    "support": "Soporte",
+    "reply": "Responder"
+  },
+  "portalSettings": {
+    "title": "Portal de clientes",
+    "intro": "Tus clientes y usuarios entran con un enlace enviado a su correo para seguir sus solicitudes, responder, adjuntar archivos y pedir ítems del catálogo de servicios. Solo ven sus propios tickets y la conversación pública, nunca las notas internas.",
+    "failed": "No se pudo actualizar el portal de clientes",
+    "on": "El portal está activado",
+    "off": "El portal está desactivado",
+    "turnOn": "Activar",
+    "turnOff": "Desactivar",
+    "needsEmail": "Los enlaces de acceso se envían por correo, así que primero conecta un buzón:"
   }
 }

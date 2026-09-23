@@ -98,6 +98,10 @@ model Tenant {
   aiTriageMode String @default("off") @map("ai_triage_mode")
   contracts      Contract[]
   contractAssets ContractAsset[]
+
+  // Customer portal (docs/adr/0063-customer-portal.md): contacts sign in with
+  // an emailed link to follow and reply to their own tickets. Off by default.
+  customerPortalEnabled Boolean @default(false) @map("customer_portal_enabled")
 }
 
 model Role {

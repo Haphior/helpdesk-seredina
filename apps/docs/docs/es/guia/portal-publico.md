@@ -3,6 +3,30 @@
 Dos páginas públicas, sin cuenta ni login, en la URL de tu instancia —
 para tus clientes, no para tus agentes.
 
+
+## Portal de clientes
+
+`/portal/tu-organizacion` — donde las personas a las que das soporte siguen
+sus propias solicitudes. Actívalo en **Administración → Portal de clientes**
+(viene desactivado y necesita un [canal de correo](/es/guia/canales#correo-electronico)
+conectado, porque los enlaces de acceso se envían por correo).
+
+- **Sin contraseñas.** La persona escribe su correo y recibe un enlace de
+  acceso de un solo uso, válido por 20 minutos. La primera vez que una
+  dirección entra, se crea como contacto. La página de acceso responde igual
+  tenga o no tickets esa dirección, y cada dirección puede pedir como máximo
+  3 enlaces por hora.
+- Solo ve **sus propios tickets** y solo la **conversación pública**, nunca
+  las notas internas. Puede responder (responder a un ticket cerrado lo
+  reabre), adjuntar un archivo, abrir una solicitud nueva y pedir ítems del
+  [catálogo de servicios](/es/guia/catalogo-de-servicios).
+- Las respuestas de los agentes en un ticket del portal también se le
+  **envían por correo**, así no tiene que revisar el portal a cada rato.
+  Responder ese correo llega al mismo ticket.
+- La sesión del portal dura 7 días y solo funciona en el portal donde se
+  emitió. Es una credencial exclusiva del portal, nunca una sesión de la
+  consola.
+
 ## Base de conocimiento pública
 
 `/kb/tu-organizacion` — todo artículo publicado desde la

@@ -54,6 +54,11 @@ contain breaking changes).
   subscriptions with dates, cost and the assets they cover, shows what's
   ending soon, and reminds asset managers before one ends. Asset pages list
   the contracts covering them.
+- **Customer portal** (`docs/adr/0063-customer-portal.md`): the people you
+  support can sign in at `/portal/<your-organization>` with a one-time link
+  sent to their email (no password) to follow their own requests, reply,
+  attach files, open new requests and request service catalog items. Off by
+  default: Administration → Customer Portal.
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or

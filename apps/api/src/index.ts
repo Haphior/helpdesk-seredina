@@ -49,6 +49,7 @@ import liveRoutes from './modules/live/routes';
 import auditRoutes from './modules/audit/routes';
 import ssoRoutes from './modules/sso/routes';
 import contractRoutes from './modules/contracts/routes';
+import portalRoutes from './modules/portal/routes';
 import { startTicketFollowupWorker } from './lib/ticketFollowup';
 
 initErrorTracking();
@@ -117,6 +118,7 @@ export function buildApp() {
   app.register(auditRoutes);
   app.register(ssoRoutes);
   app.register(contractRoutes);
+  app.register(portalRoutes);
   app.register(apiKeyRoutes);
   app.register(ticketRoutes);
   app.register(teamRoutes);

@@ -90,7 +90,8 @@
       "language": "Language",
       "auditLog": "Audit Log",
       "sso": "Single Sign-On",
-      "contracts": "Contracts"
+      "contracts": "Contracts",
+      "customerPortal": "Customer Portal"
     }
   },
   "layout": {
@@ -512,7 +513,8 @@
       "tenant.mfa_policy_changed": "Two-factor requirement changed",
       "sso.settings_updated": "Single sign-on settings changed",
       "sso.settings_deleted": "Single sign-on removed",
-      "ai_settings.triage_mode_changed": "AI triage mode changed"
+      "ai_settings.triage_mode_changed": "AI triage mode changed",
+      "portal.settings_updated": "Customer portal turned on/off"
     }
   },
   "mfa": {
@@ -704,5 +706,43 @@
       "assets": "Assets",
       "notes": "Notes"
     }
+  },
+  "portal": {
+    "title": "Support portal",
+    "signOut": "Sign out",
+    "notAvailable": "This portal isn't available.",
+    "failed": "Something went wrong. Try again.",
+    "signInTitle": "Sign in",
+    "signInIntro": "Enter your email and we'll send you a link to see and reply to your requests. No password needed.",
+    "email": "Email",
+    "sendLink": "Email me a sign-in link",
+    "checkEmailTitle": "Check your email",
+    "checkEmail": "If {{email}} can use this portal, a sign-in link is on its way. It works once and expires in 20 minutes.",
+    "linkIncomplete": "This sign-in link is incomplete.",
+    "requestNewLink": "Ask for a new link",
+    "signingIn": "Signing you in…",
+    "myRequests": "My requests",
+    "newRequest": "New request",
+    "noRequests": "You don't have any requests yet.",
+    "updated": "updated {{when}}",
+    "catalog": "Request something",
+    "confirmCatalogRequest": "Request \"{{name}}\"?",
+    "subject": "Subject",
+    "describe": "Describe what you need",
+    "send": "Send",
+    "back": "All my requests",
+    "you": "You",
+    "support": "Support",
+    "reply": "Reply"
+  },
+  "portalSettings": {
+    "title": "Customer portal",
+    "intro": "Your customers and staff sign in with a link sent to their email to follow their requests, reply, attach files and request items from the service catalog. They only ever see their own tickets and the public conversation, never internal notes.",
+    "failed": "Failed to update the customer portal",
+    "on": "The portal is on",
+    "off": "The portal is off",
+    "turnOn": "Turn on",
+    "turnOff": "Turn off",
+    "needsEmail": "Sign-in links are sent by email, so connect a mailbox first:"
   }
 }
