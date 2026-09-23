@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiGet, apiPost, ApiError } from '../lib/api';
 import type { Problem, ProblemStatus, UserSummary } from '../lib/types';
@@ -12,17 +13,12 @@ import { Textarea } from '../components/Textarea';
 import { Card } from '../components/Card';
 import { PROBLEM_STATUS_TONE } from '../lib/format';
 
-const TABS: { key: ProblemStatus | 'ALL'; label: string }[] = [
-  { key: 'ALL', label: 'All' },
-  { key: 'UNDER_INVESTIGATION', label: 'Under investigation' },
-  { key: 'KNOWN_ERROR', label: 'Known error' },
-  { key: 'RESOLVED', label: 'Resolved' },
-  { key: 'CLOSED', label: 'Closed' },
-];
+const TABS: (ProblemStatus | 'ALL')[] = ['ALL', 'UNDER_INVESTIGATION', 'KNOWN_ERROR', 'RESOLVED', 'CLOSED'];
 
 const PAGE_SIZE = 50;
 
 export function Problems() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<ProblemStatus | 'ALL'>('ALL');
   const [problems, setProblems] = useState<Problem[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -42,7 +38,7 @@ export function Problems() {
         setProblems((prev) => (offset > 0 && prev ? [...prev, ...res.problems] : res.problems));
         setTotal(res.total);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load problems'))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('problems.loadFailed')))
       .finally(() => setLoadingMore(false));
   }
 
@@ -58,31 +54,30 @@ export function Problems() {
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Problems</h1>
-        <Button onClick={() => setShowCreate(true)}>New problem</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('problems.title')}</h1>
+        <Button onClick={() => setShowCreate(true)}>{t('problems.new')}</Button>
       </div>
       <p className="mb-4 text-[13.5px] text-slate-500">
-        A root cause behind one or more tickets — separate from the incidents it's causing, so a fix (and a workaround while
-        you wait for one) has somewhere to live.
+        {t('problems.intro')}
       </p>
 
       <div className="mb-5 flex gap-1 rounded-[9px] bg-slate-100 p-[3px]">
-        {TABS.map((t) => (
+        {TABS.map((key) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={key}
+            onClick={() => setTab(key)}
             className={`rounded-[7px] px-3.5 py-1.5 text-[13px] font-medium ${
-              tab === t.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              tab === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {t.label}
+            {key === 'ALL' ? t('problems.all') : t(`problemStatus.${key}`)}
           </button>
         ))}
       </div>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {problems === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {problems?.length === 0 && <p className="text-sm text-slate-500">No problems here.</p>}
+      {problems === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {problems?.length === 0 && <p className="text-sm text-slate-500">{t('problems.empty')}</p>}
 
       {problems && problems.length > 0 && (
         <Card className="overflow-hidden p-0">
@@ -107,13 +102,13 @@ export function Problems() {
                       <span className="text-[12.5px] text-slate-500">{p.owner.name}</span>
                     </div>
                   ) : (
-                    <span className="text-[12.5px] text-slate-400">Unowned</span>
+                    <span className="text-[12.5px] text-slate-400">{t('problems.unowned')}</span>
                   )}
                   <span className="text-[12.5px] text-slate-400">
-                    {p.tickets.length} linked ticket{p.tickets.length === 1 ? '' : 's'}
+                    {t('problems.linkedTickets', { count: p.tickets.length })}
                   </span>
                   <Badge tone={PROBLEM_STATUS_TONE[p.status]} dot>
-                    {p.status.replace('_', ' ')}
+                    {t(`problemStatus.${p.status}`)}
                   </Badge>
                 </div>
               </Link>
@@ -125,7 +120,7 @@ export function Problems() {
       {problems && problems.length < total && (
         <div className="flex justify-center pt-4">
           <Button variant="secondary" onClick={() => load(problems.length)} isLoading={loadingMore}>
-            {loadingMore ? 'Loading…' : `Load more (${total - problems.length} remaining)`}
+            {loadingMore ? t('common.loading') : t('problems.loadMore', { count: total - problems.length })}
           </Button>
         </div>
       )}
@@ -144,6 +139,7 @@ function CreateProblemModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [ownerId, setOwnerId] = useState('');
@@ -159,21 +155,21 @@ function CreateProblemModal({
       onCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create problem');
+      setError(err instanceof ApiError ? err.message : t('problems.createFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="New problem" onClose={onClose}>
+    <Modal title={t('problems.new')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Intermittent VPN drops" required />
+        <Input label={t('problems.fieldTitle')} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('problems.titlePlaceholder')} required />
 
-        <Textarea label="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+        <Textarea label={t('problems.description')} value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
 
-        <Select label="Owner (optional)" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-          <option value="">Unowned</option>
+        <Select label={t('problems.owner')} value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+          <option value="">{t('problems.unowned')}</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
@@ -185,10 +181,10 @@ function CreateProblemModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Creating…' : 'Create'}
+            {submitting ? t('common.creating') : t('common.create')}
           </Button>
         </div>
       </form>
