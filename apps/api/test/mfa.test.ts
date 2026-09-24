@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma, withTenantTx } from '@seredina/db';
-import { totpCodeForStep, totpStep, verifyTotp, base32Encode } from '@seredina/shared';
+import { normalizeRecoveryCode, sha256Hex, totpCodeForStep, totpStep, verifyTotp, base32Encode } from '@seredina/shared';
 import { buildApp } from '../src/index';
 import { listAuditLogs } from '../src/modules/audit/service';
 
@@ -81,6 +81,9 @@ describe.skipIf(!hasDb)('two-factor sign-in', () => {
     const row = await withTenantTx(prisma, tenantId, (tx) => tx.user.findFirstOrThrow({ where: { email: 'admin@mfa.test' } }));
     expect(row.mfaSecretEncrypted).not.toContain(secret);
     expect(row.mfaRecoveryCodeHashes.join()).not.toContain(recoveryCodes[0]);
+    // Salted and slow like passwords, never a bare SHA-256.
+    expect(row.mfaRecoveryCodeHashes.every((h) => h.startsWith('$2'))).toBe(true);
+    expect(row.mfaRecoveryCodeHashes).not.toContain(sha256Hex(normalizeRecoveryCode(recoveryCodes[0])));
   });
 
   it('asks for a code after the password, and issues no session until it is right', async () => {
@@ -120,6 +123,22 @@ describe.skipIf(!hasDb)('two-factor sign-in', () => {
 
     const used = await listAuditLogs(tenantId, { action: 'auth.mfa_recovery_code_used' });
     expect(used.entries).toHaveLength(1);
+  });
+
+  it('still accepts a recovery code stored as SHA-256 before the switch to bcrypt, once', async () => {
+    const legacyCode = 'abcd-efgh-jkmn';
+    await withTenantTx(prisma, tenantId, async (tx) => {
+      const row = await tx.user.findFirstOrThrow({ where: { email: 'admin@mfa.test' } });
+      await tx.user.update({
+        where: { id: row.id },
+        data: { mfaRecoveryCodeHashes: [...row.mfaRecoveryCodeHashes, sha256Hex(normalizeRecoveryCode(legacyCode))] },
+      });
+    });
+    const { mfaToken } = (await login('admin@mfa.test', 'admin-password-1')).json();
+    const ok = await app.inject({ method: 'POST', url: '/auth/login/mfa', remoteAddress: nextIp(), payload: { mfaToken, code: legacyCode } });
+    expect(ok.statusCode).toBe(200);
+    const again = await app.inject({ method: 'POST', url: '/auth/login/mfa', remoteAddress: nextIp(), payload: { mfaToken, code: legacyCode } });
+    expect(again.statusCode).toBe(401);
   });
 
   it('locks the account after repeated wrong codes, even though the password is right each time', async () => {
