@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { ProcessTemplate, ProcessTemplateKind, Team } from '../lib/types';
 import { Modal } from '../components/Modal';
@@ -16,6 +17,7 @@ interface StepDraft {
 }
 
 export function ProcessTemplates() {
+  const { t } = useTranslation();
   const [templates, setTemplates] = useState<ProcessTemplate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -24,66 +26,65 @@ export function ProcessTemplates() {
   function load() {
     apiGet<{ templates: ProcessTemplate[] }>('/process-templates')
       .then((res) => setTemplates(res.templates))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load process templates'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('processTemplates.loadFailed')));
   }
 
   useEffect(load, []);
 
   async function remove(template: ProcessTemplate) {
-    if (!confirm(`Delete template "${template.name}"? Processes already started from it keep running unaffected.`)) return;
+    if (!confirm(t('processTemplates.confirmDelete', { name: template.name }))) return;
     try {
       await apiDelete(`/process-templates/${template.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete template');
+      setError(err instanceof ApiError ? err.message : t('processTemplates.deleteFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Process Templates</h1>
-        <Button onClick={() => setShowCreate(true)}>New template</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('processTemplates.title')}</h1>
+        <Button onClick={() => setShowCreate(true)}>{t('processTemplates.new')}</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Multi-step checklists for things that outlive a single ticket — onboarding, a contract approval chain. Start one from
-        the Processes page.
+        {t('processTemplates.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {templates === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {templates?.length === 0 && <p className="text-sm text-slate-500">No process templates yet.</p>}
+      {templates === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {templates?.length === 0 && <p className="text-sm text-slate-500">{t('processTemplates.empty')}</p>}
 
       {templates && templates.length > 0 && (
         <div className="flex flex-col gap-3">
-          {templates.map((t) => (
-            <Card key={t.id}>
+          {templates.map((tpl) => (
+            <Card key={tpl.id}>
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[14.5px] font-semibold text-slate-800">{t.name}</span>
-                    {t.kind === 'CHANGE' && <Badge tone="orange">Change</Badge>}
-                    {t.kind === 'RELEASE' && <Badge tone="indigo">Release</Badge>}
+                    <span className="text-[14.5px] font-semibold text-slate-800">{tpl.name}</span>
+                    {tpl.kind === 'CHANGE' && <Badge tone="orange">{t('processes.kind.CHANGE')}</Badge>}
+                    {tpl.kind === 'RELEASE' && <Badge tone="indigo">{t('processes.kind.RELEASE')}</Badge>}
                   </div>
-                  {t.description && <div className="text-[12.5px] text-slate-400">{t.description}</div>}
+                  {tpl.description && <div className="text-[12.5px] text-slate-400">{tpl.description}</div>}
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-3">
-                  <button onClick={() => setEditing(t)} className="text-xs text-slate-400 hover:text-indigo-600">
-                    edit
+                  <button onClick={() => setEditing(tpl)} className="text-xs text-slate-400 hover:text-indigo-600">
+                    {t('processTemplates.edit')}
                   </button>
-                  <button onClick={() => remove(t)} className="text-xs text-slate-400 hover:text-rose-600">
-                    delete
+                  <button onClick={() => remove(tpl)} className="text-xs text-slate-400 hover:text-rose-600">
+                    {t('processTemplates.delete')}
                   </button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {t.steps.map((s, i) => (
+                {tpl.steps.map((s, i) => (
                   <span
                     key={s.id}
                     className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[12px] text-slate-600"
                   >
                     {i + 1}. {s.label}
-                    {s.requiresApproval && <Badge tone="rose">approval</Badge>}
+                    {s.requiresApproval && <Badge tone="rose">{t('processTemplates.approval')}</Badge>}
                     {s.team && <span className="text-slate-400">· {s.team.name}</span>}
                   </span>
                 ))}
@@ -108,6 +109,7 @@ function TemplateModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(template?.name ?? '');
   const [description, setDescription] = useState(template?.description ?? '');
   const [kind, setKind] = useState<ProcessTemplateKind>(template?.kind ?? 'GENERAL');
@@ -175,52 +177,51 @@ function TemplateModal({
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save template');
+      setError(err instanceof ApiError ? err.message : t('processTemplates.saveFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title={template ? `Edit "${template.name}"` : 'New process template'} onClose={onClose}>
+    <Modal title={template ? t('processTemplates.editTitle', { name: template.name }) : t('processTemplates.newTitle')} onClose={onClose}>
       <form onSubmit={onSubmit} className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Employee Onboarding" required />
+        <Input label={t('processTemplates.name')} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('processTemplates.namePlaceholder')} required />
 
-        <Input label="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <Input label={t('processTemplates.description')} value={description} onChange={(e) => setDescription(e.target.value)} />
 
         {template ? (
           <p className="rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-500">
-            Kind (<span className="font-medium text-slate-700">{kind}</span>) can't change after creation — a template's
-            kind determines which fields starting an instance requires. Create a new template if you need a different one.
+            <span className="font-medium text-slate-700">{t(`processTemplates.kinds.${kind}.label`)}</span> — {t('processTemplates.kindImmutable')}
           </p>
         ) : (
           <div className="flex gap-2 rounded-md border border-slate-200 p-2">
             <label className="flex flex-1 items-start gap-2 text-xs">
               <input type="radio" className="mt-0.5" checked={kind === 'GENERAL'} onChange={() => setKind('GENERAL')} />
               <span>
-                <span className="block font-medium text-slate-700">General process</span>
-                <span className="block text-slate-400">Onboarding, a contract chain — any multi-step checklist.</span>
+                <span className="block font-medium text-slate-700">{t('processTemplates.kinds.GENERAL.label')}</span>
+                <span className="block text-slate-400">{t('processTemplates.kinds.GENERAL.hint')}</span>
               </span>
             </label>
             <label className="flex flex-1 items-start gap-2 text-xs">
               <input type="radio" className="mt-0.5" checked={kind === 'CHANGE'} onChange={() => setKind('CHANGE')} />
               <span>
-                <span className="block font-medium text-slate-700">Change (ITIL)</span>
-                <span className="block text-slate-400">Starting an instance will require a risk level and offer a planned window/rollback plan.</span>
+                <span className="block font-medium text-slate-700">{t('processTemplates.kinds.CHANGE.label')}</span>
+                <span className="block text-slate-400">{t('processTemplates.kinds.CHANGE.hint')}</span>
               </span>
             </label>
             <label className="flex flex-1 items-start gap-2 text-xs">
               <input type="radio" className="mt-0.5" checked={kind === 'RELEASE'} onChange={() => setKind('RELEASE')} />
               <span>
-                <span className="block font-medium text-slate-700">Release (ITIL)</span>
-                <span className="block text-slate-400">Starting an instance will require a version and can link back to the Change that approved it.</span>
+                <span className="block font-medium text-slate-700">{t('processTemplates.kinds.RELEASE.label')}</span>
+                <span className="block text-slate-400">{t('processTemplates.kinds.RELEASE.hint')}</span>
               </span>
             </label>
           </div>
         )}
 
         <div className="border-t border-slate-200 pt-2">
-          <span className="mb-2 block text-xs font-medium uppercase text-slate-400">Steps, in order</span>
+          <span className="mb-2 block text-xs font-medium uppercase text-slate-400">{t('processTemplates.steps')}</span>
           <div className="space-y-2">
             {steps.map((step, i) => (
               <div
@@ -237,8 +238,8 @@ function TemplateModal({
                   draggable
                   onDragStart={() => setDragIndex(i)}
                   onDragEnd={() => setDragIndex(null)}
-                  aria-label="Drag to reorder"
-                  title="Drag to reorder"
+                  aria-label={t('processTemplates.drag')}
+                  title={t('processTemplates.drag')}
                   className="mt-1.5 cursor-grab text-slate-300 hover:text-slate-400 active:cursor-grabbing"
                 >
                   <DragHandleIcon width={13} height={13} />
@@ -247,23 +248,23 @@ function TemplateModal({
                 <div className="flex-1 space-y-1.5">
                   <Input
                     hideLabel
-                    aria-label={`Label for step ${i + 1}`}
+                    aria-label={t('processTemplates.stepLabelAria', { n: i + 1 })}
                     value={step.label}
                     onChange={(e) => updateStep(i, { label: e.target.value })}
-                    placeholder="Step label"
+                    placeholder={t('processTemplates.stepLabel')}
                   />
                   <div className="flex items-center gap-3">
                     <div className="w-32">
                       <Select
                         hideLabel
-                        aria-label={`Team for step ${i + 1}`}
+                        aria-label={t('processTemplates.stepTeamAria', { n: i + 1 })}
                         value={step.teamId}
                         onChange={(e) => updateStep(i, { teamId: e.target.value })}
                       >
-                        <option value="">No team</option>
-                        {teams.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
+                        <option value="">{t('processTemplates.noTeam')}</option>
+                        {teams.map((tm) => (
+                          <option key={tm.id} value={tm.id}>
+                            {tm.name}
                           </option>
                         ))}
                       </Select>
@@ -275,17 +276,17 @@ function TemplateModal({
                         onChange={(e) => updateStep(i, { requiresApproval: e.target.checked })}
                         className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
                       />
-                      Requires approval
+                      {t('processTemplates.requiresApproval')}
                     </label>
                   </div>
                 </div>
                 <div className="mt-1 flex flex-col items-end gap-1">
                   <button type="button" onClick={() => duplicateStep(i)} className="text-xs text-slate-400 hover:text-indigo-600">
-                    duplicate
+                    {t('processTemplates.duplicate')}
                   </button>
                   {steps.length > 1 && (
                     <button type="button" onClick={() => removeStep(i)} className="text-xs text-slate-400 hover:text-rose-600">
-                      remove
+                      {t('processTemplates.remove')}
                     </button>
                   )}
                 </div>
@@ -293,7 +294,7 @@ function TemplateModal({
             ))}
           </div>
           <button type="button" onClick={addStep} className="mt-2 text-xs font-medium text-indigo-600 hover:underline">
-            + Add step
+            {t('processTemplates.addStep')}
           </button>
         </div>
 
@@ -301,10 +302,10 @@ function TemplateModal({
 
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

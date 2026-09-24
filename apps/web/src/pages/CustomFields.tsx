@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { CustomFieldDefinition, CustomFieldType } from '../lib/types';
 import { Modal } from '../components/Modal';
@@ -9,15 +10,10 @@ import { Select } from '../components/Select';
 import { Card } from '../components/Card';
 import { ChevronDownIcon, ChevronUpIcon } from '../components/icons';
 
-const TYPE_LABEL: Record<CustomFieldType, string> = {
-  TEXT: 'Text',
-  NUMBER: 'Number',
-  BOOLEAN: 'Yes/No',
-  DATE: 'Date',
-  SELECT: 'Select',
-};
+const FIELD_TYPES: CustomFieldType[] = ['TEXT', 'NUMBER', 'BOOLEAN', 'DATE', 'SELECT'];
 
 export function CustomFields() {
+  const { t } = useTranslation();
   const [fields, setFields] = useState<CustomFieldDefinition[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -26,18 +22,18 @@ export function CustomFields() {
   function load() {
     apiGet<{ customFields: CustomFieldDefinition[] }>('/custom-fields')
       .then((res) => setFields(res.customFields))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load custom fields'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('customFields.loadFailed')));
   }
 
   useEffect(load, []);
 
   async function remove(field: CustomFieldDefinition) {
-    if (!confirm(`Delete custom field "${field.label}"? Existing ticket values for it are kept but hidden.`)) return;
+    if (!confirm(t('customFields.confirmDelete', { label: field.label }))) return;
     try {
       await apiDelete(`/custom-fields/${field.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete custom field');
+      setError(err instanceof ApiError ? err.message : t('customFields.deleteFailed'));
     }
   }
 
@@ -54,23 +50,23 @@ export function CustomFields() {
       ]);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to reorder');
+      setError(err instanceof ApiError ? err.message : t('customFields.reorderFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Custom Fields</h1>
-        <Button onClick={() => setShowCreate(true)}>New field</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('customFields.title')}</h1>
+        <Button onClick={() => setShowCreate(true)}>{t('customFields.new')}</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Extra fields shown on every ticket's details panel, beyond status/priority/team/assignee.
+        {t('customFields.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {fields === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {fields?.length === 0 && <p className="text-sm text-slate-500">No custom fields yet.</p>}
+      {fields === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {fields?.length === 0 && <p className="text-sm text-slate-500">{t('customFields.empty')}</p>}
 
       {fields && fields.length > 0 && (
         <Card className="overflow-hidden p-0">
@@ -83,7 +79,7 @@ export function CustomFields() {
                       iconOnly
                       variant="ghost"
                       size="sm"
-                      aria-label={`Move ${f.label} field up`}
+                      aria-label={t('customFields.moveUp', { label: f.label })}
                       onClick={() => move(f, -1)}
                       disabled={i === 0}
                       className="!h-5 !w-5"
@@ -94,7 +90,7 @@ export function CustomFields() {
                       iconOnly
                       variant="ghost"
                       size="sm"
-                      aria-label={`Move ${f.label} field down`}
+                      aria-label={t('customFields.moveDown', { label: f.label })}
                       onClick={() => move(f, 1)}
                       disabled={i === fields.length - 1}
                       className="!h-5 !w-5"
@@ -105,7 +101,7 @@ export function CustomFields() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[14px] font-semibold text-slate-800">{f.label}</span>
-                      {f.required && <Badge tone="rose">required</Badge>}
+                      {f.required && <Badge tone="rose">{t('customFields.requiredBadge')}</Badge>}
                     </div>
                     <div className="text-[12.5px] text-slate-400">
                       <code className="rounded bg-slate-100 px-1">{f.key}</code>
@@ -114,12 +110,12 @@ export function CustomFields() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge tone="slate">{TYPE_LABEL[f.fieldType]}</Badge>
+                  <Badge tone="slate">{t(`customFields.type.${f.fieldType}`)}</Badge>
                   <button onClick={() => setEditing(f)} className="text-xs text-slate-400 hover:text-indigo-600">
-                    edit
+                    {t('customFields.edit')}
                   </button>
                   <button onClick={() => remove(f)} className="text-xs text-slate-400 hover:text-rose-600">
-                    delete
+                    {t('customFields.delete')}
                   </button>
                 </div>
               </div>
@@ -135,6 +131,7 @@ export function CustomFields() {
 }
 
 function RequiredCheckbox({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  const { t } = useTranslation();
   return (
     <label className="flex items-center gap-2 text-[13px] text-slate-600">
       <input
@@ -143,12 +140,13 @@ function RequiredCheckbox({ checked, onChange }: { checked: boolean; onChange: (
         onChange={(e) => onChange(e.target.checked)}
         className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
       />
-      Required
+      {t('customFields.required')}
     </label>
   );
 }
 
 function CreateFieldModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useTranslation();
   const [key, setKey] = useState('');
   const [label, setLabel] = useState('');
   const [fieldType, setFieldType] = useState<CustomFieldType>('TEXT');
@@ -178,41 +176,41 @@ function CreateFieldModal({ onClose, onCreated }: { onClose: () => void; onCreat
       onCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create custom field');
+      setError(err instanceof ApiError ? err.message : t('customFields.createFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="New custom field" onClose={onClose}>
+    <Modal title={t('customFields.newTitle')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Input label="Label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Order number" required />
+        <Input label={t('customFields.label')} value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t('customFields.labelPlaceholder')} required />
 
         <div>
           <Input
-            label="Key"
+            label={t('customFields.key')}
             value={key}
             onChange={(e) => setKey(e.target.value)}
             placeholder="order_number"
             pattern="[a-z][a-z0-9_]*"
             required
           />
-          <span className="mt-1 block text-xs text-slate-400">Lowercase, no spaces — used as the storage key.</span>
+          <span className="mt-1 block text-xs text-slate-400">{t('customFields.keyHint')}</span>
         </div>
 
-        <Select label="Type" value={fieldType} onChange={(e) => setFieldType(e.target.value as CustomFieldType)}>
-          {Object.entries(TYPE_LABEL).map(([value, label]) => (
+        <Select label={t('customFields.typeLabel')} value={fieldType} onChange={(e) => setFieldType(e.target.value as CustomFieldType)}>
+          {FIELD_TYPES.map((value) => (
             <option key={value} value={value}>
-              {label}
+              {t(`customFields.type.${value}`)}
             </option>
           ))}
         </Select>
 
         {fieldType === 'SELECT' && (
           <div>
-            <Input label="Options" value={options} onChange={(e) => setOptions(e.target.value)} placeholder="Small, Medium, Large" />
-            <span className="mt-1 block text-xs text-slate-400">Comma-separated.</span>
+            <Input label={t('customFields.options')} value={options} onChange={(e) => setOptions(e.target.value)} placeholder={t('customFields.optionsPlaceholder')} />
+            <span className="mt-1 block text-xs text-slate-400">{t('customFields.commaSeparated')}</span>
           </div>
         )}
 
@@ -222,10 +220,10 @@ function CreateFieldModal({ onClose, onCreated }: { onClose: () => void; onCreat
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>
@@ -245,6 +243,7 @@ function EditFieldModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [label, setLabel] = useState(field.label);
   const [options, setOptions] = useState(field.options.join(', '));
   const [required, setRequired] = useState(field.required);
@@ -270,27 +269,26 @@ function EditFieldModal({
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save custom field');
+      setError(err instanceof ApiError ? err.message : t('customFields.saveFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title={`Edit "${field.label}"`} onClose={onClose}>
+    <Modal title={t('customFields.editTitle', { label: field.label })} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Input label="Label" value={label} onChange={(e) => setLabel(e.target.value)} required />
+        <Input label={t('customFields.label')} value={label} onChange={(e) => setLabel(e.target.value)} required />
 
         <p className="text-xs text-slate-400">
-          Key <code className="rounded bg-slate-100 px-1">{field.key}</code> and type{' '}
-          <code className="rounded bg-slate-100 px-1">{field.fieldType}</code> can't change after creation — delete and
-          recreate the field if you need a different one.
+          <code className="rounded bg-slate-100 px-1">{field.key}</code> · {t(`customFields.type.${field.fieldType}`)} —{' '}
+          {t('customFields.immutableHint')}
         </p>
 
         {field.fieldType === 'SELECT' && (
           <div>
-            <Input label="Options" value={options} onChange={(e) => setOptions(e.target.value)} placeholder="Small, Medium, Large" />
-            <span className="mt-1 block text-xs text-slate-400">Comma-separated.</span>
+            <Input label={t('customFields.options')} value={options} onChange={(e) => setOptions(e.target.value)} placeholder={t('customFields.optionsPlaceholder')} />
+            <span className="mt-1 block text-xs text-slate-400">{t('customFields.commaSeparated')}</span>
           </div>
         )}
 
@@ -300,10 +298,10 @@ function EditFieldModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

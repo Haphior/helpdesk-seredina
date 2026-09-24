@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 
 export function CopyableField({ label, value }: { label: string; value: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -23,7 +25,7 @@ export function CopyableField({ label, value }: { label: string; value: string }
           {value}
         </code>
         <Button variant="secondary" size="sm" onClick={copy} className="flex-shrink-0">
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t('common.copied') : t('common.copy')}
         </Button>
       </div>
     </div>
@@ -31,6 +33,7 @@ export function CopyableField({ label, value }: { label: string; value: string }
 }
 
 export function CopyableCodeBlock({ label, value }: { label: string; value: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -48,7 +51,7 @@ export function CopyableCodeBlock({ label, value }: { label: string; value: stri
       <div className="mb-1 flex items-center justify-between">
         <span className="block text-[12.5px] font-medium text-slate-700">{label}</span>
         <Button variant="secondary" size="sm" onClick={copy}>
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t('common.copied') : t('common.copy')}
         </Button>
       </div>
       <pre className="max-h-64 overflow-auto rounded-md border border-slate-300 bg-slate-50 p-2.5 text-[11.5px] leading-relaxed text-slate-700">

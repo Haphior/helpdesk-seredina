@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { TicketStatus, TicketStatusCategory } from '../lib/types';
 import { Modal } from '../components/Modal';
@@ -13,6 +14,7 @@ import { STATUS_CATEGORY_TONE } from '../lib/format';
 const CATEGORIES: TicketStatusCategory[] = ['OPEN', 'PENDING', 'RESOLVED', 'CLOSED'];
 
 export function TicketStatuses() {
+  const { t } = useTranslation();
   const [statuses, setStatuses] = useState<TicketStatus[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -21,18 +23,18 @@ export function TicketStatuses() {
   function load() {
     apiGet<{ statuses: TicketStatus[] }>('/ticket-statuses')
       .then((res) => setStatuses(res.statuses))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load ticket statuses'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('statuses.loadFailed')));
   }
 
   useEffect(load, []);
 
   async function remove(status: TicketStatus) {
-    if (!confirm(`Delete status "${status.label}"?`)) return;
+    if (!confirm(t('statuses.confirmDelete', { label: status.label }))) return;
     try {
       await apiDelete(`/ticket-statuses/${status.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete status');
+      setError(err instanceof ApiError ? err.message : t('statuses.deleteFailed'));
     }
   }
 
@@ -49,23 +51,22 @@ export function TicketStatuses() {
       ]);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to reorder');
+      setError(err instanceof ApiError ? err.message : t('statuses.reorderFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Ticket Statuses</h1>
-        <Button onClick={() => setShowCreate(true)}>New status</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('statuses.title')}</h1>
+        <Button onClick={() => setShowCreate(true)}>{t('statuses.new')}</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Every status belongs to one of four categories (Open/Pending/Resolved/Closed) that drive SLA tracking and
-        reporting — labels are yours to customize, categories are fixed.
+        {t('statuses.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {statuses === null && <p className="text-sm text-slate-500">Loading…</p>}
+      {statuses === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
 
       {statuses && statuses.length > 0 && (
         <Card className="overflow-hidden p-0">
@@ -78,7 +79,7 @@ export function TicketStatuses() {
                       iconOnly
                       variant="ghost"
                       size="sm"
-                      aria-label={`Move ${s.label} status up`}
+                      aria-label={t('statuses.moveUp', { label: s.label })}
                       onClick={() => move(s, -1)}
                       disabled={i === 0}
                       className="!h-5 !w-5"
@@ -89,7 +90,7 @@ export function TicketStatuses() {
                       iconOnly
                       variant="ghost"
                       size="sm"
-                      aria-label={`Move ${s.label} status down`}
+                      aria-label={t('statuses.moveDown', { label: s.label })}
                       onClick={() => move(s, 1)}
                       disabled={i === statuses.length - 1}
                       className="!h-5 !w-5"
@@ -100,21 +101,21 @@ export function TicketStatuses() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-[14px] font-semibold text-slate-800">{s.label}</span>
-                      {s.key === 'open' && <span className="text-[11px] text-slate-400">(new tickets start here)</span>}
+                      {s.key === 'open' && <span className="text-[11px] text-slate-400">{t('statuses.startsHere')}</span>}
                     </div>
                     <code className="text-[12px] text-slate-400">{s.key}</code>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge tone={STATUS_CATEGORY_TONE[s.category]} dot>
-                    {s.category}
+                    {t(`statusCategory.${s.category}`)}
                   </Badge>
                   <button onClick={() => setEditing(s)} className="text-xs text-slate-400 hover:text-indigo-600">
-                    edit
+                    {t('statuses.edit')}
                   </button>
                   {s.key !== 'open' && (
                     <button onClick={() => remove(s)} className="text-xs text-slate-400 hover:text-rose-600">
-                      delete
+                      {t('statuses.delete')}
                     </button>
                   )}
                 </div>
@@ -139,6 +140,7 @@ function StatusModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [key, setKey] = useState(status?.key ?? '');
   const [label, setLabel] = useState(status?.label ?? '');
   const [category, setCategory] = useState<TicketStatusCategory>(status?.category ?? 'OPEN');
@@ -158,21 +160,21 @@ function StatusModal({
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save status');
+      setError(err instanceof ApiError ? err.message : t('statuses.saveFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title={status ? `Edit "${status.label}"` : 'New status'} onClose={onClose}>
+    <Modal title={status ? t('statuses.editTitle', { label: status.label }) : t('statuses.new')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Input label="Label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Waiting on Vendor" required />
+        <Input label={t('statuses.label')} value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t('statuses.labelPlaceholder')} required />
 
         {!status && (
           <div>
             <Input
-              label="Key"
+              label={t('statuses.key')}
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder="waiting_on_vendor"
@@ -180,26 +182,26 @@ function StatusModal({
               required
             />
             <span className="mt-1 block text-xs text-slate-400">
-              Lowercase, no spaces — the internal identifier, fixed once created.
+              {t('statuses.keyHint')}
             </span>
           </div>
         )}
 
         <div>
           <Select
-            label="Category"
+            label={t('statuses.category')}
             value={category}
             onChange={(e) => setCategory(e.target.value as TicketStatusCategory)}
             disabled={status?.key === 'open'}
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {t(`statusCategory.${c}`)}
               </option>
             ))}
           </Select>
           <span className="mt-1 block text-xs text-slate-400">
-            Drives SLA tracking and reporting — Closed excludes a ticket from SLA-compliance and open-workload counts.
+            {t('statuses.categoryHint')}
           </span>
         </div>
 
@@ -207,10 +209,10 @@ function StatusModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

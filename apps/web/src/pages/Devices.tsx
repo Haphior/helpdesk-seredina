@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiGet, apiPost, API_URL, ApiError } from '../lib/api';
 import type { DeviceListItem } from '../lib/types';
@@ -29,6 +30,7 @@ function buildEnrollCommand(serverUrl: string, token: string, caCertPem: string 
 }
 
 export function Devices() {
+  const { t } = useTranslation();
   const [devices, setDevices] = useState<DeviceListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enrollToken, setEnrollToken] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export function Devices() {
   function load() {
     apiGet<{ devices: DeviceListItem[] }>('/devices')
       .then((res) => setDevices(res.devices))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load devices'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('devices.loadFailed')));
   }
 
   useEffect(load, []);
@@ -64,38 +66,32 @@ export function Devices() {
       const { token } = await apiPost<{ token: string; expiresAt: string }>('/devices/enrollment-tokens', {});
       setEnrollToken(token);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to generate an enrollment token');
+      setError(err instanceof ApiError ? err.message : t('devices.tokenFailed'));
     } finally {
       setGenerating(false);
     }
   }
 
   async function revoke(device: DeviceListItem) {
-    if (!confirm(`Revoke "${device.asset.name}"? It will stop checking in until re-enrolled.`)) return;
+    if (!confirm(t('devices.confirmRevoke', { name: device.asset.name }))) return;
     try {
       await apiPost(`/devices/${device.id}/revoke`, {});
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to revoke device');
+      setError(err instanceof ApiError ? err.message : t('devices.revokeFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Devices</h1>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('devices.title')}</h1>
         <Button onClick={generateToken} isLoading={generating}>
-          Generate enrollment command
+          {t('devices.generate')}
         </Button>
       </div>
       <p className="mb-5 max-w-2xl text-[13.5px] text-slate-500">
-        A lightweight agent reports hardware/software inventory, OS version, disk encryption, and
-        antivirus status from a real device — inventory-only in this release, nothing runs remotely.
-        Enrolled devices show up here and in{' '}
-        <Link to="/assets" className="text-indigo-700 hover:underline">
-          Assets
-        </Link>
-        , tagged "AGENT".
+        <Trans i18nKey="devices.intro" components={{ assets: <Link to="/assets" className="text-indigo-700 hover:underline" /> }} />
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
@@ -104,7 +100,7 @@ export function Devices() {
         <div className="mb-3">
           <Input
             id="agent-server-url"
-            label="Server address for agents"
+            label={t('devices.serverAddress')}
             value={serverUrl}
             onChange={(e) => setServerUrl(e.target.value)}
             placeholder="https://helpdesk.example.com/api"
@@ -112,46 +108,45 @@ export function Devices() {
           />
           <p className="mt-1.5 text-[12.5px] text-slate-500">
             {serverUrlValid
-              ? 'The address devices use to reach this server — change it if they connect another way, e.g. over a VPN.'
-              : 'Enter a full address starting with https:// (or http://).'}
+              ? t('devices.serverHint')
+              : t('devices.serverInvalid')}
           </p>
           {serverUrlValid && serverUrl.trim().startsWith('http://') && (
             <p className="mt-1 text-[12.5px] text-amber-700">
-              Without https://, each device's credential and inventory travel unencrypted.
+              {t('devices.httpWarning')}
             </p>
           )}
           {agentSetup?.caCertSha256 && (
             <p className="mt-1 text-[12.5px] text-slate-500">
-              This server uses its own certificate authority. The command below includes it, so the agent trusts
-              exactly that CA (fingerprint <code className="text-[11.5px]">{agentSetup.caCertSha256?.slice(0, 16)}…</code>).
+              {t('devices.ownCa')} <code className="text-[11.5px]">{agentSetup.caCertSha256?.slice(0, 16)}…</code>
             </p>
           )}
         </div>
         {enrollCommand ? (
           <>
-            <h2 className="mb-1 text-[15px] font-bold text-slate-800">Run this on the device</h2>
+            <h2 className="mb-1 text-[15px] font-bold text-slate-800">{t('devices.runThis')}</h2>
             <p className="mb-3 text-[12.5px] text-slate-500">
-              Valid for 15 minutes, and works once. Requires Node.js on the device; run it from the agent's folder.
+              {t('devices.validity')}
             </p>
-            <CopyableCodeBlock label="Enrollment command" value={enrollCommand} />
+            <CopyableCodeBlock label={t('devices.command')} value={enrollCommand} />
           </>
         ) : (
-          <p className="text-[12.5px] text-slate-500">Generate an enrollment command to add a device.</p>
+          <p className="text-[12.5px] text-slate-500">{t('devices.generateHint')}</p>
         )}
       </Card>
 
-      {devices === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
-      {devices?.length === 0 && <p className="text-sm text-slate-500">No devices enrolled yet.</p>}
+      {devices === null && !error && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {devices?.length === 0 && <p className="text-sm text-slate-500">{t('devices.empty')}</p>}
 
       {devices && devices.length > 0 && (
         <Card className="max-w-4xl overflow-hidden p-0">
           <table className="w-full text-left text-[13px]">
             <thead className="bg-slate-50 text-[11.5px] font-bold uppercase tracking-wide text-slate-400">
               <tr>
-                <th className="px-5 py-2.5">Hostname</th>
-                <th className="px-5 py-2.5">Platform</th>
-                <th className="px-5 py-2.5">Last check-in</th>
-                <th className="px-5 py-2.5">Status</th>
+                <th className="px-5 py-2.5">{t('devices.hostname')}</th>
+                <th className="px-5 py-2.5">{t('devices.platform')}</th>
+                <th className="px-5 py-2.5">{t('devices.lastCheckIn')}</th>
+                <th className="px-5 py-2.5">{t('devices.status')}</th>
                 <th className="px-5 py-2.5"></th>
               </tr>
             </thead>
@@ -165,21 +160,21 @@ export function Devices() {
                   </td>
                   <td className="px-5 py-3 text-slate-600">{d.platform}</td>
                   <td className="px-5 py-3 text-slate-400">
-                    {d.asset.lastSeenAt ? formatDateTime(d.asset.lastSeenAt) : 'Never'}
+                    {d.asset.lastSeenAt ? formatDateTime(d.asset.lastSeenAt) : t('devices.never')}
                   </td>
                   <td className="px-5 py-3">
                     {d.revokedAt ? (
-                      <Badge tone="slate">Revoked</Badge>
+                      <Badge tone="slate">{t('devices.revoked')}</Badge>
                     ) : (
                       <Badge tone="emerald" dot>
-                        Active
+                        {t('devices.active')}
                       </Badge>
                     )}
                   </td>
                   <td className="px-5 py-3 text-right text-xs">
                     {!d.revokedAt && (
                       <button onClick={() => revoke(d)} className="text-slate-400 hover:text-rose-600">
-                        revoke
+                        {t('devices.revoke')}
                       </button>
                     )}
                   </td>

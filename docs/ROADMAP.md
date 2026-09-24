@@ -213,16 +213,17 @@ narrative in the ADR. Browser-verified the `/email-channels` settings page and t
 rendered conversation thread, zero console errors.
 
 **Deferred from this pass, still open for Phase 1:**
-- A ticket doesn't remember which specific `EmailChannel` it arrived through —
+- ✅ *Resolved, ADR 0058:* A ticket doesn't remember which specific `EmailChannel` it arrived through —
   outbound send just picks the tenant's first active one. Fine for one channel per
   tenant (the expected case); needs `Ticket.emailChannelId` before multiple email
   channels per tenant are meaningfully supported.
-- No email attachment handling (`mailparser` extracts them; nothing stores/surfaces
+- ✅ *Resolved, ADR 0058:* No email attachment handling (`mailparser` extracts them; nothing stores/surfaces
   them yet).
 - Realtime updates over WebSockets via Redis pub/sub (the web app currently polls by
   navigation/refetch-after-mutation only — no live push).
 - ~~AI copilot v1 (reply suggestions, summarization, auto-classify)~~ — reply
-  suggestions and summarization shipped (below); auto-classify still open.
+  suggestions and summarization shipped (below); auto-classify shipped as AI
+  triage (priority + team), ADR 0063.
 - Knowledge base CRUD + full-text search.
 - `SEREDINA_MODE=self_hosted` auto-bootstrapping a default tenant in the `migrate`
   container.
@@ -339,7 +340,7 @@ confirmed helmet headers on a live response, confirmed the CORS guard both fails
 closed with no `CORS_ORIGIN` and boots correctly with one set, full existing test
 suite (9/9) still green. Remaining lower-priority items from the audit (CAPTCHA/bot
 protection on login+register, CI-gated dependency scanning, a real security-event
-audit log, tenant-slug enumeration on `/auth/register`) are deliberately deferred,
+audit log (✅ since shipped, ADR 0060), tenant-slug enumeration on `/auth/register`) are deliberately deferred,
 not silently dropped — revisit once real users exist.
 
 **AI copilot v1 ✅ (this pass).** `packages/ai-adapters`: a provider-agnostic
@@ -1600,7 +1601,8 @@ these real users actually want:
 - **Environmental Impact Management**: GLPI's sustainability/carbon-footprint
   tracking for IT assets — needs real power/lifecycle data models nothing here has
   yet.
-- **Contract/license/financial asset management** (added 2026-09-16, from the
+- ✅ *Shipped, ADR 0064 (contracts, warranties, licenses, renewal reminders).*
+  **Contract/license/financial asset management** (added 2026-09-16, from the
   same competitive pass as Phase 2's new items above): contracts, warranties,
   and purchase orders linked to an `Asset`/`AssetModel` — GLPI's strongest
   differentiator against every other tool checked. Same relationship as Data
@@ -1661,8 +1663,9 @@ way a mutating tool call already works, and whether it's worth the added AI-cost
 per-signup for a self-hosted operator who may have no AI provider configured at
 all (Phase 4's BYOK is opt-in, not guaranteed set up before first use).
 
-**Other**: mobile apps, voice/telephony, BPMN-style workflow automation, SSO/SAML,
-per-tenant data residency.
+**Other**: mobile apps, voice/telephony, BPMN-style workflow automation,
+per-tenant data residency. (SSO shipped as OpenID Connect, ADR 0062; SAML
+deliberately not added.)
 
 **Extensibility, decided 2026-09-16: integrations, not a plugin platform —
 in either deployment mode.** A self-hosted-only native plugin loader was
@@ -1702,10 +1705,9 @@ self-hosted, full stop.
   overlook since it's a newer env var; back it up like a database password, document
   this prominently before any real self-hosted deployment. See
   `docs/adr/0004-email-channel.md`.
-- Multiple `worker` replicas would double-poll every tenant's email channels (the
-  interval-loop design isn't coordinated across instances) — a real constraint on
-  horizontal scaling, not yet solved, deferred to Phase 4 alongside the equivalent
-  discovery-worker scaling question.
+- ~~Multiple `worker` replicas would double-poll every tenant's email channels~~ —
+  resolved: per-mailbox Redis lock plus Message-ID-idempotent ingestion, see
+  `docs/adr/0059-email-poll-lock.md`.
 - Phase 5's endpoint agent is a categorically bigger trust boundary than anything
   else in this project — everything before it runs inside Seredina's own
   infrastructure; an agent runs with real privilege on a customer's real machine.

@@ -34,8 +34,15 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   on_call_schedules, on_call_shifts, escalation_tiers, escalation_runs, saved_views,
   notifications, notification_preferences, ai_usage_logs, attachments, kb_chunks,
   autonomy_policies, ai_agent_runs, tenant_ai_settings, tenant_ui_settings, tenant_kb_settings, telegram_channels,
-  csat_responses, device_enrollment_tokens, devices
+  csat_responses, device_enrollment_tokens, devices, tenant_sso_settings,
+  contracts, contract_assets
   TO app_tenant;
+
+-- Append-only: the app can write and read audit entries, never change or delete
+-- them (docs/adr/0060-audit-log.md). REVOKE first so a re-run after a future
+-- grant change still lands on exactly this set.
+REVOKE ALL ON audit_logs FROM app_tenant;
+GRANT SELECT, INSERT ON audit_logs TO app_tenant;
 
 -- tenants: a tenant-scoped session may see only its own row (defense against
 -- cross-tenant enumeration via the tenant registry itself). Its scope column is its
@@ -67,7 +74,8 @@ BEGIN
     'on_call_schedules', 'on_call_shifts', 'escalation_tiers', 'escalation_runs', 'saved_views',
     'notifications', 'notification_preferences', 'ai_usage_logs', 'attachments', 'kb_chunks',
     'autonomy_policies', 'ai_agent_runs', 'tenant_ai_settings', 'tenant_ui_settings', 'tenant_kb_settings', 'telegram_channels',
-    'csat_responses', 'device_enrollment_tokens', 'devices'
+    'csat_responses', 'device_enrollment_tokens', 'devices', 'audit_logs', 'tenant_sso_settings',
+    'contracts', 'contract_assets'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
@@ -133,7 +141,9 @@ LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT id, tenant_id FROM email_channels WHERE is_active = true;
+  -- connection_status: an OAuth channel still waiting for consent, or whose
+  -- grant was revoked, has nothing to log in with -- see docs/adr/0057-email-oauth.md.
+  SELECT id, tenant_id FROM email_channels WHERE is_active = true AND connection_status = 'connected';
 $$;
 
 REVOKE ALL ON FUNCTION public.list_active_email_channels() FROM PUBLIC;
@@ -203,3 +213,25 @@ $$;
 
 REVOKE ALL ON FUNCTION public.resolve_tenant_id_by_device_credential_hash(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_tenant_id_by_device_credential_hash(text) TO app_tenant;
+
+-- Contract renewal reminders (docs/adr/0064-contracts.md): the worker's
+-- periodic check has no tenant context and needs to find which contracts in
+-- which tenants are due for a reminder. Same escape-hatch shape as
+-- list_active_email_channels(): (id, tenant_id) only; everything else is read
+-- through the normal tenant-scoped path.
+CREATE OR REPLACE FUNCTION public.list_contracts_due_for_renewal_notice()
+RETURNS TABLE (id uuid, tenant_id uuid)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT id, tenant_id FROM contracts
+  WHERE end_date IS NOT NULL
+    AND renewal_notice_days > 0
+    AND renewal_notified_at IS NULL
+    AND end_date >= CURRENT_DATE
+    AND end_date - renewal_notice_days <= CURRENT_DATE;
+$$;
+
+REVOKE ALL ON FUNCTION public.list_contracts_due_for_renewal_notice() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.list_contracts_due_for_renewal_notice() TO app_tenant;

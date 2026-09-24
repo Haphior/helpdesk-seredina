@@ -4,6 +4,7 @@ import { requirePermission } from '../rbac/permissions';
 import { TOOL_CATALOG } from './catalog';
 import { getAutonomyPolicy, updateAutonomyPolicy } from './policy';
 import { approveAiAgentRun, listAiAgentRuns, rejectAiAgentRun } from './agentRuns';
+import { auditRequest } from '../audit/service';
 
 const updatePolicySchema = z.object({
   autoExecuteTools: z.array(z.string()).optional(),
@@ -40,6 +41,7 @@ export default async function aiToolsRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     try {
       const policy = await updateAutonomyPolicy(request.user.tenantId, parsed.data);
+      await auditRequest(request, 'autonomy_policy.updated', { type: 'autonomy_policy' }, parsed.data);
       return reply.send(policy);
     } catch (err) {
       return reply.code(400).send({ error: (err as Error).message });

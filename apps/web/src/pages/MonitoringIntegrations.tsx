@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Trans, useTranslation } from 'react-i18next';
 import { API_URL } from '../lib/api';
 import { Card } from '../components/Card';
 import { CopyableCodeBlock, CopyableField } from '../components/Copyable';
@@ -48,130 +49,86 @@ catch (error) {
 }`;
 
 export function MonitoringIntegrations() {
+  const { t } = useTranslation();
   const grafanaUrl = `${API_URL}/v1/alerts/grafana`;
   const genericAlertsUrl = `${API_URL}/v1/alerts`;
+  const code = <code className="rounded bg-slate-100 px-1" />;
+  const apiKeysLink = <Link to="/api-keys" className="text-indigo-700 hover:underline" />;
+  const rich = { strong: <strong />, code, apiKeys: apiKeysLink };
+  const param = (name: string, value: string) => (
+    <li>
+      <code className="rounded bg-slate-100 px-1">{name}</code> → <code className="rounded bg-slate-100 px-1">{value}</code>
+    </li>
+  );
 
   return (
     <div className="px-8 py-7">
-      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">Monitoring Integrations</h1>
+      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">{t('monitoring.title')}</h1>
       <p className="mb-6 max-w-2xl text-[13.5px] text-slate-500">
-        Turn alerts from a monitoring or alerting tool you already run into tickets here. Seredina
-        integrates with these tools rather than replacing them — see{' '}
-        <Link to="/api-keys" className="text-indigo-700 hover:underline">
-          API Keys
-        </Link>{' '}
-        for the generic API too.
+        <Trans i18nKey="monitoring.intro" components={rich} />
       </p>
 
       <Card className="max-w-xl !p-5">
         <h2 className="mb-1 text-[15px] font-bold text-slate-800">Grafana Alerting</h2>
-        <p className="mb-4 text-[12.5px] text-slate-500">
-          Works with Grafana's default alert notification payload — no custom notification
-          template needed on the Grafana side.
-        </p>
+        <p className="mb-4 text-[12.5px] text-slate-500">{t('monitoring.grafana.summary')}</p>
 
         <ol className="mb-4 list-decimal space-y-3 pl-5 text-[13px] text-slate-700">
           <li>
-            <Link to="/api-keys" className="text-indigo-700 hover:underline">
-              Create an API key
-            </Link>{' '}
-            for this integration (any name — e.g. "Grafana").
+            <Trans i18nKey="monitoring.createKey" values={{ name: 'Grafana' }} components={rich} />
           </li>
           <li>
-            In Grafana, go to <strong>Alerting → Contact points → Add contact point</strong>, choose{' '}
-            <strong>Webhook</strong> as the integration, and paste in the URL below.
+            <Trans i18nKey="monitoring.grafana.step2" components={rich} />
           </li>
           <li>
-            Under the webhook's <strong>HTTP settings</strong>, add a custom header named{' '}
-            <code className="rounded bg-slate-100 px-1">Authorization</code> with the value{' '}
-            <code className="rounded bg-slate-100 px-1">Bearer &lt;your API key&gt;</code>.
+            <Trans i18nKey="monitoring.grafana.step3" components={rich} />
           </li>
-          <li>Attach this contact point to whichever alert rules/notification policy you want flowing into Seredina.</li>
+          <li>{t('monitoring.grafana.step4')}</li>
         </ol>
 
-        <CopyableField label="Webhook URL" value={grafanaUrl} />
+        <CopyableField label={t('monitoring.webhookUrl')} value={grafanaUrl} />
 
         <p className="mt-4 text-[12px] text-slate-400">
-          A tenant-defined <code className="rounded bg-slate-100 px-1">severity</code> label on an alert rule
-          (e.g. "critical", "warning", "info") maps to Seredina's priority automatically; alerts with no
-          severity label default to Normal priority. Re-firing and resolved notifications for the same alert
-          group fold into the same ticket while it's still open, instead of creating a new one each time.
+          <Trans i18nKey="monitoring.grafana.footer" components={rich} />
         </p>
       </Card>
 
       <Card className="mt-5 max-w-xl !p-5">
         <h2 className="mb-1 text-[15px] font-bold text-slate-800">Zabbix</h2>
-        <p className="mb-4 text-[12.5px] text-slate-500">
-          Unlike Grafana, Zabbix's webhook has no default payload shape of its own — it always runs a
-          script you provide. Paste the one below into a new Webhook media type; it already speaks
-          Seredina's generic alerts API, no changes needed.
-        </p>
+        <p className="mb-4 text-[12.5px] text-slate-500">{t('monitoring.zabbix.summary')}</p>
 
         <ol className="mb-4 list-decimal space-y-3 pl-5 text-[13px] text-slate-700">
           <li>
-            <Link to="/api-keys" className="text-indigo-700 hover:underline">
-              Create an API key
-            </Link>{' '}
-            for this integration (any name — e.g. "Zabbix").
+            <Trans i18nKey="monitoring.createKey" values={{ name: 'Zabbix' }} components={rich} />
           </li>
           <li>
-            In Zabbix, go to <strong>Alerts → Media types → Create media type</strong>, set the type to{' '}
-            <strong>Webhook</strong>, and paste the script below into its <strong>Script</strong> field.
+            <Trans i18nKey="monitoring.zabbix.step2" components={rich} />
           </li>
           <li>
-            Add these <strong>Parameters</strong> (name → value) to the media type — the script reads
-            them, so the names must match exactly:
+            <Trans i18nKey="monitoring.zabbix.step3" components={rich} />
             <ul className="mt-1.5 list-disc space-y-1 pl-5 text-[12.5px] text-slate-600">
+              {param('api_url', genericAlertsUrl)}
               <li>
-                <code className="rounded bg-slate-100 px-1">api_url</code> →{' '}
-                <code className="rounded bg-slate-100 px-1">{genericAlertsUrl}</code>
+                <code className="rounded bg-slate-100 px-1">api_key</code> → {t('monitoring.zabbix.apiKeyValue')}
               </li>
-              <li>
-                <code className="rounded bg-slate-100 px-1">api_key</code> → your API key from step 1
-              </li>
-              <li>
-                <code className="rounded bg-slate-100 px-1">event_id</code> →{' '}
-                <code className="rounded bg-slate-100 px-1">{'{EVENT.ID}'}</code>
-              </li>
-              <li>
-                <code className="rounded bg-slate-100 px-1">severity</code> →{' '}
-                <code className="rounded bg-slate-100 px-1">{'{EVENT.SEVERITY}'}</code>
-              </li>
-              <li>
-                <code className="rounded bg-slate-100 px-1">title</code> →{' '}
-                <code className="rounded bg-slate-100 px-1">{'{TRIGGER.NAME}'}</code>
-              </li>
-              <li>
-                <code className="rounded bg-slate-100 px-1">host</code> →{' '}
-                <code className="rounded bg-slate-100 px-1">{'{HOST.NAME}'}</code>
-              </li>
-              <li>
-                <code className="rounded bg-slate-100 px-1">date</code> →{' '}
-                <code className="rounded bg-slate-100 px-1">{'{EVENT.DATE}'}</code>, and{' '}
-                <code className="rounded bg-slate-100 px-1">time</code> →{' '}
-                <code className="rounded bg-slate-100 px-1">{'{EVENT.TIME}'}</code>
-              </li>
+              {param('event_id', '{EVENT.ID}')}
+              {param('severity', '{EVENT.SEVERITY}')}
+              {param('title', '{TRIGGER.NAME}')}
+              {param('host', '{HOST.NAME}')}
+              {param('date', '{EVENT.DATE}')}
+              {param('time', '{EVENT.TIME}')}
             </ul>
           </li>
           <li>
-            Create a Zabbix user with this media type attached, then an <strong>Action</strong> (under{' '}
-            <strong>Alerts → Actions → Trigger actions</strong>) with condition{' '}
-            <strong>Event type = Problem</strong> that notifies it. Restricting to Problem events here —
-            not in the script — is deliberate: Zabbix's own Action conditions are the documented way to
-            do this, so resolved/OK notifications simply never reach the script at all.
+            <Trans i18nKey="monitoring.zabbix.step4" components={rich} />
           </li>
         </ol>
 
         <div className="flex flex-col gap-4">
-          <CopyableField label="Seredina alerts API URL" value={genericAlertsUrl} />
-          <CopyableCodeBlock label="Webhook script" value={ZABBIX_WEBHOOK_SCRIPT} />
+          <CopyableField label={t('monitoring.zabbix.apiUrl')} value={genericAlertsUrl} />
+          <CopyableCodeBlock label={t('monitoring.zabbix.script')} value={ZABBIX_WEBHOOK_SCRIPT} />
         </div>
 
-        <p className="mt-4 text-[12px] text-slate-400">
-          Zabbix's own severity scale (Not classified/Information/Warning/Average/High/Disaster) maps to
-          Seredina's priority automatically. A re-fired problem for the same event id folds into the same
-          open ticket instead of creating a new one each time.
-        </p>
+        <p className="mt-4 text-[12px] text-slate-400">{t('monitoring.zabbix.footer')}</p>
       </Card>
     </div>
   );

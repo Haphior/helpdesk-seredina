@@ -5,9 +5,9 @@ import { prisma, withTenantTx } from '@seredina/db';
  * the honest opposite of how a vendor whose business model depends on lock-in
  * treats migrating away. Every tenant-scoped table (see
  * packages/db/src/prisma.ts's TENANT_SCOPE_FIELD) is included, EXCEPT:
- *   - secrets: User.passwordHash, ApiKey.hashedKey, EmailChannel's two
- *     encrypted password fields, Webhook.secretEncrypted -- explicit `select`
- *     allowlists on those four models, never a denylist, so a future field
+ *   - secrets: User.passwordHash, ApiKey.hashedKey, EmailChannel's
+ *     encrypted password and OAuth secret/token fields, Webhook.secretEncrypted, TenantSsoSettings' client secret -- explicit `select`
+ *     allowlists on those five models, never a denylist, so a future field
  *     added to any of them can't silently leak into an export by default.
  *   - Notification and DiscoveryJob rows -- transient inbox/scan-job state,
  *     not data or configuration a tenant would need to migrate or restore.
@@ -56,6 +56,10 @@ export async function exportTenantData(tenantId: string) {
       savedViews,
       notificationPreferences,
       aiUsageLogs,
+      contracts,
+      contractAssets,
+      auditLogs,
+      ssoSettings,
     ] = await Promise.all([
       tx.tenant.findUniqueOrThrow({ where: { id: tenantId } }),
       tx.role.findMany(),
@@ -95,6 +99,10 @@ export async function exportTenantData(tenantId: string) {
           isActive: true,
           lastPolledAt: true,
           createdAt: true,
+          authType: true,
+          connectionStatus: true,
+          oauthClientId: true,
+          oauthMicrosoftTenant: true,
         },
       }),
       tx.customFieldDefinition.findMany(),
@@ -131,6 +139,25 @@ export async function exportTenantData(tenantId: string) {
       tx.savedView.findMany(),
       tx.notificationPreference.findMany(),
       tx.aiUsageLog.findMany(),
+      tx.contract.findMany(),
+      tx.contractAsset.findMany(),
+      tx.auditLog.findMany({ orderBy: { createdAt: 'asc' } }),
+      // Allowlist, like the other models with a secret: never the client secret.
+      tx.tenantSsoSettings.findMany({
+        select: {
+          id: true,
+          enabled: true,
+          provider: true,
+          issuer: true,
+          clientId: true,
+          allowedDomains: true,
+          autoProvision: true,
+          defaultRoleKey: true,
+          enforced: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
     ]);
 
     return {
@@ -172,6 +199,10 @@ export async function exportTenantData(tenantId: string) {
       savedViews,
       notificationPreferences,
       aiUsageLogs,
+      contracts,
+      contractAssets,
+      auditLogs,
+      ssoSettings,
     };
   });
 }

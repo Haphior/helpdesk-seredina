@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiGet, apiPost, ApiError } from '../lib/api';
 import type { ChangeRiskLevel, ProcessInstance, ProcessInstanceStatus, ProcessTemplate } from '../lib/types';
@@ -13,12 +14,7 @@ import { RISK_TONE } from '../lib/format';
 
 const STATUS_TONE = { IN_PROGRESS: 'sky', COMPLETED: 'emerald', CANCELLED: 'slate' } as const;
 
-const TABS: { key: ProcessInstanceStatus | 'ALL'; label: string }[] = [
-  { key: 'ALL', label: 'All' },
-  { key: 'IN_PROGRESS', label: 'In progress' },
-  { key: 'COMPLETED', label: 'Completed' },
-  { key: 'CANCELLED', label: 'Cancelled' },
-];
+const TABS: (ProcessInstanceStatus | 'ALL')[] = ['ALL', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
 const PAGE_SIZE = 50;
 
@@ -28,6 +24,7 @@ function progress(instance: ProcessInstance) {
 }
 
 export function Processes() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<ProcessInstanceStatus | 'ALL'>('ALL');
   const [instances, setInstances] = useState<ProcessInstance[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -46,7 +43,7 @@ export function Processes() {
         setInstances((prev) => (offset > 0 && prev ? [...prev, ...res.instances] : res.instances));
         setTotal(res.total);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load processes'))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('processes.loadFailed')))
       .finally(() => setLoadingMore(false));
   }
 
@@ -58,30 +55,30 @@ export function Processes() {
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Processes</h1>
-        <Button onClick={() => setShowStart(true)}>Start process</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('processes.title')}</h1>
+        <Button onClick={() => setShowStart(true)}>{t('processes.start')}</Button>
       </div>
       <p className="mb-4 text-[13.5px] text-slate-500">
-        Onboarding, contract approvals — anything that's a checklist over days, not a single ticket conversation.
+        {t('processes.intro')}
       </p>
 
       <div className="mb-5 flex gap-1 rounded-[9px] bg-slate-100 p-[3px]">
-        {TABS.map((t) => (
+        {TABS.map((key) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={key}
+            onClick={() => setTab(key)}
             className={`rounded-[7px] px-3.5 py-1.5 text-[13px] font-medium ${
-              tab === t.key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              tab === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {t.label}
+            {key === 'ALL' ? t('processes.all') : t(`processStatus.${key}`)}
           </button>
         ))}
       </div>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {instances === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {instances?.length === 0 && <p className="text-sm text-slate-500">No processes here.</p>}
+      {instances === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {instances?.length === 0 && <p className="text-sm text-slate-500">{t('processes.empty')}</p>}
 
       {instances && instances.length > 0 && (
         <Card className="overflow-hidden p-0">
@@ -97,7 +94,7 @@ export function Processes() {
                     <span className="text-[14px] font-semibold text-slate-800">{inst.subject}</span>
                     {inst.riskLevel && (
                       <Badge tone={RISK_TONE[inst.riskLevel]} dot>
-                        {inst.riskLevel} risk
+                        {t('processes.riskBadge', { level: t(`risk.${inst.riskLevel}`) })}
                       </Badge>
                     )}
                     {inst.releaseVersion && <Badge tone="indigo">{inst.releaseVersion}</Badge>}
@@ -105,9 +102,9 @@ export function Processes() {
                   <div className="text-[12.5px] text-slate-400">{inst.templateName}</div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-[12.5px] text-slate-400">{progress(inst)} steps</span>
+                  <span className="text-[12.5px] text-slate-400">{t('processes.steps', { progress: progress(inst) })}</span>
                   <Badge tone={STATUS_TONE[inst.status]} dot>
-                    {inst.status.replace('_', ' ')}
+                    {t(`processStatus.${inst.status}`)}
                   </Badge>
                 </div>
               </Link>
@@ -119,7 +116,7 @@ export function Processes() {
       {instances && instances.length < total && (
         <div className="flex justify-center pt-4">
           <Button variant="secondary" onClick={() => load(instances.length)} isLoading={loadingMore}>
-            {loadingMore ? 'Loading…' : `Load more (${total - instances.length} remaining)`}
+            {loadingMore ? t('common.loading') : t('processes.loadMore', { count: total - instances.length })}
           </Button>
         </div>
       )}
@@ -144,12 +141,13 @@ function PlannedWindowFields({
   rollbackPlan: string;
   setRollbackPlan: (v: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <div className="flex gap-2">
         <div className="flex-1">
           <Input
-            label="Planned start (optional)"
+            label={t('processes.plannedStart')}
             type="datetime-local"
             value={plannedStart}
             onChange={(e) => setPlannedStart(e.target.value)}
@@ -157,7 +155,7 @@ function PlannedWindowFields({
         </div>
         <div className="flex-1">
           <Input
-            label="Planned end (optional)"
+            label={t('processes.plannedEnd')}
             type="datetime-local"
             value={plannedEnd}
             onChange={(e) => setPlannedEnd(e.target.value)}
@@ -165,17 +163,18 @@ function PlannedWindowFields({
         </div>
       </div>
       <Textarea
-        label="Rollback plan (optional)"
+        label={t('processes.rollback')}
         value={rollbackPlan}
         onChange={(e) => setRollbackPlan(e.target.value)}
         rows={2}
-        placeholder="How do we undo this if it goes wrong?"
+        placeholder={t('processes.rollbackPlaceholder')}
       />
     </>
   );
 }
 
 function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStarted: () => void }) {
+  const { t } = useTranslation();
   const [templates, setTemplates] = useState<ProcessTemplate[]>([]);
   const [changeInstances, setChangeInstances] = useState<ProcessInstance[]>([]);
   const [templateId, setTemplateId] = useState('');
@@ -203,7 +202,7 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
       .catch(() => {});
   }, []);
 
-  const selectedTemplate = templates.find((t) => t.id === templateId);
+  const selectedTemplate = templates.find((tpl) => tpl.id === templateId);
   const isChange = selectedTemplate?.kind === 'CHANGE';
   const isRelease = selectedTemplate?.kind === 'RELEASE';
 
@@ -228,7 +227,7 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
       onStarted();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to start process');
+      setError(err instanceof ApiError ? err.message : t('processes.startFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -236,30 +235,30 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
 
 
   return (
-    <Modal title="Start a process" onClose={onClose}>
+    <Modal title={t('processes.startTitle')} onClose={onClose}>
       {templates.length === 0 ? (
-        <p className="text-sm text-slate-500">No process templates yet — create one on the Process Templates page first.</p>
+        <p className="text-sm text-slate-500">{t('processes.noTemplates')}</p>
       ) : (
         <form onSubmit={onSubmit} className="space-y-3">
-          <Select label="Template" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-            {templates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-                {t.kind === 'CHANGE' ? ' (Change)' : ''}
-                {t.kind === 'RELEASE' ? ' (Release)' : ''}
+          <Select label={t('processes.template')} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+            {templates.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>
+                {tpl.name}
+                {tpl.kind === 'CHANGE' ? ` (${t('processes.kind.CHANGE')})` : ''}
+                {tpl.kind === 'RELEASE' ? ` (${t('processes.kind.RELEASE')})` : ''}
               </option>
             ))}
           </Select>
 
-          <Input label="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Onboarding: Jane Doe" required />
+          <Input label={t('processes.subject')} value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('processes.subjectPlaceholder')} required />
 
           {isChange && (
             <div className="space-y-2.5 rounded-md border border-orange-200 bg-orange-50 p-2.5">
-              <p className="text-xs font-semibold text-orange-800">Change Enablement — a risk assessment is required.</p>
-              <Select label="Risk level" value={riskLevel} onChange={(e) => setRiskLevel(e.target.value as ChangeRiskLevel)}>
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
+              <p className="text-xs font-semibold text-orange-800">{t('processes.changeHint')}</p>
+              <Select label={t('processes.riskLevel')} value={riskLevel} onChange={(e) => setRiskLevel(e.target.value as ChangeRiskLevel)}>
+                <option value="LOW">{t('risk.LOW')}</option>
+                <option value="MEDIUM">{t('risk.MEDIUM')}</option>
+                <option value="HIGH">{t('risk.HIGH')}</option>
               </Select>
               <PlannedWindowFields
                 plannedStart={plannedStart}
@@ -274,10 +273,10 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
 
           {isRelease && (
             <div className="space-y-2.5 rounded-md border border-indigo-200 bg-indigo-50 p-2.5">
-              <p className="text-xs font-semibold text-indigo-800">Release Management — a version is required.</p>
-              <Input label="Version" value={releaseVersion} onChange={(e) => setReleaseVersion(e.target.value)} placeholder="v2.4.0" required />
-              <Select label="Approved by which Change? (optional)" value={changeInstanceId} onChange={(e) => setChangeInstanceId(e.target.value)}>
-                <option value="">No linked change</option>
+              <p className="text-xs font-semibold text-indigo-800">{t('processes.releaseHint')}</p>
+              <Input label={t('processes.version')} value={releaseVersion} onChange={(e) => setReleaseVersion(e.target.value)} placeholder="v2.4.0" required />
+              <Select label={t('processes.approvedBy')} value={changeInstanceId} onChange={(e) => setChangeInstanceId(e.target.value)}>
+                <option value="">{t('processes.noChange')}</option>
                 {changeInstances.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.subject}
@@ -299,10 +298,10 @@ function StartProcessModal({ onClose, onStarted }: { onClose: () => void; onStar
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" isLoading={submitting}>
-              {submitting ? 'Starting…' : 'Start'}
+              {submitting ? t('processes.starting') : t('processes.startButton')}
             </Button>
           </div>
         </form>

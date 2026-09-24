@@ -428,7 +428,7 @@ export function TicketsQueue() {
                     </span>
                     <span className="w-fit">
                       <Badge tone={PRIORITY_TONE[ticket.priority]} dot>
-                        {ticket.priority}
+                        {t(`priority.${ticket.priority}`)}
                       </Badge>
                     </span>
                     <TicketSlaCell ticket={ticket} />

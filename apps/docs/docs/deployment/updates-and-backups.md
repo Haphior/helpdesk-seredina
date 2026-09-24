@@ -25,32 +25,71 @@ not just the what.
 ## Backups
 
 Seredina doesn't ship automated backups — it's a standard Postgres
-running in a container, and the standard Postgres tools are what you use:
+running in a container, and the standard Postgres tools are what you use.
 
 ```bash
-# Full backup
-docker compose -f infra/docker-compose.yml exec postgres \
-  pg_dump -U app_migrator seredina > backup-$(date +%Y%m%d).sql
-
-# Restore
+# Full backup, in Postgres's compressed custom format. Run it from the
+# repository root. -T matters: without it docker allocates a terminal and
+# can corrupt the binary output.
 docker compose -f infra/docker-compose.yml exec -T postgres \
-  psql -U app_migrator seredina < backup-20260101.sql
+  pg_dump -U app_migrator -Fc seredina > seredina-$(date +%Y%m%d-%H%M).dump
 ```
 
-For real production use, run this via cron or your infrastructure
-provider's own backup mechanism — Seredina doesn't assume anything about
-where Postgres runs or how you schedule backups.
+Schedule it with cron (or your provider's own backup mechanism) and copy
+the file **off the machine** — a backup on the same disk as the database
+doesn't survive the disk. For example, nightly at 02:30 keeping 14 days:
+
+```cron
+30 2 * * * cd /opt/seredina && docker compose -f infra/docker-compose.yml exec -T postgres pg_dump -U app_migrator -Fc seredina > /var/backups/seredina/seredina-$(date +\%Y\%m\%d).dump && find /var/backups/seredina -name '*.dump' -mtime +14 -delete
+```
+
+If Postgres doesn't run in this compose file (a managed database), use
+your provider's snapshots or point the same `pg_dump` at it.
+
+### Restoring
+
+Restore into an **empty** database, then let `migrate` finish the job:
+it recreates the `app_tenant` role with the password in your `.env` and
+re-applies the row-level security policies and grants, all of which live
+outside a plain table dump.
+
+```bash
+# 1. Stop everything and start only Postgres, on an empty volume.
+docker compose -f infra/docker-compose.yml down -v
+docker compose -f infra/docker-compose.yml up -d postgres
+
+# 2. Load the dump.
+docker compose -f infra/docker-compose.yml exec -T postgres \
+  pg_restore -U app_migrator -d seredina --no-owner --no-privileges < seredina-20260101-0230.dump
+
+# 3. Bring the rest up; migrate runs first, as on every start.
+docker compose -f infra/docker-compose.yml up -d
+```
+
+`down -v` deletes the current database volume — only run it when you
+really mean to replace that data. Restore into a test machine now and
+then: a backup you've never restored is a guess, not a backup.
 
 ### What else you need to back up
 
-A `pg_dump` of the database **isn't enough on its own**:
+A database dump **isn't enough on its own**. Keep a copy of your `.env`
+somewhere safe and separate from the dumps — in particular:
 
-- **`ENCRYPTION_KEY`**: without this exact key, every stored email
-  channel password (encrypted with AES-256-GCM) becomes permanently
-  undecryptable, even with a perfectly restored database. Guard it with
-  the same seriousness as the database password itself.
+- **`ENCRYPTION_KEY`**: every stored secret is encrypted with it
+  (AES-256-GCM): email channel passwords and Gmail/Microsoft 365 OAuth
+  tokens, SSO client secrets, users' MFA secrets, AI provider keys,
+  webhook signing secrets and Telegram bot tokens. Restore a database
+  with a different key and all of those are permanently unreadable:
+  mailboxes must be reconnected, SSO reconfigured, and **every user with
+  MFA must have it reset by an admin**. Guard it like the database
+  password itself — and never store it in the same place as the dumps,
+  or one stolen backup is enough to read every secret.
 - **`JWT_SECRET`**: losing this doesn't lose data, but every active
   session becomes invalid — annoying, not catastrophic.
+- **`APP_TENANT_DB_PASSWORD`** and **`POSTGRES_PASSWORD`**: not needed
+  to read the dump, but restoring with the same `.env` avoids surprises.
+- If you use the `proxy` profile with your own certificate, the files in
+  `certs/`. Let's Encrypt certificates are reissued on their own.
 
 ### Per-tenant data export
 

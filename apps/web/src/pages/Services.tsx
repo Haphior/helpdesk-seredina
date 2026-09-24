@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPost, ApiError } from '../lib/api';
 import type { AssetSummary, Service } from '../lib/types';
 import { Modal } from '../components/Modal';
@@ -13,6 +14,7 @@ interface Me {
 }
 
 export function Services() {
+  const { t } = useTranslation();
   const [services, setServices] = useState<Service[] | null>(null);
   const [allAssets, setAllAssets] = useState<AssetSummary[]>([]);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export function Services() {
         setServices(s.services);
         setAllAssets(a.assets);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load services'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('services.loadFailed')));
   }
 
   useEffect(() => {
@@ -39,12 +41,12 @@ export function Services() {
   }, []);
 
   async function remove(service: Service) {
-    if (!confirm(`Delete "${service.name}"? This only removes the service record and its asset links.`)) return;
+    if (!confirm(t('services.confirmDelete', { name: service.name }))) return;
     try {
       await apiDelete(`/services/${service.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete service');
+      setError(err instanceof ApiError ? err.message : t('services.deleteFailed'));
     }
   }
 
@@ -56,7 +58,7 @@ export function Services() {
       setAssetToLink((v) => ({ ...v, [serviceId]: '' }));
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to link asset');
+      setError(err instanceof ApiError ? err.message : t('services.linkFailed'));
     }
   }
 
@@ -65,26 +67,25 @@ export function Services() {
       await apiDelete(`/services/${serviceId}/assets/${assetId}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to unlink asset');
+      setError(err instanceof ApiError ? err.message : t('services.unlinkFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Services</h1>
-        <Button onClick={() => setShowCreate(true)}>New service</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('services.title')}</h1>
+        <Button onClick={() => setShowCreate(true)}>{t('services.new')}</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Business-facing services — "Email," "Payroll" — and which assets actually underpin them. An open alert-channel
-        ticket linked to one of those assets shows on your public status page at{' '}
-        {tenantSlug ? <code className="rounded bg-slate-100 px-1">/status/{tenantSlug}</code> : 'your status page'} —
-        no account needed, auto-updating, nothing to publish by hand.
+        {t('services.introBefore')}{' '}
+        {tenantSlug ? <code className="rounded bg-slate-100 px-1">/status/{tenantSlug}</code> : t('services.yourStatusPage')} —{' '}
+        {t('services.introAfter')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {services === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {services?.length === 0 && <p className="text-sm text-slate-500">No services defined yet.</p>}
+      {services === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {services?.length === 0 && <p className="text-sm text-slate-500">{t('services.empty')}</p>}
 
       {services && services.length > 0 && (
         <div className="flex flex-col gap-3">
@@ -96,12 +97,12 @@ export function Services() {
                   {service.description && <div className="text-[12.5px] text-slate-400">{service.description}</div>}
                 </div>
                 <button onClick={() => remove(service)} className="text-xs text-slate-400 hover:text-rose-600">
-                  delete
+                  {t('services.delete')}
                 </button>
               </div>
 
               <div className="mb-2 flex flex-wrap gap-1.5">
-                {service.assets.length === 0 && <span className="text-[12.5px] text-slate-400">No assets linked yet.</span>}
+                {service.assets.length === 0 && <span className="text-[12.5px] text-slate-400">{t('services.noAssets')}</span>}
                 {service.assets.map(({ asset }) => (
                   <span
                     key={asset.id}
@@ -110,7 +111,7 @@ export function Services() {
                     {asset.name}
                     <button
                       onClick={() => unlinkAsset(service.id, asset.id)}
-                      aria-label={`Unlink ${asset.name} from ${service.name}`}
+                      aria-label={t('services.unlinkAria', { asset: asset.name, service: service.name })}
                       className="text-slate-400 hover:text-rose-600"
                     >
                       ×
@@ -123,11 +124,11 @@ export function Services() {
                 <div className="flex-1">
                   <Select
                     hideLabel
-                    aria-label={`Link an asset to ${service.name}`}
+                    aria-label={t('services.linkAria', { service: service.name })}
                     value={assetToLink[service.id] ?? ''}
                     onChange={(e) => setAssetToLink((v) => ({ ...v, [service.id]: e.target.value }))}
                   >
-                    <option value="">Link an asset…</option>
+                    <option value="">{t('services.linkPlaceholder')}</option>
                     {allAssets
                       .filter((a) => !service.assets.some((sa) => sa.asset.id === a.id))
                       .map((a) => (
@@ -138,7 +139,7 @@ export function Services() {
                   </Select>
                 </div>
                 <Button size="sm" onClick={() => linkAsset(service.id)} disabled={!assetToLink[service.id]}>
-                  Link
+                  {t('services.link')}
                 </Button>
               </div>
             </Card>
@@ -152,6 +153,7 @@ export function Services() {
 }
 
 function CreateServiceModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -166,27 +168,27 @@ function CreateServiceModal({ onClose, onCreated }: { onClose: () => void; onCre
       onCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create service');
+      setError(err instanceof ApiError ? err.message : t('services.createFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="New service" onClose={onClose}>
+    <Modal title={t('services.new')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Payroll" required />
+        <Input label={t('services.name')} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('services.namePlaceholder')} required />
 
-        <Textarea label="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+        <Textarea label={t('services.description')} value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

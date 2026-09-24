@@ -1,6 +1,6 @@
 import { prisma, withTenantTx } from '@seredina/db';
 import type { NotificationEmailJobPayload } from '@seredina/shared';
-import { createTransportForChannel } from '../email/transport';
+import { createTransportForChannel, pickSendChannel } from '../email/transport';
 
 /**
  * Consumes NOTIFICATION_EMAIL_QUEUE_NAME regardless of which app produced the
@@ -14,13 +14,13 @@ export async function sendNotificationEmail(payload: NotificationEmailJobPayload
   const data = await withTenantTx(prisma, payload.tenantId, async (tx) => {
     const user = await tx.user.findUnique({ where: { id: payload.userId } });
     if (!user) return null;
-    const channel = await tx.emailChannel.findFirst({ where: { isActive: true } });
+    const channel = pickSendChannel(await tx.emailChannel.findMany({ orderBy: { createdAt: 'asc' } }), null);
     if (!channel) return null;
     return { user, channel };
   });
   if (!data) return;
 
-  const transport = createTransportForChannel(data.channel);
+  const transport = await createTransportForChannel(data.channel);
   await transport.sendMail({
     from: data.channel.fromAddress,
     to: data.user.email,

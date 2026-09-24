@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
-import { PERMISSIONS } from '@seredina/shared';
+import { PERMISSIONS, type Permission } from '@seredina/shared';
 import {
   completeTour,
   createRole,
@@ -13,10 +13,26 @@ import {
   login,
   registerTenant,
   resetUserPassword,
+  SsoRequiredError,
   unlockUser,
   updateRole,
   updateUser,
 } from './service';
+import { auditRequest, recordAudit, requestOrigin } from '../audit/service';
+import {
+  beginMfaSetup,
+  beginMfaSetupForLogin,
+  completeMfaLogin,
+  completeMfaSetupForLogin,
+  confirmMfaSetup,
+  disableMfa,
+  getMfaStatus,
+  issueMfaChallenge,
+  MfaError,
+  regenerateRecoveryCodes,
+  resetUserMfa,
+  setMfaRequired,
+} from './mfa';
 
 const registerSchema = z.object({
   tenantSlug: z
@@ -66,6 +82,10 @@ const updateRoleSchema = z.object({
 
 const resetPasswordSchema = z.object({ password: z.string().min(8).max(128) });
 
+const mfaTokenSchema = z.object({ mfaToken: z.string().min(1).max(2000) });
+const mfaCodeSchema = z.object({ code: z.string().min(1).max(32) });
+const mfaLoginSchema = mfaTokenSchema.merge(mfaCodeSchema);
+
 export default async function authRoutes(app: FastifyInstance) {
   // Tighter than the global default (see index.ts) -- these are the two routes an
   // automated credential-stuffing/mass-registration attempt would actually hit.
@@ -82,6 +102,14 @@ export default async function authRoutes(app: FastifyInstance) {
 
       try {
         const result = await registerTenant(parsed.data);
+        await recordAudit(result.tenantId, {
+          action: 'tenant.registered',
+          actorType: 'user',
+          actorUserId: result.userId,
+          actorLabel: parsed.data.adminEmail,
+          target: { type: 'tenant', id: result.tenantId, label: parsed.data.tenantSlug },
+          ...requestOrigin(request),
+        });
         const token = app.jwt.sign({
           sub: result.userId,
           tenantId: result.tenantId,
@@ -104,15 +132,144 @@ export default async function authRoutes(app: FastifyInstance) {
       }
 
       try {
-        const result = await login(parsed.data);
+        const result = await login(parsed.data, requestOrigin(request));
+        // Password right, second step owed: no session yet, just a 5-minute
+        // token for the next request (docs/adr/0061-mfa-totp.md).
+        if (result.mfa === 'verify') return reply.send({ mfaRequired: true, mfaToken: issueMfaChallenge(result) });
+        if (result.mfa === 'setup') return reply.send({ mfaSetupRequired: true, mfaToken: issueMfaChallenge(result) });
         const token = app.jwt.sign({
           sub: result.userId,
           tenantId: result.tenantId,
           permissions: result.permissions,
         });
         return reply.send({ token });
-      } catch {
+      } catch (err) {
+        if (err instanceof SsoRequiredError) return reply.code(403).send({ error: err.message, ssoRequired: true });
         return reply.code(401).send({ error: 'invalid credentials' });
+      }
+    },
+  );
+
+  const signSession = (result: { userId: string; tenantId: string; permissions: Permission[] }) =>
+    app.jwt.sign({ sub: result.userId, tenantId: result.tenantId, permissions: result.permissions });
+
+  const mfaFailure = (reply: import('fastify').FastifyReply, err: unknown) => {
+    if (err instanceof MfaError) return reply.code(401).send({ error: err.message });
+    throw err;
+  };
+
+  // Second step of sign-in: same per-IP limit as the password step. Wrong codes
+  // also count toward the per-account lockout.
+  app.post('/auth/login/mfa', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const parsed = mfaLoginSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    try {
+      const result = await completeMfaLogin(parsed.data.mfaToken, parsed.data.code, requestOrigin(request));
+      return reply.send({ token: signSession(result) });
+    } catch (err) {
+      return mfaFailure(reply, err);
+    }
+  });
+
+  // Enrollment during sign-in, when the workspace requires MFA.
+  app.post('/auth/login/mfa-setup', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const parsed = mfaTokenSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    try {
+      return reply.send(await beginMfaSetupForLogin(parsed.data.mfaToken));
+    } catch (err) {
+      return mfaFailure(reply, err);
+    }
+  });
+
+  app.post('/auth/login/mfa-setup/confirm', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const parsed = mfaLoginSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    try {
+      const { auth, recoveryCodes } = await completeMfaSetupForLogin(parsed.data.mfaToken, parsed.data.code, requestOrigin(request));
+      return reply.send({ token: signSession(auth), recoveryCodes });
+    } catch (err) {
+      return mfaFailure(reply, err);
+    }
+  });
+
+  // Self-service MFA for the signed-in user.
+  app.get('/auth/mfa', { preHandler: app.authenticate }, async (request, reply) => {
+    return reply.send(await getMfaStatus(request.user.tenantId, request.user.sub));
+  });
+
+  app.post('/auth/mfa/setup', { preHandler: app.authenticate }, async (request, reply) => {
+    return reply.send(await beginMfaSetup(request.user.tenantId, request.user.sub));
+  });
+
+  app.post('/auth/mfa/enable', { preHandler: app.authenticate, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const parsed = mfaCodeSchema.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    try {
+      const recoveryCodes = await confirmMfaSetup(request.user.tenantId, request.user.sub, parsed.data.code);
+      await auditRequest(request, 'auth.mfa_enabled', { type: 'user', id: request.user.sub });
+      return reply.send({ recoveryCodes });
+    } catch (err) {
+      if (err instanceof MfaError) return reply.code(400).send({ error: err.message });
+      throw err;
+    }
+  });
+
+  app.post('/auth/mfa/disable', { preHandler: app.authenticate, config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const parsed = z.object({ password: z.string().min(1).max(128) }).safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    try {
+      await disableMfa(request.user.tenantId, request.user.sub, parsed.data.password);
+      await auditRequest(request, 'auth.mfa_disabled', { type: 'user', id: request.user.sub });
+      return reply.code(204).send();
+    } catch (err) {
+      if (err instanceof MfaError) return reply.code(400).send({ error: err.message });
+      throw err;
+    }
+  });
+
+  app.post(
+    '/auth/mfa/recovery-codes',
+    { preHandler: app.authenticate, config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const parsed = mfaCodeSchema.safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const recoveryCodes = await regenerateRecoveryCodes(request.user.tenantId, request.user.sub, parsed.data.code);
+        await auditRequest(request, 'auth.mfa_recovery_codes_regenerated', { type: 'user', id: request.user.sub });
+        return reply.send({ recoveryCodes });
+      } catch (err) {
+        if (err instanceof MfaError) return reply.code(400).send({ error: err.message });
+        throw err;
+      }
+    },
+  );
+
+  // Workspace policy: everyone must use MFA.
+  app.patch('/auth/mfa-policy', { preHandler: [app.authenticate, requirePermission('users:manage')] }, async (request, reply) => {
+    const parsed = z.object({ required: z.boolean() }).safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    try {
+      await setMfaRequired(request.user.tenantId, request.user.sub, parsed.data.required);
+      await auditRequest(request, 'tenant.mfa_policy_changed', { type: 'tenant', id: request.user.tenantId }, { required: parsed.data.required });
+      return reply.send({ required: parsed.data.required });
+    } catch (err) {
+      if (err instanceof MfaError) return reply.code(400).send({ error: err.message });
+      throw err;
+    }
+  });
+
+  app.post(
+    '/users/:id/mfa/reset',
+    { preHandler: [app.authenticate, requirePermission('users:manage')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      try {
+        const { email } = await resetUserMfa(request.user.tenantId, id);
+        await auditRequest(request, 'user.mfa_reset', { type: 'user', id, label: email });
+        return reply.code(204).send();
+      } catch (err) {
+        return reply.code(404).send({ error: (err as Error).message });
       }
     },
   );
@@ -152,6 +309,7 @@ export default async function authRoutes(app: FastifyInstance) {
       }
       try {
         const user = await createUser(request.user.tenantId, parsed.data, request.user.permissions);
+        await auditRequest(request, 'user.created', { type: 'user', id: user.id, label: user.email }, { role: parsed.data.roleKey });
         return reply.code(201).send(user);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
@@ -173,6 +331,11 @@ export default async function authRoutes(app: FastifyInstance) {
           id: request.user.sub,
           permissions: request.user.permissions,
         });
+        const target = { type: 'user', id: user.id, label: user.email };
+        if (parsed.data.roleKey) await auditRequest(request, 'user.role_changed', target, { role: parsed.data.roleKey });
+        if (parsed.data.isActive === false) await auditRequest(request, 'user.deactivated', target);
+        if (parsed.data.isActive === true) await auditRequest(request, 'user.reactivated', target);
+        if (parsed.data.name) await auditRequest(request, 'user.renamed', target, { name: parsed.data.name });
         return reply.send(user);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
@@ -187,6 +350,7 @@ export default async function authRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       try {
         await unlockUser(request.user.tenantId, id);
+        await auditRequest(request, 'user.unlocked', { type: 'user', id });
         return reply.code(204).send();
       } catch (err) {
         return reply.code(404).send({ error: (err as Error).message });
@@ -205,6 +369,7 @@ export default async function authRoutes(app: FastifyInstance) {
       }
       try {
         await resetUserPassword(request.user.tenantId, id, parsed.data.password);
+        await auditRequest(request, 'user.password_reset', { type: 'user', id });
         return reply.code(204).send();
       } catch (err) {
         return reply.code(404).send({ error: (err as Error).message });
@@ -232,6 +397,7 @@ export default async function authRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     try {
       const role = await createRole(request.user.tenantId, parsed.data);
+      await auditRequest(request, 'role.created', { type: 'role', id: role.id, label: role.key }, { permissions: role.permissions });
       return reply.code(201).send(role);
     } catch (err) {
       return reply.code(400).send({ error: (err as Error).message });
@@ -244,6 +410,10 @@ export default async function authRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     try {
       const role = await updateRole(request.user.tenantId, id, parsed.data);
+      await auditRequest(request, 'role.updated', { type: 'role', id: role.id, label: role.key }, {
+        ...(parsed.data.name ? { name: parsed.data.name } : {}),
+        ...(parsed.data.permissions ? { permissions: role.permissions } : {}),
+      });
       return reply.send(role);
     } catch (err) {
       return reply.code(404).send({ error: (err as Error).message });
@@ -254,6 +424,7 @@ export default async function authRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     try {
       await deleteRole(request.user.tenantId, id);
+      await auditRequest(request, 'role.deleted', { type: 'role', id });
       return reply.code(204).send();
     } catch (err) {
       return reply.code(400).send({ error: (err as Error).message });

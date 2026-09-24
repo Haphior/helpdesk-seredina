@@ -1,7 +1,29 @@
 # Public Portal
 
-Two public pages, no account or login, on your instance's URL — for your
-customers, not for your agents.
+Public pages on your instance's URL — for your customers, not for your
+agents. The knowledge base and status page need no sign-in; the customer
+portal uses a link sent by email.
+
+## Customer portal
+
+`/portal/your-organization` — where the people you support follow their
+own requests. Turn it on under **Administration → Customer Portal** (it's
+off by default, and needs a connected [email channel](/guide/channels#email)
+because sign-in links go out by email).
+
+- **No passwords.** A customer types their email and gets a one-time
+  sign-in link, valid for 20 minutes. The first time an address signs in, it
+  becomes a contact. The sign-in page gives the same answer whether or not
+  the address has tickets, and each address is limited to 3 links per hour.
+- They see **only their own tickets** and only the **public conversation**,
+  never internal notes. They can reply (a reply to a closed ticket reopens
+  it), attach a file, open a new request, and request items from the
+  [service catalog](/guide/service-catalog).
+- Agent replies to a portal ticket are also **emailed** to the customer, so
+  they don't have to keep checking. Replying to that email lands on the same
+  ticket.
+- A portal session lasts 7 days and only works on the portal it was issued
+  for. It's a portal-only credential, never a console session.
 
 ## Public knowledge base
 

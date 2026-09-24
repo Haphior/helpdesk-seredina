@@ -4,6 +4,7 @@ import './lib/startupCheck';
 import IORedis from 'ioredis';
 import { Worker } from 'bullmq';
 import {
+  CONTACT_EMAIL_QUEUE_NAME,
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
   EMBED_KB_ARTICLE_QUEUE_NAME,
@@ -12,6 +13,7 @@ import {
   SLA_BREACH_QUEUE_NAME,
   TELEGRAM_SEND_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
+  type ContactEmailJobPayload,
   type DiscoveryJobPayload,
   type EmailSendJobPayload,
   type EmbedKbArticleJobPayload,
@@ -24,12 +26,15 @@ import {
 import { runDiscoveryJob } from './discovery/processor';
 import { pollActiveEmailChannels } from './email/poll';
 import { sendEmailMessage } from './email/send';
+import { sendContactEmail } from './email/sendContactEmail';
 import { sendTelegramMessage } from './telegram/send';
 import { deliverWebhook, markWebhookDeliveryFailed } from './webhooks/deliver';
 import { checkSlaBreach } from './sla/checkBreach';
 import { advanceEscalation } from './oncall/escalate';
 import { sendNotificationEmail } from './notifications/sendEmail';
 import { embedKbArticle } from './kb/embed';
+import { sendDueContractReminders } from './contracts/renewalCheck';
+import { redisLock } from './lib/lock';
 import { captureError, initErrorTracking } from './lib/errorTracking';
 
 initErrorTracking();
@@ -60,6 +65,18 @@ const emailSendWorker = new Worker<EmailSendJobPayload>(
   },
   { connection, concurrency: 4 },
 );
+
+const contactEmailWorker = new Worker<ContactEmailJobPayload>(
+  CONTACT_EMAIL_QUEUE_NAME,
+  async (job) => {
+    await sendContactEmail(job.data);
+  },
+  { connection, concurrency: 4 },
+);
+contactEmailWorker.on('failed', (job, err) => {
+  console.error(`[worker] contact email ${job?.id} failed:`, err);
+  captureError(err);
+});
 
 // Retry/backoff (5 attempts, exponential) is set on the job at enqueue time --
 // see lib/webhookDispatch.ts -- not here; Worker's own options have no such
@@ -160,10 +177,9 @@ telegramSendWorker.on('failed', (job, err) => {
 // Inbound email is a plain interval loop across every tenant's channels, not a
 // per-channel BullMQ repeatable job -- see docs/adr/0004-email-channel.md for why
 // (mainly: registering/deregistering repeatable jobs in step with channel CRUD is
-// real complexity this v1 doesn't need yet with one worker instance). Known
-// consequence, not an oversight: running multiple worker replicas would double-poll
-// every mailbox -- fine for now, a real problem only once horizontal scaling matters
-// (Phase 4).
+// real complexity this doesn't need). Safe with several worker replicas: each
+// mailbox is polled under a per-channel Redis lock, and ingestion is idempotent
+// on Message-ID -- see docs/adr/0059-email-poll-lock.md.
 const EMAIL_POLL_INTERVAL_MS = Number(process.env.EMAIL_POLL_INTERVAL_MS ?? 30_000);
 
 async function pollLoop() {
@@ -179,10 +195,32 @@ async function pollLoop() {
 
 pollLoop();
 
+// Contract renewal reminders (docs/adr/0064-contracts.md). A few times a day
+// is plenty for date-granular deadlines; the lock keeps replicas from running
+// it at the same moment, and each reminder is claimed atomically anyway.
+const CONTRACT_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+async function contractReminderLoop() {
+  try {
+    await redisLock.runExclusive('seredina:contract-reminders', 10 * 60 * 1000, async () => {
+      const sent = await sendDueContractReminders();
+      if (sent > 0) console.log(`[worker] sent ${sent} contract renewal reminder(s)`);
+    });
+  } catch (err) {
+    console.error('[worker] contract reminder run failed:', err);
+    captureError(err);
+  } finally {
+    setTimeout(contractReminderLoop, CONTRACT_CHECK_INTERVAL_MS);
+  }
+}
+
+setTimeout(contractReminderLoop, 60_000);
+
 console.log(
   '[worker] listening on queues:',
   DISCOVERY_QUEUE_NAME,
   EMAIL_SEND_QUEUE_NAME,
+  CONTACT_EMAIL_QUEUE_NAME,
   WEBHOOK_DELIVERY_QUEUE_NAME,
   SLA_BREACH_QUEUE_NAME,
   ESCALATION_ADVANCE_QUEUE_NAME,

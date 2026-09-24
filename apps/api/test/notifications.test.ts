@@ -36,6 +36,7 @@ describe.skipIf(!hasDb)('Notifications', () => {
     expect(prefs).toEqual([
       { eventType: 'TICKET_ASSIGNED', label: expect.any(String), inApp: true, email: false },
       { eventType: 'NEW_REPLY', label: expect.any(String), inApp: true, email: false },
+      { eventType: 'CONTRACT_EXPIRING', label: expect.any(String), inApp: true, email: false },
     ]);
   });
 

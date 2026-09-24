@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiGet, apiPut, ApiError } from '../lib/api';
 import type { BusinessHoursSchedule } from '../lib/types';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Card } from '../components/Card';
 
-const DAYS: { key: keyof BusinessHoursSchedule; label: string }[] = [
-  { key: 'mon', label: 'Monday' },
-  { key: 'tue', label: 'Tuesday' },
-  { key: 'wed', label: 'Wednesday' },
-  { key: 'thu', label: 'Thursday' },
-  { key: 'fri', label: 'Friday' },
-  { key: 'sat', label: 'Saturday' },
-  { key: 'sun', label: 'Sunday' },
+const DAYS: { key: keyof BusinessHoursSchedule }[] = [
+  { key: 'mon' },
+  { key: 'tue' },
+  { key: 'wed' },
+  { key: 'thu' },
+  { key: 'fri' },
+  { key: 'sat' },
+  { key: 'sun' },
 ];
 
 interface DayRow {
@@ -24,6 +25,7 @@ interface DayRow {
 const DEFAULT_ROW: DayRow = { enabled: false, start: '09:00', end: '18:00' };
 
 export function BusinessHoursPage() {
+  const { t } = useTranslation();
   const [timezone, setTimezone] = useState('UTC');
   const [days, setDays] = useState<Record<string, DayRow>>(() =>
     Object.fromEntries(DAYS.map((d) => [d.key, { ...DEFAULT_ROW }])),
@@ -48,7 +50,7 @@ export function BusinessHoursPage() {
         setLoaded(true);
       })
       .catch((err) => {
-        setError(err instanceof ApiError ? err.message : 'Failed to load business hours');
+        setError(err instanceof ApiError ? err.message : t('businessHours.loadFailed'));
         setLoaded(true);
       });
   }, []);
@@ -69,7 +71,7 @@ export function BusinessHoursPage() {
       await apiPut('/business-hours', { timezone, schedule });
       setSavedAt(Date.now());
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save business hours');
+      setError(err instanceof ApiError ? err.message : t('businessHours.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -77,11 +79,9 @@ export function BusinessHoursPage() {
 
   return (
     <div className="px-8 py-7">
-      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">Business Hours</h1>
+      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">{t('businessHours.title')}</h1>
       <p className="mb-5 max-w-xl text-[13.5px] text-slate-500">
-        Only consulted by an SLA policy with "business hours only" checked — a due date computed from those policies
-        skips the closed hours below instead of counting straight calendar time. One window per day in this first
-        pass (no split lunch-break schedules yet).
+        {t('businessHours.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
@@ -90,9 +90,9 @@ export function BusinessHoursPage() {
         <div className="max-w-xl">
           <div className="mb-4">
             <div className="w-64">
-              <Input label="Timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="e.g. America/Santiago" />
+              <Input label={t('businessHours.timezone')} value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder={t('businessHours.timezonePlaceholder')} />
             </div>
-            <span className="ml-0.5 mt-1 block text-xs text-slate-400">IANA name (America/Santiago, UTC, Etc/GMT+5, …)</span>
+            <span className="ml-0.5 mt-1 block text-xs text-slate-400">{t('businessHours.timezoneHint')}</span>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -107,28 +107,28 @@ export function BusinessHoursPage() {
                       onChange={(e) => updateDay(d.key, { enabled: e.target.checked })}
                       className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
                     />
-                    {d.label}
+                    {t(`businessHours.days.${d.key}`)}
                   </label>
                   {row.enabled ? (
                     <div className="flex items-center gap-2 text-xs text-slate-500">
                       <Input
                         hideLabel
-                        aria-label={`${d.label} start time`}
+                        aria-label={t('businessHours.startOf', { day: t(`businessHours.days.${d.key}`) })}
                         type="time"
                         value={row.start}
                         onChange={(e) => updateDay(d.key, { start: e.target.value })}
                       />
-                      to
+                      {t('businessHours.to')}
                       <Input
                         hideLabel
-                        aria-label={`${d.label} end time`}
+                        aria-label={t('businessHours.endOf', { day: t(`businessHours.days.${d.key}`) })}
                         type="time"
                         value={row.end}
                         onChange={(e) => updateDay(d.key, { end: e.target.value })}
                       />
                     </div>
                   ) : (
-                    <span className="text-xs text-slate-400">Closed</span>
+                    <span className="text-xs text-slate-400">{t('businessHours.closed')}</span>
                   )}
                 </Card>
               );
@@ -137,9 +137,9 @@ export function BusinessHoursPage() {
 
           <div className="mt-5 flex items-center gap-3">
             <Button onClick={save} isLoading={saving}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? t('common.saving') : t('common.save')}
             </Button>
-            {savedAt && <span className="text-xs text-emerald-600">Saved.</span>}
+            {savedAt && <span className="text-xs text-emerald-600">{t('businessHours.saved')}</span>}
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
 import { createApiKey, deleteApiKey, listApiKeys } from './service';
+import { auditRequest } from '../audit/service';
 
 const createSchema = z.object({ name: z.string().min(1).max(100) });
 
@@ -15,6 +16,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: parsed.error.flatten() });
       }
       const created = await createApiKey(request.user.tenantId, parsed.data.name);
+      await auditRequest(request, 'api_key.created', { type: 'api_key', id: created.id, label: parsed.data.name });
       return reply.code(201).send(created);
     },
   );
@@ -35,6 +37,7 @@ export default async function apiKeyRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       try {
         await deleteApiKey(request.user.tenantId, id);
+        await auditRequest(request, 'api_key.deleted', { type: 'api_key', id });
         return reply.code(204).send();
       } catch {
         return reply.code(404).send({ error: 'API key not found' });

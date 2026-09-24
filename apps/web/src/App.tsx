@@ -24,6 +24,15 @@ const Devices = lazy(() => import('./pages/Devices').then((m) => ({ default: m.D
 const AssetDetail = lazy(() => import('./pages/AssetDetail').then((m) => ({ default: m.AssetDetail })));
 const Users = lazy(() => import('./pages/Users').then((m) => ({ default: m.Users })));
 const Roles = lazy(() => import('./pages/Roles').then((m) => ({ default: m.Roles })));
+const CustomerPortal = lazy(() => import('./pages/CustomerPortal').then((m) => ({ default: m.CustomerPortal })));
+const CustomerPortalAuth = lazy(() => import('./pages/CustomerPortal').then((m) => ({ default: m.CustomerPortalAuth })));
+const CustomerPortalTicket = lazy(() => import('./pages/CustomerPortal').then((m) => ({ default: m.CustomerPortalTicket })));
+const PortalSettings = lazy(() => import('./pages/PortalSettings').then((m) => ({ default: m.PortalSettings })));
+const Contracts = lazy(() => import('./pages/Contracts').then((m) => ({ default: m.Contracts })));
+const SsoComplete = lazy(() => import('./pages/SsoComplete').then((m) => ({ default: m.SsoComplete })));
+const SsoSettings = lazy(() => import('./pages/SsoSettings').then((m) => ({ default: m.SsoSettings })));
+const AccountSecurity = lazy(() => import('./pages/AccountSecurity').then((m) => ({ default: m.AccountSecurity })));
+const AuditLog = lazy(() => import('./pages/AuditLog').then((m) => ({ default: m.AuditLog })));
 const EmailChannels = lazy(() => import('./pages/EmailChannels').then((m) => ({ default: m.EmailChannels })));
 const CustomFields = lazy(() => import('./pages/CustomFields').then((m) => ({ default: m.CustomFields })));
 const EquipmentCatalog = lazy(() => import('./pages/EquipmentCatalog').then((m) => ({ default: m.EquipmentCatalog })));
@@ -70,6 +79,10 @@ export function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/login/sso" element={<SsoComplete />} />
+          <Route path="/portal/:tenantSlug" element={<CustomerPortal />} />
+          <Route path="/portal/:tenantSlug/auth" element={<CustomerPortalAuth />} />
+          <Route path="/portal/:tenantSlug/tickets/:id" element={<CustomerPortalTicket />} />
           <Route path="/register" element={<Register />} />
           <Route path="/kb/:tenantSlug" element={<PublicKb />} />
           <Route path="/kb/:tenantSlug/:slug" element={<PublicKbArticlePage />} />
@@ -85,10 +98,15 @@ export function App() {
               <Route path="/assets" element={<Assets />} />
               <Route path="/devices" element={<Devices />} />
               <Route path="/assets/:id" element={<AssetDetail />} />
+              <Route path="/contracts" element={<Contracts />} />
               <Route path="/api-keys" element={<ApiKeys />} />
               <Route path="/users" element={<Users />} />
               <Route path="/roles" element={<Roles />} />
               <Route path="/email-channels" element={<EmailChannels />} />
+              <Route path="/audit-log" element={<AuditLog />} />
+              <Route path="/account/security" element={<AccountSecurity />} />
+              <Route path="/sso" element={<SsoSettings />} />
+              <Route path="/customer-portal" element={<PortalSettings />} />
               <Route path="/custom-fields" element={<CustomFields />} />
               <Route path="/equipment-catalog" element={<EquipmentCatalog />} />
               <Route path="/processes" element={<Processes />} />

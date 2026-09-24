@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { apiGet, ApiError } from '../lib/api';
 import type { PublicKbArticleSummary } from '../lib/types';
@@ -11,6 +12,7 @@ import { kbAccessHeaders, setStoredKbAccessCode } from '../lib/kbAccessCode';
 import { KbAccessGate } from '../components/KbAccessGate';
 
 export function PublicKb() {
+  const { t } = useTranslation();
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
   const [articles, setArticles] = useState<PublicKbArticleSummary[] | null>(null);
   const [q, setQ] = useState('');
@@ -33,7 +35,7 @@ export function PublicKb() {
           setCodeRequired(true);
           return;
         }
-        setError(err instanceof ApiError ? err.message : 'Failed to load the help center');
+        setError(err instanceof ApiError ? err.message : t('publicKb.loadFailed'));
       });
   }
 
@@ -57,7 +59,7 @@ export function PublicKb() {
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10">
       <div className="mx-auto max-w-2xl">
-        <PortalBrand tenantSlug={tenantSlug} title="Help Center" />
+        <PortalBrand tenantSlug={tenantSlug} title={t('publicKb.helpCenter')} />
 
         <form
           onSubmit={(e) => {
@@ -69,22 +71,22 @@ export function PublicKb() {
           <div className="flex-1">
             <Input
               hideLabel
-              aria-label="Search articles"
+              aria-label={t('publicKb.search')}
               icon={<SearchIcon width={16} height={16} />}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search articles…"
+              placeholder={t('publicKb.searchPlaceholder')}
               className="!py-3"
             />
           </div>
           <Button type="submit" variant="secondary" size="lg">
-            Search
+            {t('publicKb.searchButton')}
           </Button>
         </form>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
-        {articles === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
-        {articles?.length === 0 && <p className="text-sm text-slate-500">No articles found.</p>}
+        {articles === null && !error && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+        {articles?.length === 0 && <p className="text-sm text-slate-500">{t('publicKb.noArticles')}</p>}
 
         {articles && articles.length > 0 && (
           <Card className="overflow-hidden p-0">

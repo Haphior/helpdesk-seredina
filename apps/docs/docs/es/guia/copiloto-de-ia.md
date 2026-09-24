@@ -20,6 +20,25 @@ aparece directamente en el cuadro de respuesta — el agente lo edita o lo
 manda tal cual, nunca se envía solo. Si usó algún artículo, aparece
 listado como "Basado en:" debajo del cuadro.
 
+## Clasificación de tickets nuevos
+
+**Operaciones → Configuración de IA → Clasificación de tickets nuevos con
+IA** hace que la IA lea el asunto y el primer mensaje de cada ticket nuevo
+(o la descripción de una alerta) y elija una prioridad y uno de tus equipos:
+
+- **Desactivada** (por defecto): no pasa nada.
+- **Sugerir**: el ticket muestra "La IA sugiere prioridad …, equipo …" con
+  el motivo y un botón **Aplicar**.
+- **Aplicar automáticamente**: la prioridad y el equipo se asignan de
+  inmediato, pero solo si nadie los fijó antes (se respeta una prioridad
+  elegida en un formulario del catálogo o derivada de la severidad de una
+  alerta). Una nota interna en el ticket indica qué cambió y por qué.
+
+La clasificación corre en segundo plano después de crear el ticket, así que
+nunca retrasa la recepción. Funciona para todos los canales, incluido el
+correo. Cada ticket nuevo cuesta una llamada pequeña al modelo, que aparece
+en la transparencia de costos de IA como `triage`.
+
 ## Modo autónomo ("Dejar que la IA lo intente")
 
 Acá el copiloto puede investigar el ticket y, si tiene confianza,

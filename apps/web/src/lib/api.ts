@@ -58,7 +58,7 @@ function humanizeZodError(error: ZodFlattenedError): string {
   return parts.length > 0 ? parts.join('; ') : 'Invalid request';
 }
 
-function extractErrorMessage(body: unknown, status: number): string {
+export function extractErrorMessage(body: unknown, status: number): string {
   if (body && typeof body === 'object' && 'error' in body) {
     const error = (body as { error: unknown }).error;
     if (typeof error === 'string') return error;

@@ -9,6 +9,56 @@ contain breaking changes).
 
 ### Added
 
+- **Connect Microsoft 365 and Gmail mailboxes with OAuth**
+  (`docs/adr/0057-email-oauth.md`): the Email Channels page now offers
+  "Microsoft 365 / Outlook" and "Gmail / Google Workspace" next to plain
+  IMAP/SMTP. You register your own app in Microsoft Entra or Google Cloud,
+  paste its client ID and secret, and sign in as the mailbox; server
+  settings are filled in for you. Tokens are refreshed automatically. If the
+  provider revokes access, the channel shows "Reconnect needed" and stops
+  being polled until you reconnect. Login errors for any mailbox, including
+  password ones, now show on the Email Channels page.
+- **Email attachments are kept** (`docs/adr/0058-inbound-email-attachments.md`):
+  files attached to an incoming email (including pasted screenshots) are
+  saved on the ticket, with the same 8 MB / 5-per-message limits as manual
+  uploads. Anything that doesn't fit is named in a note on the message
+  instead of disappearing.
+- **Replies go out from the mailbox the customer wrote to**, when a tenant
+  has more than one email channel, instead of always from the first one.
+- **`worker` can run as several replicas**: each mailbox is polled under a
+  per-mailbox lock and a repeated Message-ID is ignored, so emails no longer
+  turn into duplicate tickets (`docs/adr/0059-email-poll-lock.md`).
+- **Audit log** (`docs/adr/0060-audit-log.md`): Administration → Audit Log
+  shows sign-ins (including failed ones and lockouts, with IP and browser),
+  changes to users and roles, and changes to API keys, webhooks, email
+  channels, Telegram, agents, AI settings and the knowledge base portal, plus
+  full data exports. Entries can't be edited or deleted, even by the app
+  itself. Needs the new `audit:read` permission, which existing admin roles
+  get automatically.
+- **Two-factor sign-in** (`docs/adr/0061-mfa-totp.md`): users can protect
+  their account with a code from an authenticator app (Account security, the
+  shield icon in the sidebar), with one-time recovery codes. Admins can
+  require it for the whole workspace (users set it up at their next sign-in)
+  and reset it for someone who lost their phone.
+- **Single sign-on** (`docs/adr/0062-sso-oidc.md`): sign in with Microsoft
+  365 (Entra ID), Google Workspace, or any OpenID Connect provider
+  (Administration → Single Sign-On). Optional allowed domains, automatic
+  account creation with a chosen role, and "require SSO" (admins keep
+  password sign-in as a way back in).
+- **AI triage of new tickets** (`docs/adr/0063-ai-triage.md`): the AI can
+  suggest, or automatically set, a new ticket's priority and team from its
+  subject and first message (AI Settings → AI triage). Automatic mode only
+  fills fields nobody set, and leaves an internal note saying why.
+- **Contracts, warranties and licenses** (`docs/adr/0064-contracts.md`):
+  CMDB → Contracts tracks support contracts, warranties, licenses, leases and
+  subscriptions with dates, cost and the assets they cover, shows what's
+  ending soon, and reminds asset managers before one ends. Asset pages list
+  the contracts covering them.
+- **Customer portal** (`docs/adr/0065-customer-portal.md`): the people you
+  support can sign in at `/portal/<your-organization>` with a one-time link
+  sent to their email (no password) to follow their own requests, reply,
+  attach files, open new requests and request service catalog items. Off by
+  default: Administration → Customer Portal.
 - **SLA countdown** (`docs/adr/0056-sla-countdown.md`): the ticket queue has
   an SLA column with the time left on the next milestone, and the ticket
   page shows each milestone's countdown with a progress bar. Both tick every
@@ -63,8 +113,19 @@ contain breaking changes).
     record instead of creating a new one. Enrolling a machine that was already
     discovered this way adopts that record.
 
+- CI now builds every Docker image and boots the full compose stack
+  (`scripts/compose-smoke.sh`, runnable locally too): migrations, console,
+  the API through the console's `/api` proxy, tenant sign-up and the worker.
+- The whole console is available in Spanish, including processes, the
+  knowledge base, assets, on-call, AI settings and users.
+
 ### Changed
 
+- The backup guide now uses `pg_dump -Fc` with a cron example, documents a
+  restore procedure that re-creates the `app_tenant` role and RLS policies,
+  and lists everything `ENCRYPTION_KEY` protects (OAuth tokens, SSO and MFA
+  secrets, AI keys) — restoring without it means reconnecting mailboxes and
+  resetting every user's MFA.
 - The console reaches the API at `/api` on its own address by default
   (`VITE_API_URL` now defaults to empty). Existing `.env` files that set it
   keep working.
@@ -81,6 +142,20 @@ contain breaking changes).
   tenant's. `infra/docker-compose.yml` now passes `SEREDINA_MODE` to `worker`.
 - `POST /v1/devices/checkin` returns `200 { neighbors: { created, updated } }`
   instead of `204`.
+
+### Fixed
+
+- The `api`, `worker` and `mcp-server` Docker images failed to build: they
+  import `@seredina/ai-adapters` but never copied it into the image.
+- The Docker images didn't run against the database: the slim Node base
+  image has no OpenSSL, so Prisma generated the wrong query engine and
+  `migrate` failed while seeding (the others would fail on their first
+  query). Every image that uses Prisma now installs `openssl`.
+- Decoding a TOTP secret no longer takes quadratic time on a long run of
+  `=` padding.
+- Tickets created from **email** now get their SLA due dates and fire the
+  `ticket.created` webhook (so Slack/Teams notifications include them);
+  both were skipped before.
 
 ### Security
 

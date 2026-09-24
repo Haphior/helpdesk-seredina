@@ -76,6 +76,7 @@ const navGroups: {
     items: [
       { to: '/assets', itemKey: 'assets', icon: AssetsIcon },
       { to: '/devices', itemKey: 'devices', icon: DevicesIcon, permission: 'assets:read' },
+      { to: '/contracts', itemKey: 'contracts', icon: CatalogIcon, permission: 'assets:read' },
       { to: '/equipment-catalog', itemKey: 'equipmentCatalog', icon: LayersIcon, permission: 'assets:manage' },
       { to: '/services', itemKey: 'services', icon: ServiceMapIcon, permission: 'assets:manage' },
     ],
@@ -108,10 +109,13 @@ const navGroups: {
     items: [
       { to: '/users', itemKey: 'users', icon: UsersIcon, permission: 'users:manage' },
       { to: '/roles', itemKey: 'roles', icon: ShieldIcon, permission: 'roles:manage' },
+      { to: '/sso', itemKey: 'sso', icon: KeyIcon, permission: 'users:manage' },
+      { to: '/audit-log', itemKey: 'auditLog', icon: ChecklistIcon, permission: 'audit:read' },
       { to: '/api-keys', itemKey: 'apiKeys', icon: KeyIcon },
       { to: '/email-channels', itemKey: 'emailChannels', icon: MailIcon, permission: 'channels:manage' },
       { to: '/telegram', itemKey: 'telegram', icon: PaperPlaneIcon, permission: 'channels:manage' },
       { to: '/monitoring-integrations', itemKey: 'monitoringIntegrations', icon: WarningIcon, permission: 'channels:manage' },
+      { to: '/customer-portal', itemKey: 'customerPortal', icon: UsersIcon, permission: 'tickets:manage_all' },
       { to: '/appearance', itemKey: 'appearance', icon: PaletteIcon, permission: 'tickets:manage_all' },
       { to: '/branding', itemKey: 'branding', icon: BrandIcon, permission: 'tickets:manage_all' },
     ],
@@ -213,6 +217,14 @@ export function Layout() {
             <div className="truncate text-[13px] font-semibold text-slate-800">{me?.name ?? '…'}</div>
             <div className="truncate text-[11.5px] capitalize text-slate-400">{me?.role?.key ?? ''}</div>
           </div>
+          <button
+            onClick={() => navigate('/account/security')}
+            aria-label={t('layout.accountSecurity')}
+            title={t('layout.accountSecurity')}
+            className="flex-shrink-0 text-slate-400 hover:text-slate-700"
+          >
+            <ShieldIcon width={16} height={16} />
+          </button>
           <button onClick={logout} aria-label={t('layout.logOut')} className="flex-shrink-0 text-slate-400 hover:text-slate-700">
             <LogoutIcon width={16} height={16} />
           </button>

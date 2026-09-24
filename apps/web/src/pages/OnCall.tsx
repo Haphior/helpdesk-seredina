@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { EscalationTier, OnCallSchedule, UserSummary } from '../lib/types';
 import { Modal } from '../components/Modal';
@@ -10,6 +11,7 @@ import { ChevronDownIcon, ChevronUpIcon } from '../components/icons';
 import { formatDateTime } from '../lib/format';
 
 export function OnCall() {
+  const { t } = useTranslation();
   const [schedules, setSchedules] = useState<OnCallSchedule[] | null>(null);
   const [tiers, setTiers] = useState<EscalationTier[] | null>(null);
   const [users, setUsers] = useState<UserSummary[]>([]);
@@ -28,23 +30,23 @@ export function OnCall() {
       apiGet<{ tiers: EscalationTier[] }>('/escalation-tiers'),
       apiGet<{ users: UserSummary[] }>('/users'),
     ])
-      .then(([s, t, u]) => {
+      .then(([s, tr, u]) => {
         setSchedules(s.schedules);
-        setTiers(t.tiers);
+        setTiers(tr.tiers);
         setUsers(u.users);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load on-call configuration'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('onCall.loadFailed')));
   }
 
   useEffect(load, []);
 
   async function removeSchedule(id: string) {
-    if (!confirm('Delete this schedule and its shifts? Any escalation tier pointing at it will also be removed.')) return;
+    if (!confirm(t('onCall.confirmDeleteSchedule'))) return;
     try {
       await apiDelete(`/on-call-schedules/${id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete schedule');
+      setError(err instanceof ApiError ? err.message : t('onCall.deleteScheduleFailed'));
     }
   }
 
@@ -56,7 +58,7 @@ export function OnCall() {
       setShiftForm((f) => ({ ...f, [scheduleId]: { userId: '', startsAt: '', endsAt: '' } }));
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to add shift');
+      setError(err instanceof ApiError ? err.message : t('onCall.addShiftFailed'));
     }
   }
 
@@ -65,7 +67,7 @@ export function OnCall() {
       await apiDelete(`/on-call-shifts/${id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to remove shift');
+      setError(err instanceof ApiError ? err.message : t('onCall.removeShiftFailed'));
     }
   }
 
@@ -80,7 +82,7 @@ export function OnCall() {
       setTierTargetId('');
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to add escalation tier');
+      setError(err instanceof ApiError ? err.message : t('onCall.addTierFailed'));
     }
   }
 
@@ -89,7 +91,7 @@ export function OnCall() {
       await apiDelete(`/escalation-tiers/${id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to remove tier');
+      setError(err instanceof ApiError ? err.message : t('onCall.removeTierFailed'));
     }
   }
 
@@ -105,13 +107,13 @@ export function OnCall() {
       });
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to update tier');
+      setError(err instanceof ApiError ? err.message : t('onCall.updateTierFailed'));
     }
   }
 
   async function moveTier(tier: EscalationTier, direction: -1 | 1) {
     if (!tiers) return;
-    const i = tiers.findIndex((t) => t.id === tier.id);
+    const i = tiers.findIndex((tr) => tr.id === tier.id);
     const j = i + direction;
     if (i < 0 || j < 0 || j >= tiers.length) return;
     const other = tiers[j];
@@ -122,28 +124,28 @@ export function OnCall() {
       ]);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to reorder');
+      setError(err instanceof ApiError ? err.message : t('onCall.reorderFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
-      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">On-Call &amp; Escalation</h1>
+      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">{t('onCall.title')}</h1>
       <p className="mb-6 text-[13.5px] text-slate-500">
-        Who's on call, and who gets notified next if an SLA breach goes unacknowledged.
+        {t('onCall.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
 
       <div className="mb-8">
         <div className="mb-2.5 flex items-center justify-between">
-          <h2 className="text-[15px] font-bold text-slate-800">On-call schedules</h2>
+          <h2 className="text-[15px] font-bold text-slate-800">{t('onCall.schedules')}</h2>
           <Button size="sm" onClick={() => setShowCreateSchedule(true)}>
-            New schedule
+            {t('onCall.newSchedule')}
           </Button>
         </div>
 
-        {schedules?.length === 0 && <p className="text-sm text-slate-500">No on-call schedules yet.</p>}
+        {schedules?.length === 0 && <p className="text-sm text-slate-500">{t('onCall.noSchedules')}</p>}
 
         <div className="flex flex-col gap-3">
           {schedules?.map((s) => (
@@ -152,23 +154,23 @@ export function OnCall() {
                 <span className="text-[14.5px] font-semibold text-slate-800">{s.name}</span>
                 <div className="flex items-center gap-3">
                   <button onClick={() => setRenamingSchedule(s)} className="text-xs text-slate-400 hover:text-indigo-600">
-                    rename
+                    {t('onCall.rename')}
                   </button>
                   <button onClick={() => removeSchedule(s.id)} className="text-xs text-slate-400 hover:text-rose-600">
-                    delete
+                    {t('onCall.delete')}
                   </button>
                 </div>
               </div>
 
               <div className="mb-2 flex flex-col gap-1.5">
-                {s.shifts.length === 0 && <span className="text-[12.5px] text-slate-400">No shifts scheduled yet.</span>}
+                {s.shifts.length === 0 && <span className="text-[12.5px] text-slate-400">{t('onCall.noShifts')}</span>}
                 {s.shifts.map((shift) => (
                   <div key={shift.id} className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-1.5 text-[12.5px]">
                     <span className="text-slate-700">
                       {shift.user.name} · {formatDateTime(shift.startsAt)} → {formatDateTime(shift.endsAt)}
                     </span>
                     <button onClick={() => removeShift(shift.id)} className="text-slate-400 hover:text-rose-600">
-                      remove
+                      {t('onCall.remove')}
                     </button>
                   </div>
                 ))}
@@ -178,11 +180,11 @@ export function OnCall() {
                 <div className="w-28">
                   <Select
                     hideLabel
-                    aria-label={`Who for a new shift on ${s.name}`}
+                    aria-label={t('onCall.whoAria', { schedule: s.name })}
                     value={shiftForm[s.id]?.userId ?? ''}
                     onChange={(e) => setShiftForm((f) => ({ ...f, [s.id]: { ...f[s.id], userId: e.target.value, startsAt: f[s.id]?.startsAt ?? '', endsAt: f[s.id]?.endsAt ?? '' } }))}
                   >
-                    <option value="">Who…</option>
+                    <option value="">{t('onCall.who')}</option>
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.name}
@@ -192,7 +194,7 @@ export function OnCall() {
                 </div>
                 <Input
                   hideLabel
-                  aria-label={`Shift start for ${s.name}`}
+                  aria-label={t('onCall.startAria', { schedule: s.name })}
                   type="datetime-local"
                   value={shiftForm[s.id]?.startsAt ?? ''}
                   onChange={(e) => setShiftForm((f) => ({ ...f, [s.id]: { userId: f[s.id]?.userId ?? '', endsAt: f[s.id]?.endsAt ?? '', startsAt: e.target.value } }))}
@@ -200,14 +202,14 @@ export function OnCall() {
                 />
                 <Input
                   hideLabel
-                  aria-label={`Shift end for ${s.name}`}
+                  aria-label={t('onCall.endAria', { schedule: s.name })}
                   type="datetime-local"
                   value={shiftForm[s.id]?.endsAt ?? ''}
                   onChange={(e) => setShiftForm((f) => ({ ...f, [s.id]: { userId: f[s.id]?.userId ?? '', startsAt: f[s.id]?.startsAt ?? '', endsAt: e.target.value } }))}
                   className="w-auto"
                 />
                 <Button size="sm" onClick={() => addShift(s.id)}>
-                  Add shift
+                  {t('onCall.addShift')}
                 </Button>
               </div>
             </Card>
@@ -216,24 +218,23 @@ export function OnCall() {
       </div>
 
       <div>
-        <h2 className="mb-2.5 text-[15px] font-bold text-slate-800">Escalation chain</h2>
+        <h2 className="mb-2.5 text-[15px] font-bold text-slate-800">{t('onCall.chain')}</h2>
         <p className="mb-3 text-[13px] text-slate-500">
-          When an SLA milestone is breached, tier 1 is notified. If nobody acknowledges within its window, the chain moves to
-          the next tier.
+          {t('onCall.chainIntro')}
         </p>
 
         <div className="mb-3 flex flex-col gap-2">
-          {tiers?.length === 0 && <p className="text-sm text-slate-500">No escalation chain configured yet — SLA breaches won't escalate.</p>}
-          {tiers?.map((t, i) => (
-            <div key={t.id} className="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3.5 py-2.5">
+          {tiers?.length === 0 && <p className="text-sm text-slate-500">{t('onCall.noChain')}</p>}
+          {tiers?.map((tier, i) => (
+            <div key={tier.id} className="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3.5 py-2.5">
               <div className="flex items-center gap-1.5">
                 <div className="flex flex-col opacity-0 transition-opacity group-hover:opacity-100">
                   <Button
                     iconOnly
                     variant="ghost"
                     size="sm"
-                    aria-label={`Move tier ${i + 1} up`}
-                    onClick={() => moveTier(t, -1)}
+                    aria-label={t('onCall.moveUp', { n: i + 1 })}
+                    onClick={() => moveTier(tier, -1)}
                     disabled={i === 0}
                     className="!h-5 !w-5"
                   >
@@ -243,8 +244,8 @@ export function OnCall() {
                     iconOnly
                     variant="ghost"
                     size="sm"
-                    aria-label={`Move tier ${i + 1} down`}
-                    onClick={() => moveTier(t, 1)}
+                    aria-label={t('onCall.moveDown', { n: i + 1 })}
+                    onClick={() => moveTier(tier, 1)}
                     disabled={i === (tiers?.length ?? 0) - 1}
                     className="!h-5 !w-5"
                   >
@@ -252,30 +253,30 @@ export function OnCall() {
                   </Button>
                 </div>
                 <span className="text-[13.5px] text-slate-700">
-                  <span className="font-semibold">Tier {i + 1}:</span>{' '}
-                  {t.user ? t.user.name : `whoever's on call for "${t.onCallSchedule?.name}"`}
+                  <span className="font-semibold">{t('onCall.tier', { n: i + 1 })}</span>{' '}
+                  {tier.user ? tier.user.name : t('onCall.whoeverOnCall', { schedule: tier.onCallSchedule?.name })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[12.5px] text-slate-400">escalates after</span>
+                <span className="text-[12.5px] text-slate-400">{t('onCall.escalatesAfter')}</span>
                 <div className="w-16">
                   <Input
                     hideLabel
-                    aria-label={`Escalation minutes for tier ${i + 1}`}
+                    aria-label={t('onCall.minutesAria', { n: i + 1 })}
                     type="number"
                     min={1}
-                    value={tierMinutesEdit[t.id] ?? String(t.escalateAfterMinutes)}
-                    onChange={(e) => setTierMinutesEdit((v) => ({ ...v, [t.id]: e.target.value }))}
+                    value={tierMinutesEdit[tier.id] ?? String(tier.escalateAfterMinutes)}
+                    onChange={(e) => setTierMinutesEdit((v) => ({ ...v, [tier.id]: e.target.value }))}
                   />
                 </div>
-                <span className="text-[12.5px] text-slate-400">min</span>
-                {tierMinutesEdit[t.id] !== undefined && tierMinutesEdit[t.id] !== String(t.escalateAfterMinutes) && (
-                  <Button size="sm" onClick={() => saveTierMinutes(t)}>
-                    Save
+                <span className="text-[12.5px] text-slate-400">{t('onCall.min')}</span>
+                {tierMinutesEdit[tier.id] !== undefined && tierMinutesEdit[tier.id] !== String(tier.escalateAfterMinutes) && (
+                  <Button size="sm" onClick={() => saveTierMinutes(tier)}>
+                    {t('common.save')}
                   </Button>
                 )}
-                <button onClick={() => removeTier(t.id)} className="text-xs text-slate-400 hover:text-rose-600">
-                  remove
+                <button onClick={() => removeTier(tier.id)} className="text-xs text-slate-400 hover:text-rose-600">
+                  {t('onCall.remove')}
                 </button>
               </div>
             </div>
@@ -286,20 +287,20 @@ export function OnCall() {
           <div className="w-40">
             <Select
               hideLabel
-              aria-label="Escalation target type"
+              aria-label={t('onCall.targetType')}
               value={tierType}
               onChange={(e) => {
                 setTierType(e.target.value as 'user' | 'schedule');
                 setTierTargetId('');
               }}
             >
-              <option value="user">A specific person</option>
-              <option value="schedule">Whoever's on call for…</option>
+              <option value="user">{t('onCall.targetUser')}</option>
+              <option value="schedule">{t('onCall.targetSchedule')}</option>
             </Select>
           </div>
           <div className="w-36">
-            <Select hideLabel aria-label="Escalation target" value={tierTargetId} onChange={(e) => setTierTargetId(e.target.value)}>
-              <option value="">Choose…</option>
+            <Select hideLabel aria-label={t('onCall.target')} value={tierTargetId} onChange={(e) => setTierTargetId(e.target.value)}>
+              <option value="">{t('onCall.choose')}</option>
               {(tierType === 'user' ? users : schedules ?? []).map((opt) => (
                 <option key={opt.id} value={opt.id}>
                   {opt.name}
@@ -308,14 +309,14 @@ export function OnCall() {
             </Select>
           </div>
           <label className="flex items-center gap-1.5 text-xs text-slate-600">
-            Escalate after
+            {t('onCall.escalateAfter')}
             <div className="w-16">
-              <Input hideLabel aria-label="Escalate after minutes" type="number" min={1} value={tierMinutes} onChange={(e) => setTierMinutes(e.target.value)} />
+              <Input hideLabel aria-label={t('onCall.escalateAfterAria')} type="number" min={1} value={tierMinutes} onChange={(e) => setTierMinutes(e.target.value)} />
             </div>
-            minutes
+            {t('onCall.minutes')}
           </label>
           <Button size="sm" onClick={addTier} disabled={!tierTargetId}>
-            Add tier
+            {t('onCall.addTier')}
           </Button>
         </div>
       </div>
@@ -337,6 +338,7 @@ function RenameScheduleModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(schedule.name);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -350,25 +352,25 @@ function RenameScheduleModal({
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to rename schedule');
+      setError(err instanceof ApiError ? err.message : t('onCall.renameFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="Rename schedule" onClose={onClose}>
+    <Modal title={t('onCall.renameTitle')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input label={t('onCall.name')} value={name} onChange={(e) => setName(e.target.value)} required />
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>
@@ -377,6 +379,7 @@ function RenameScheduleModal({
 }
 
 function CreateScheduleModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -390,25 +393,25 @@ function CreateScheduleModal({ onClose, onCreated }: { onClose: () => void; onCr
       onCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create schedule');
+      setError(err instanceof ApiError ? err.message : t('onCall.createFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title="New on-call schedule" onClose={onClose}>
+    <Modal title={t('onCall.newTitle')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Primary IT On-Call" required />
+        <Input label={t('onCall.name')} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('onCall.namePlaceholder')} required />
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

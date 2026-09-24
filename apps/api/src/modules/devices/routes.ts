@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requirePermission } from '../rbac/permissions';
 import { checkIn, createEnrollmentToken, enrollDevice, listDevices, revokeDevice } from './service';
 import { getAgentSetup } from './agentSetup';
+import { auditRequest, recordAudit, requestOrigin } from '../audit/service';
 
 // Format only -- neighbors.ts's normalizeMac() does the real validation
 // (multicast/broadcast/all-zero rejected there, not here).
@@ -37,6 +38,7 @@ export default async function deviceRoutes(app: FastifyInstance) {
     { preHandler: [app.authenticate, requirePermission('assets:manage')] },
     async (request, reply) => {
       const result = await createEnrollmentToken(request.user.tenantId);
+      await auditRequest(request, 'device.enrollment_token_created', { type: 'device_enrollment_token' });
       return reply.code(201).send(result);
     },
   );
@@ -61,6 +63,7 @@ export default async function deviceRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       try {
         await revokeDevice(request.user.tenantId, id);
+        await auditRequest(request, 'device.revoked', { type: 'device', id });
         return reply.code(204).send();
       } catch {
         return reply.code(404).send({ error: 'device not found' });
@@ -76,7 +79,14 @@ export default async function deviceRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     try {
       const { enrollmentToken, ...input } = parsed.data;
-      const result = await enrollDevice(enrollmentToken, input);
+      const { tenantId, ...result } = await enrollDevice(enrollmentToken, input);
+      await recordAudit(tenantId, {
+        action: result.reenrolled ? 'device.reenrolled' : 'device.enrolled',
+        actorType: 'system',
+        target: { type: 'device', id: result.deviceId, label: input.hostname },
+        metadata: { platform: input.platform, agentVersion: input.agentVersion ?? null },
+        ...requestOrigin(request),
+      });
       return reply.code(201).send(result);
     } catch (err) {
       return reply.code(401).send({ error: (err as Error).message });

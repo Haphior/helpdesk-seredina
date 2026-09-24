@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Asset, AssetStatus, AssetType, DiscoveryJob } from '../lib/types';
@@ -29,6 +30,7 @@ const ASSET_STATUSES: AssetStatus[] = ['ACTIVE', 'INACTIVE', 'RETIRED'];
 const PAGE_SIZE = 50;
 
 export function Assets() {
+  const { t } = useTranslation();
   const [assets, setAssets] = useState<Asset[] | null>(null);
   const [total, setTotal] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -63,7 +65,7 @@ export function Assets() {
         setAssets((prev) => (offset > 0 && prev ? [...prev, ...res.assets] : res.assets));
         setTotal(res.total);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load assets'))
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('assets.loadFailed')))
       .finally(() => setLoadingMore(false));
     apiGet<{ discoveryJobs: DiscoveryJob[]; scanEnabled: boolean }>('/discovery-jobs')
       .then((res) => {
@@ -98,7 +100,7 @@ export function Assets() {
       setCidrRange('');
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to start scan');
+      setError(err instanceof ApiError ? err.message : t('assets.scanFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -114,36 +116,33 @@ export function Assets() {
   }
 
   async function removeAsset(asset: Asset) {
-    if (!confirm(`Delete asset "${asset.name}"? This also removes it from any linked tickets.`)) return;
+    if (!confirm(t('assets.confirmDelete', { name: asset.name }))) return;
     try {
       await apiDelete(`/assets/${asset.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete asset');
+      setError(err instanceof ApiError ? err.message : t('assets.deleteFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Assets</h1>
-        <Button onClick={() => setEditingAsset('new')}>New asset</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('assets.title')}</h1>
+        <Button onClick={() => setEditingAsset('new')}>{t('assetForm.new')}</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Discovered by enrolled agents (each reports its own inventory and the devices it sees on its
-        network){scanEnabled ? ', by network scans from this server,' : ''} or added by hand. Enroll agents
-        from the{' '}
-        <Link to="/devices" className="font-medium text-slate-700 underline">
-          Devices
-        </Link>{' '}
-        page.
+        <Trans
+          i18nKey={scanEnabled ? 'assets.introWithScan' : 'assets.intro'}
+          components={{ devices: <Link to="/devices" className="font-medium text-slate-700 underline" /> }}
+        />
       </p>
 
       {scanEnabled && (
         <form onSubmit={onSubmitScan} className="mb-5 flex items-end gap-2">
           <div className="w-64">
             <Input
-              label="Scan a network range"
+              label={t('assets.scanRange')}
               value={cidrRange}
               onChange={(e) => setCidrRange(e.target.value)}
               placeholder="192.168.1.0/24"
@@ -151,7 +150,7 @@ export function Assets() {
             />
           </div>
           <Button type="submit" variant="secondary" isLoading={submitting}>
-            Start scan
+            {t('assets.startScan')}
           </Button>
         </form>
       )}
@@ -160,7 +159,7 @@ export function Assets() {
 
       {jobs.length > 0 && (
         <div className="mb-6">
-          <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-slate-400">Recent scans</h2>
+          <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wide text-slate-400">{t('assets.recentScans')}</h2>
           <Card className="overflow-hidden p-0">
             <div className="divide-y divide-slate-100">
               {jobs.map((j) => (
@@ -168,14 +167,14 @@ export function Assets() {
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-slate-700">{j.cidrRange}</span>
                     <Badge tone={JOB_STATUS_TONE[j.status]} dot>
-                      {j.status}
+                      {t(`assets.jobStatus.${j.status}`)}
                     </Badge>
                     {j.status === 'FAILED' && j.errorMessage && (
                       <span className="text-rose-600">{j.errorMessage}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 text-slate-400">
-                    <span>{j.discoveredCount} found</span>
+                    <span>{t('assets.found', { count: j.discoveredCount })}</span>
                     <span>{j.startedAt ? formatDateTime(j.startedAt) : '—'}</span>
                   </div>
                 </div>
@@ -189,24 +188,24 @@ export function Assets() {
         <div className="w-[260px]">
           <Input
             hideLabel
-            aria-label="Search assets by name, IP, or hostname"
+            aria-label={t('assets.search')}
             icon={<SearchIcon width={15} height={15} />}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name, IP, hostname…"
+            placeholder={t('assets.searchPlaceholder')}
           />
         </div>
         <div className="w-[140px]">
           <Select
             hideLabel
-            aria-label="Filter by asset type"
+            aria-label={t('assets.filterType')}
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as AssetType | '')}
           >
-            <option value="">Any type</option>
-            {ASSET_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            <option value="">{t('assets.anyType')}</option>
+            {ASSET_TYPES.map((ty) => (
+              <option key={ty} value={ty}>
+                {t(`assetType.${ty}`)}
               </option>
             ))}
           </Select>
@@ -214,38 +213,38 @@ export function Assets() {
         <div className="w-[140px]">
           <Select
             hideLabel
-            aria-label="Filter by asset status"
+            aria-label={t('assets.filterStatus')}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as AssetStatus | '')}
           >
-            <option value="">Any status</option>
+            <option value="">{t('assets.anyStatus')}</option>
             {ASSET_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {t(`assetStatus.${s}`)}
               </option>
             ))}
           </Select>
         </div>
         {assets && (
           <span className="ml-1 text-[13px] text-slate-400">
-            {assets.length} of {total}
+            {t('assets.countOf', { shown: assets.length, total })}
           </span>
         )}
       </div>
 
-      {assets === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {assets?.length === 0 && <p className="text-sm text-slate-500">No assets here. Add one or run a scan above.</p>}
+      {assets === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {assets?.length === 0 && <p className="text-sm text-slate-500">{t('assets.empty')}</p>}
 
       {assets && assets.length > 0 && (
         <Card className="overflow-hidden p-0">
           <div className="grid grid-cols-[2fr_100px_90px_110px_120px_90px_110px_60px] items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 text-[11.5px] font-bold uppercase tracking-wide text-slate-400">
-            <span>Name</span>
-            <span>Type</span>
-            <span>Status</span>
+            <span>{t('assets.col.name')}</span>
+            <span>{t('assets.col.type')}</span>
+            <span>{t('assets.col.status')}</span>
             <span>IP</span>
-            <span>Hostname</span>
-            <span>Source</span>
-            <span>Last seen</span>
+            <span>{t('assets.col.hostname')}</span>
+            <span>{t('assets.col.source')}</span>
+            <span>{t('assets.col.lastSeen')}</span>
             <span></span>
           </div>
           <div className="divide-y divide-slate-100">
@@ -257,11 +256,11 @@ export function Assets() {
                 <Link to={`/assets/${asset.id}`} className="contents">
                   <span className="truncate text-[13.5px] font-semibold text-slate-800">{asset.name}</span>
                   <span className="w-fit">
-                    <Badge tone="slate">{asset.assetType}</Badge>
+                    <Badge tone="slate">{t(`assetType.${asset.assetType}`)}</Badge>
                   </span>
                   <span className="w-fit">
                     <Badge tone={ASSET_STATUS_TONE[asset.status]} dot>
-                      {asset.status}
+                      {t(`assetStatus.${asset.status}`)}
                     </Badge>
                   </span>
                   <span className="truncate text-[12.5px] text-slate-500">{asset.ipAddress ?? '—'}</span>
@@ -279,7 +278,7 @@ export function Assets() {
                     }}
                     className="mr-2.5 text-slate-400 hover:text-indigo-600"
                   >
-                    edit
+                    {t('assets.edit')}
                   </button>
                   <button
                     onClick={(e) => {
@@ -288,7 +287,7 @@ export function Assets() {
                     }}
                     className="text-slate-400 hover:text-rose-600"
                   >
-                    delete
+                    {t('assets.delete')}
                   </button>
                 </div>
               </div>
@@ -300,7 +299,7 @@ export function Assets() {
       {assets && assets.length < total && (
         <div className="flex justify-center pt-4">
           <Button variant="secondary" onClick={() => load(assets.length)} isLoading={loadingMore}>
-            {loadingMore ? 'Loading…' : `Load more (${total - assets.length} remaining)`}
+            {loadingMore ? t('common.loading') : t('assets.loadMore', { count: total - assets.length })}
           </Button>
         </div>
       )}

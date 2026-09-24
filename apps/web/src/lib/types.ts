@@ -6,7 +6,8 @@ export type Permission =
   | 'tickets:manage_all'
   | 'assets:read'
   | 'assets:manage'
-  | 'channels:manage';
+  | 'channels:manage'
+  | 'audit:read';
 
 export type TicketStatusCategory = 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
 export type TicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
@@ -38,6 +39,7 @@ export interface UserSummary {
   role: { key: string } | null;
   isActive: boolean;
   isLocked: boolean;
+  mfaEnabled: boolean;
 }
 
 export interface Role {
@@ -228,7 +230,18 @@ export interface DiscoveryJob {
   completedAt: string | null;
 }
 
+export interface AiTriage {
+  priority: TicketPriority | null;
+  teamId: string | null;
+  teamName: string | null;
+  reason: string;
+  model: string;
+  at: string;
+  applied: boolean;
+}
+
 export interface TicketDetail extends Ticket {
+  aiTriage?: AiTriage | null;
   messages: Message[];
   assets: { assetId: string; asset: AssetSummary }[];
   problem?: { id: string; number: number; title: string } | null;
@@ -259,7 +272,14 @@ export interface EmailChannel {
   isActive: boolean;
   lastPolledAt: string | null;
   createdAt: string;
+  authType: EmailAuthType;
+  connectionStatus: 'connected' | 'pending_authorization' | 'needs_reconnect';
+  lastError: string | null;
+  oauthClientId: string | null;
+  oauthMicrosoftTenant: string | null;
 }
+
+export type EmailAuthType = 'password' | 'google_oauth' | 'microsoft_oauth';
 
 export interface MacroActions {
   setStatusId?: string;
@@ -541,7 +561,7 @@ export interface SavedView {
   createdAt: string;
 }
 
-export type NotificationEventType = 'TICKET_ASSIGNED' | 'NEW_REPLY';
+export type NotificationEventType = 'TICKET_ASSIGNED' | 'NEW_REPLY' | 'CONTRACT_EXPIRING';
 
 export interface AppNotification {
   id: string;
@@ -629,4 +649,41 @@ export interface AiAgentRun {
   reviewedByUser: { id: string; name: string } | null;
   reviewedAt: string | null;
   createdAt: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorType: 'user' | 'system' | 'anonymous';
+  actorUserId: string | null;
+  actorLabel: string | null;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  targetLabel: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export type ContractType = 'SUPPORT' | 'WARRANTY' | 'LICENSE' | 'LEASE' | 'SUBSCRIPTION' | 'OTHER';
+export type ContractStatus = 'active' | 'expiring' | 'expired' | 'no_end_date';
+
+export interface Contract {
+  id: string;
+  name: string;
+  type: ContractType;
+  supplier: string | null;
+  reference: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  renewalNoticeDays: number;
+  cost: number | null;
+  currency: string | null;
+  billingPeriod: 'one_time' | 'monthly' | 'yearly' | null;
+  seats: number | null;
+  notes: string | null;
+  status: ContractStatus;
+  daysUntilEnd: number | null;
+  assets: { id: string; name: string; assetType: AssetType }[];
 }

@@ -86,6 +86,22 @@ model Tenant {
   csatResponses         CsatResponse[]
 
   @@map("tenants")
+  auditLogs AuditLog[]
+
+  // Every user must set up two-factor sign-in before they can use the console
+  // (docs/adr/0061-mfa-totp.md). Off by default; users can still opt in.
+  mfaRequired Boolean @default(false) @map("mfa_required")
+  ssoSettings TenantSsoSettings?
+
+  // 'off' | 'suggest' | 'auto' -- see docs/adr/0063-ai-triage.md. Off by
+  // default: every new ticket costs a model call once it's on.
+  aiTriageMode String @default("off") @map("ai_triage_mode")
+  contracts      Contract[]
+  contractAssets ContractAsset[]
+
+  // Customer portal (docs/adr/0065-customer-portal.md): contacts sign in with
+  // an emailed link to follow and reply to their own tickets. Off by default.
+  customerPortalEnabled Boolean @default(false) @map("customer_portal_enabled")
 }
 
 model Role {
@@ -145,6 +161,18 @@ model User {
   // lockout is applied; lockedUntil null means not currently locked.
   failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
   lockedUntil         DateTime? @map("locked_until")
+
+  // Two-factor sign-in with an authenticator app (TOTP) -- see
+  // docs/adr/0061-mfa-totp.md. The secret is encrypted with ENCRYPTION_KEY
+  // (the server must recompute codes from it, so it can't be hashed); the
+  // pending one exists only between "show QR code" and "confirm first code".
+  // mfaLastUsedStep blocks replaying a code inside its validity window.
+  // Recovery codes are one-time and high-entropy, so a plain SHA-256 each.
+  mfaSecretEncrypted        String?   @map("mfa_secret_encrypted")
+  mfaPendingSecretEncrypted String?   @map("mfa_pending_secret_encrypted")
+  mfaEnabledAt              DateTime? @map("mfa_enabled_at")
+  mfaLastUsedStep           Int?      @map("mfa_last_used_step")
+  mfaRecoveryCodeHashes     String[]  @default([]) @map("mfa_recovery_code_hashes")
 
   // Soft-deactivation for offboarding -- deliberately not a delete: Ticket.assignee
   // and Message.authorUser have no onDelete action (a hard delete would be blocked
@@ -275,6 +303,16 @@ model Ticket {
   // credential (a guess = read someone else's conversation), not a
   // dedup key where "not unique yet" is a normal, temporary state.
   widgetToken String?       @unique @map("widget_token")
+  // Set only for channel='email' -- the mailbox this conversation arrived on,
+  // so replies go out from the same address the customer wrote to (not just
+  // the tenant's first channel). Null (channel deleted) falls back to the
+  // first connected one.
+  // AI triage (docs/adr/0063-ai-triage.md): what the model suggested for this
+  // ticket -- { priority, teamId, teamName, reason, model, at, applied } -- or
+  // null if triage is off, no AI is configured, or it hasn't run yet.
+  aiTriage Json? @map("ai_triage")
+  emailChannelId String?      @map("email_channel_id") @db.Uuid
+  emailChannel   EmailChannel? @relation(fields: [emailChannelId], references: [id], onDelete: SetNull)
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
   resolvedAt DateTime?      @map("resolved_at")
@@ -422,9 +460,8 @@ model Message {
   @@map("messages")
 }
 
-// v1 file attachments -- manual uploads on a reply/note only (see
-// docs/adr/0026-work-section-improvements.md for why inbound-email attachments
-// are explicitly deferred). Bytes stored directly in Postgres, not an
+// File attachments -- manual uploads on a reply/note, and files attached to
+// inbound email (docs/adr/0058-inbound-email-attachments.md). Bytes stored directly in Postgres, not an
 // object-storage bucket: no MinIO/S3 exists in this stack yet (self-hosted
 // Docker Compose has none), and a hard per-file size cap enforced at the
 // service layer (modules/attachments/service.ts) keeps row/table bloat bounded
@@ -478,15 +515,34 @@ model EmailChannel {
   imapPort              Int       @map("imap_port")
   imapSecure            Boolean   @default(true) @map("imap_secure")
   imapUsername          String    @map("imap_username")
-  imapPasswordEncrypted String    @map("imap_password_encrypted")
+  // Null for an OAuth channel (authType != 'password'), which authenticates
+  // with a refreshed access token instead -- see docs/adr/0057-email-oauth.md.
+  imapPasswordEncrypted String?   @map("imap_password_encrypted")
   smtpHost              String    @map("smtp_host")
   smtpPort              Int       @map("smtp_port")
   smtpSecure            Boolean   @default(true) @map("smtp_secure")
   smtpUsername          String    @map("smtp_username")
-  smtpPasswordEncrypted String    @map("smtp_password_encrypted")
+  smtpPasswordEncrypted String?   @map("smtp_password_encrypted")
   isActive              Boolean   @default(true) @map("is_active")
   lastPolledAt          DateTime? @map("last_polled_at")
   createdAt             DateTime  @default(now()) @map("created_at")
+
+  // 'password' | 'google_oauth' | 'microsoft_oauth' (EMAIL_AUTH_TYPES in
+  // packages/shared/src/emailOAuth.ts). The OAuth app is the tenant's own
+  // (bring-your-own), so its client secret is stored encrypted like a password.
+  authType                    String    @default("password") @map("auth_type")
+  // 'connected' | 'pending_authorization' | 'needs_reconnect' -- the worker
+  // only polls 'connected' channels.
+  connectionStatus            String    @default("connected") @map("connection_status")
+  lastError                   String?   @map("last_error")
+  oauthClientId               String?   @map("oauth_client_id")
+  oauthClientSecretEncrypted  String?   @map("oauth_client_secret_encrypted")
+  oauthMicrosoftTenant        String?   @map("oauth_microsoft_tenant")
+  oauthRefreshTokenEncrypted  String?   @map("oauth_refresh_token_encrypted")
+  oauthAccessTokenEncrypted   String?   @map("oauth_access_token_encrypted")
+  oauthAccessTokenExpiresAt   DateTime? @map("oauth_access_token_expires_at")
+
+  tickets Ticket[]
 
   @@map("email_channels")
 }
@@ -615,6 +671,8 @@ model Asset {
   // duplicating -- imperfect under DHCP churn, a known v1 limitation (see ADR), not
   // an oversight. Agent neighbor reports match by MAC first (see
   // modules/devices/neighbors.ts), which is what the macAddress index is for.
+  contracts ContractAsset[]
+
   @@unique([tenantId, ipAddress])
   @@index([tenantId, macAddress])
   @@map("assets")
@@ -1270,6 +1328,7 @@ model SavedView {
 enum NotificationEventType {
   TICKET_ASSIGNED
   NEW_REPLY
+  CONTRACT_EXPIRING
 }
 
 // One row per notification actually delivered in-app -- only created when the
@@ -1464,4 +1523,117 @@ model TenantKbSettings {
   createdAt        DateTime @default(now()) @map("created_at")
 
   @@map("tenant_kb_settings")
+}
+
+// Security audit log (docs/adr/0060-audit-log.md): who signed in, who changed
+// access, who touched integrations and secrets. Append-only for the app --
+// app_tenant is granted SELECT/INSERT only (prisma/rls/policies.sql), so not
+// even a compromised API process can rewrite history. actorUserId is a plain
+// column, not a relation: the entry must outlive the user it names.
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // 'user' | 'system' | 'anonymous'
+  actorType   String   @map("actor_type")
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  // The actor's email at the time -- still readable after the user is renamed or removed.
+  actorLabel  String?  @map("actor_label")
+  // Dotted, past tense: 'auth.login_succeeded', 'user.role_changed', ...
+  action      String
+  targetType  String?  @map("target_type")
+  targetId    String?  @map("target_id")
+  targetLabel String?  @map("target_label")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action, createdAt])
+  @@map("audit_logs")
+}
+
+// Single sign-on over OpenID Connect (docs/adr/0062-sso-oidc.md), one per
+// tenant. Like the email OAuth app (ADR 0055) the identity-provider app is
+// the tenant's own; its client secret is encrypted with ENCRYPTION_KEY.
+model TenantSsoSettings {
+  id                    String   @id @default(uuid()) @db.Uuid
+  tenantId              String   @unique @map("tenant_id") @db.Uuid
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enabled               Boolean  @default(false)
+  // 'microsoft' | 'google' | 'oidc'
+  provider              String
+  // Microsoft: the directory (tenant) ID; Google: https://accounts.google.com;
+  // generic: the issuer URL whose /.well-known/openid-configuration is fetched.
+  issuer                String
+  clientId              String   @map("client_id")
+  clientSecretEncrypted String   @map("client_secret_encrypted")
+  // Lowercase email domains allowed to sign in; empty = any the IdP vouches for.
+  allowedDomains        String[] @default([]) @map("allowed_domains")
+  // Create a console user on first sign-in instead of requiring one to exist.
+  autoProvision         Boolean  @default(false) @map("auto_provision")
+  defaultRoleKey        String   @default("agent") @map("default_role_key")
+  // Password sign-in refused for everyone but admins (the break-glass path).
+  enforced              Boolean  @default(false)
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@map("tenant_sso_settings")
+}
+
+// Contracts, warranties and licenses tied to assets -- docs/adr/0064-contracts.md.
+enum ContractType {
+  SUPPORT
+  WARRANTY
+  LICENSE
+  LEASE
+  SUBSCRIPTION
+  OTHER
+}
+
+model Contract {
+  id        String       @id @default(uuid()) @db.Uuid
+  tenantId  String       @map("tenant_id") @db.Uuid
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  type      ContractType @default(SUPPORT)
+  supplier  String?
+  // Contract or order number, license agreement id -- never a license key
+  // itself (that's a secret, and this field is shown in lists and exports).
+  reference String?
+  startDate DateTime?    @map("start_date") @db.Date
+  endDate   DateTime?    @map("end_date") @db.Date
+  // Remind this many days before endDate (0 = no reminder).
+  renewalNoticeDays Int       @default(30) @map("renewal_notice_days")
+  // Set once the reminder went out; cleared whenever endDate changes.
+  renewalNotifiedAt DateTime? @map("renewal_notified_at")
+  cost          Decimal?   @db.Decimal(14, 2)
+  currency      String?
+  // 'one_time' | 'monthly' | 'yearly'
+  billingPeriod String?    @map("billing_period")
+  // Licenses: how many seats/installs the contract covers.
+  seats     Int?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assets ContractAsset[]
+
+  @@index([tenantId, endDate])
+  @@map("contracts")
+}
+
+model ContractAsset {
+  tenantId   String   @map("tenant_id") @db.Uuid
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contractId String   @map("contract_id") @db.Uuid
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  assetId    String   @map("asset_id") @db.Uuid
+  asset      Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@id([contractId, assetId])
+  @@index([assetId])
+  @@map("contract_assets")
 }

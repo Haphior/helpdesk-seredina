@@ -46,6 +46,11 @@ import telegramRoutes from './modules/telegram/routes';
 import csatRoutes from './modules/csat/routes';
 import deviceRoutes from './modules/devices/routes';
 import liveRoutes from './modules/live/routes';
+import auditRoutes from './modules/audit/routes';
+import ssoRoutes from './modules/sso/routes';
+import contractRoutes from './modules/contracts/routes';
+import portalRoutes from './modules/portal/routes';
+import { startTicketFollowupWorker } from './lib/ticketFollowup';
 
 initErrorTracking();
 
@@ -110,6 +115,10 @@ export function buildApp() {
   app.register(apiKeyAuthPlugin);
   app.register(deviceAuthPlugin);
   app.register(authRoutes);
+  app.register(auditRoutes);
+  app.register(ssoRoutes);
+  app.register(contractRoutes);
+  app.register(portalRoutes);
   app.register(apiKeyRoutes);
   app.register(ticketRoutes);
   app.register(teamRoutes);
@@ -170,6 +179,7 @@ export function buildApp() {
 
 if (require.main === module) {
   const app = buildApp();
+  startTicketFollowupWorker();
   const port = Number(process.env.PORT ?? 4000);
   app
     .listen({ port, host: '0.0.0.0' })

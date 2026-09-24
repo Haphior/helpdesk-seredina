@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
 import type { Permission, Role } from '../lib/types';
 import { Modal } from '../components/Modal';
@@ -16,9 +17,11 @@ const ALL_PERMISSIONS: Permission[] = [
   'channels:manage',
   'users:manage',
   'roles:manage',
+  'audit:read',
 ];
 
 export function Roles() {
+  const { t } = useTranslation();
   const [roles, setRoles] = useState<Role[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Role | 'new' | null>(null);
@@ -26,7 +29,7 @@ export function Roles() {
   function load() {
     apiGet<{ roles: Role[] }>('/roles')
       .then((res) => setRoles(res.roles))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load roles'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('roles.loadFailed')));
   }
 
   useEffect(() => {
@@ -34,28 +37,27 @@ export function Roles() {
   }, []);
 
   async function remove(role: Role) {
-    if (!confirm(`Delete the "${role.name}" role?`)) return;
+    if (!confirm(t('roles.confirmDelete', { name: role.name }))) return;
     try {
       await apiDelete(`/roles/${role.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete role');
+      setError(err instanceof ApiError ? err.message : t('roles.deleteFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Roles</h1>
-        <Button onClick={() => setEditing('new')}>New role</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('roles.title')}</h1>
+        <Button onClick={() => setEditing('new')}>{t('roles.new')}</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        Every role here is available immediately when assigning a user (Administration → Users) —
-        no restart, no fixed list of three.
+        {t('roles.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {roles === null && <p className="text-sm text-slate-500">Loading…</p>}
+      {roles === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
 
       {roles && (
         <Card className="overflow-hidden p-0">
@@ -70,14 +72,14 @@ export function Roles() {
                   <div className="mt-1 flex flex-wrap gap-1">
                     {r.permissions.map((p) => (
                       <Badge key={p} tone="slate">
-                        {p}
+                        {t(`roles.permissions.${p}`, { defaultValue: p })}
                       </Badge>
                     ))}
                   </div>
                 </button>
                 {r.key !== 'admin' && (
                   <button onClick={() => remove(r)} className="flex-shrink-0 text-xs text-slate-400 hover:text-rose-600">
-                    delete
+                    {t('roles.delete')}
                   </button>
                 )}
               </div>
@@ -92,6 +94,7 @@ export function Roles() {
 }
 
 function RoleModal({ role, onClose, onSaved }: { role: Role | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
   const [key, setKey] = useState(role?.key ?? '');
   const [name, setName] = useState(role?.name ?? '');
   const [permissions, setPermissions] = useState<Permission[]>(role?.permissions ?? []);
@@ -115,26 +118,26 @@ function RoleModal({ role, onClose, onSaved }: { role: Role | null; onClose: () 
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save role');
+      setError(err instanceof ApiError ? err.message : t('roles.saveFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Modal title={role ? 'Edit role' : 'New role'} onClose={onClose}>
+    <Modal title={role ? t('roles.edit') : t('roles.new')} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
         {!role && (
           <div>
-            <Input label="Key" value={key} onChange={(e) => setKey(e.target.value)} placeholder="billing_viewer" required />
-            <span className="mt-1 block text-[12px] text-slate-400">Lowercase, alphanumeric and underscores. Can't be changed later.</span>
+            <Input label={t('roles.key')} value={key} onChange={(e) => setKey(e.target.value)} placeholder="billing_viewer" required />
+            <span className="mt-1 block text-[12px] text-slate-400">{t('roles.keyHint')}</span>
           </div>
         )}
 
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Billing Viewer" required />
+        <Input label={t('roles.name')} value={name} onChange={(e) => setName(e.target.value)} placeholder="Billing Viewer" required />
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-slate-700">Permissions</span>
+          <span className="mb-1.5 block text-sm font-medium text-slate-700">{t('roles.permissionsLabel')}</span>
           <div className="grid grid-cols-2 gap-1.5">
             {ALL_PERMISSIONS.map((p) => (
               <label key={p} className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1.5 text-[12.5px]">
@@ -144,7 +147,9 @@ function RoleModal({ role, onClose, onSaved }: { role: Role | null; onClose: () 
                   onChange={() => togglePermission(p)}
                   className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
                 />
-                <span className="font-mono">{p}</span>
+                <span>
+                  {t(`roles.permissions.${p}`, { defaultValue: p })} <span className="font-mono text-[11px] text-slate-400">{p}</span>
+                </span>
               </label>
             ))}
           </div>
@@ -154,10 +159,10 @@ function RoleModal({ role, onClose, onSaved }: { role: Role | null; onClose: () 
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

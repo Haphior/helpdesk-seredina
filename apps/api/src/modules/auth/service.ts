@@ -5,6 +5,13 @@ import { prisma, withTenantTx } from '@seredina/db';
 import { countTenants, resolveTenantIdBySlug } from '../tenants/service';
 import { seedDefaultTicketStatuses } from '../tickets/service';
 import { seedDefaultTeam } from '../teams/service';
+import { recordAudit } from '../audit/service';
+
+/** Where a sign-in attempt came from, for the audit log. */
+export interface RequestOrigin {
+  ipAddress: string | null;
+  userAgent: string | null;
+}
 
 export interface RegisterTenantInput {
   tenantSlug: string;
@@ -18,6 +25,13 @@ export interface AuthResult {
   tenantId: string;
   userId: string;
   permissions: Permission[];
+  /**
+   * Set when the password was right but a second step is still owed
+   * (docs/adr/0061-mfa-totp.md): 'verify' = enter a code from the app,
+   * 'setup' = the tenant requires MFA and this user hasn't enrolled yet. No
+   * session token may be issued while this is set.
+   */
+  mfa?: 'verify' | 'setup';
 }
 
 export async function registerTenant(input: RegisterTenantInput): Promise<AuthResult> {
@@ -87,8 +101,8 @@ export interface LoginInput {
 // anti-enumeration reasoning as everywhere else in this function: a client
 // shouldn't be able to distinguish "wrong password," "no such user," or "locked
 // out" from the response alone.
-const MAX_FAILED_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+export const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+export const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
 // Compared against when there's no real hash to check (unknown email, locked or
 // inactive account), so every login attempt pays the same bcrypt cost. Without
@@ -97,11 +111,25 @@ const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 // alone enumerates which emails have accounts.
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('seredina-login-timing-equalizer', 12);
 
-export async function login(input: LoginInput): Promise<AuthResult> {
+type LoginFailure = 'unknown_user' | 'account_inactive' | 'account_locked' | 'wrong_password' | 'sso_required';
+
+/**
+ * The password was right, but this workspace signs in through its identity
+ * provider (docs/adr/0062-sso-oidc.md). Only thrown after the password
+ * checked out, so it reveals nothing to someone guessing.
+ */
+export class SsoRequiredError extends Error {}
+
+export async function login(input: LoginInput, origin: RequestOrigin = { ipAddress: null, userAgent: null }): Promise<AuthResult> {
   const tenantId = await resolveTenantIdBySlug(input.tenantSlug);
   if (!tenantId) {
     throw new Error('invalid credentials');
   }
+
+  // Filled in inside the transaction, written to the audit log after it commits.
+  let failure: LoginFailure | null = null;
+  let failedUserId: string | null = null;
+  let justLockedOut = false;
 
   // Returns null on any failure rather than throwing inside the transaction --
   // throwing here would roll back the whole interactive transaction, INCLUDING the
@@ -116,6 +144,8 @@ export async function login(input: LoginInput): Promise<AuthResult> {
 
     if (!user || !user.isActive || (user.lockedUntil && user.lockedUntil > new Date())) {
       await bcrypt.compare(input.password, DUMMY_PASSWORD_HASH);
+      failure = !user ? 'unknown_user' : !user.isActive ? 'account_inactive' : 'account_locked';
+      failedUserId = user?.id ?? null;
       return null;
     }
 
@@ -123,6 +153,9 @@ export async function login(input: LoginInput): Promise<AuthResult> {
     if (!valid) {
       const failedLoginAttempts = user.failedLoginAttempts + 1;
       const lockedOut = failedLoginAttempts >= MAX_FAILED_LOGIN_ATTEMPTS;
+      failure = 'wrong_password';
+      failedUserId = user.id;
+      justLockedOut = lockedOut;
       await tx.user.update({
         where: { id: user.id },
         data: {
@@ -133,16 +166,57 @@ export async function login(input: LoginInput): Promise<AuthResult> {
       return null;
     }
 
-    if (user.failedLoginAttempts > 0) {
+    // SSO enforced: password sign-in is kept only for admins, as the way back in
+    // if the identity provider is down or misconfigured.
+    const sso = await tx.tenantSsoSettings.findUnique({ where: { tenantId }, select: { enabled: true, enforced: true } });
+    if (sso?.enabled && sso.enforced && user.role?.key !== 'admin') {
+      failure = 'sso_required';
+      failedUserId = user.id;
+      return null;
+    }
+
+    const tenant = await tx.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { mfaRequired: true } });
+    const mfa: AuthResult['mfa'] = user.mfaEnabledAt ? 'verify' : tenant.mfaRequired ? 'setup' : undefined;
+
+    // With a second step still owed, the failed-attempt counter is left alone:
+    // resetting it on the password alone would let someone who has the password
+    // retry codes forever by signing in again between guesses. It resets once
+    // the code is right (see mfa.ts).
+    if (!mfa && user.failedLoginAttempts > 0) {
       await tx.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
     }
 
     const permissions = (user.role?.permissions.map((rp) => rp.permission.key) ?? []) as Permission[];
 
-    return { tenantId, userId: user.id, permissions };
+    return { tenantId, userId: user.id, permissions, mfa };
   });
 
-  if (!result) throw new Error('invalid credentials');
+  const actor = { actorLabel: input.email, ...origin };
+  if (!result) {
+    await recordAudit(tenantId, {
+      action: 'auth.login_failed',
+      actorType: failedUserId ? 'user' : 'anonymous',
+      actorUserId: failedUserId,
+      metadata: { reason: failure },
+      ...actor,
+    });
+    if (justLockedOut) {
+      await recordAudit(tenantId, {
+        action: 'auth.account_locked',
+        actorType: 'system',
+        target: { type: 'user', id: failedUserId, label: input.email },
+        metadata: { failedAttempts: MAX_FAILED_LOGIN_ATTEMPTS, lockMinutes: LOCKOUT_DURATION_MS / 60_000 },
+        ...origin,
+      });
+    }
+    if (failure === 'sso_required') throw new SsoRequiredError('This workspace signs in with single sign-on.');
+    throw new Error('invalid credentials');
+  }
+
+  // With MFA pending, success is recorded once the code checks out (mfa.ts).
+  if (!result.mfa) {
+    await recordAudit(tenantId, { action: 'auth.login_succeeded', actorType: 'user', actorUserId: result.userId, ...actor });
+  }
   return result;
 }
 
@@ -170,7 +244,7 @@ export async function getActiveUserPermissions(tenantId: string, userId: string)
  * role) could assign 'admin' to itself or mint a new admin account. Throws if
  * the role carries any permission the caller lacks.
  */
-function assertCanAssignRole(rolePermissionKeys: string[], callerPermissions: readonly Permission[]) {
+export function assertCanAssignRole(rolePermissionKeys: string[], callerPermissions: readonly Permission[]) {
   const missing = rolePermissionKeys.filter((key) => !callerPermissions.includes(key as Permission));
   if (missing.length > 0) {
     throw new Error(`cannot assign a role with permissions you don't have: ${missing.join(', ')}`);
@@ -223,12 +297,17 @@ export async function listUsers(tenantId: string) {
         role: { select: { key: true } },
         isActive: true,
         lockedUntil: true,
+        mfaEnabledAt: true,
       },
       orderBy: { name: 'asc' },
     }),
   );
   const now = new Date();
-  return users.map(({ lockedUntil, ...u }) => ({ ...u, isLocked: !!lockedUntil && lockedUntil > now }));
+  return users.map(({ lockedUntil, mfaEnabledAt, ...u }) => ({
+    ...u,
+    isLocked: !!lockedUntil && lockedUntil > now,
+    mfaEnabled: Boolean(mfaEnabledAt),
+  }));
 }
 
 /**

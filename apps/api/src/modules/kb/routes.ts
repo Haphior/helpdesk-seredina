@@ -15,6 +15,7 @@ import {
   updateKbPortalSettings,
 } from './service';
 import { searchKnowledgeBase } from './embeddings';
+import { auditRequest } from '../audit/service';
 
 const createArticleSchema = z.object({
   title: z.string().min(1).max(200),
@@ -139,7 +140,12 @@ export default async function kbRoutes(app: FastifyInstance) {
   app.patch('/kb-settings', { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] }, async (request, reply) => {
     const parsed = updatePortalSettingsSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
-    return reply.send(await updateKbPortalSettings(request.user.tenantId, parsed.data));
+    const settings = await updateKbPortalSettings(request.user.tenantId, parsed.data);
+    await auditRequest(request, 'kb_portal.settings_updated', { type: 'kb_settings' }, {
+      ...(parsed.data.portalEnabled !== undefined ? { portalEnabled: parsed.data.portalEnabled } : {}),
+      ...(parsed.data.accessCode !== undefined ? { accessCode: parsed.data.accessCode === null ? 'removed' : 'changed' } : {}),
+    });
+    return reply.send(settings);
   });
 
   // The self-service portal: deliberately no user-account auth -- a contact

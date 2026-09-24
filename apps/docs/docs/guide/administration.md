@@ -20,6 +20,63 @@ Permissions are granular (`tickets:read`, `tickets:write`,
 `users:manage`, `roles:manage`) — a custom role can combine them however
 you need, you're not tied to the three factory-default roles.
 
+## Single sign-on (SSO)
+
+**Administration → Single Sign-On** lets people sign in with their
+Microsoft 365 (Entra ID), Google Workspace, or any OpenID Connect account
+(Okta, Auth0, Keycloak, Authentik…) instead of a separate password. You
+register an app in your identity provider (the page shows the exact steps
+and the **redirect URI** to register, `<your address>/api/auth/sso/callback`)
+and paste its client ID and secret. For Microsoft, also paste the Directory
+(tenant) ID. Sign-in is pinned to that one directory.
+
+- **Allowed email domains**: only these domains may sign in via SSO.
+- **Create accounts automatically**: the first SSO sign-in from an allowed
+  domain creates the user with the role you choose. Otherwise, add people on
+  the Users page first (with any password); they then sign in via SSO with
+  the same email.
+- **Require single sign-on**: password sign-in stops working for everyone
+  except admins, who keep it as the way back in if the identity provider
+  has a problem.
+
+On the sign-in page, people type their organization and click **Sign in
+with single sign-on**. Two-factor sign-in for SSO users is your identity
+provider's job. Seredina doesn't ask for its own code on top.
+
+## Two-factor sign-in
+
+Each user can turn on two-factor sign-in under **Account security** (the
+shield icon at the bottom of the sidebar): scan the QR code with an
+authenticator app (Microsoft Authenticator, Google Authenticator, 1Password,
+Authy…) and type the 6-digit code. From then on, sign-in asks for a code
+after the password. Ten one-time **recovery codes** are shown once. Keep
+them somewhere safe; each one lets you in once if you lose the phone.
+
+On **Administration → Users**, an admin can:
+
+- **Require two-factor sign-in for everyone.** Users who haven't set it up
+  are walked through it at their next sign-in, and can't turn it off while
+  it's required. You must have it on yourself first.
+- **Reset** a user's two-factor sign-in when they lose their phone. They sign
+  in with just their password and set it up again.
+
+Wrong codes count toward the same 5-attempt lockout as wrong passwords.
+
+## Audit log
+
+**Administration → Audit Log** lists security-relevant activity: sign-ins
+(successful and failed, with IP address and browser), account lockouts,
+users created, deactivated or given a new role, role changes, API keys,
+webhooks, email channels, Telegram, endpoint agents, AI settings, the
+knowledge base portal settings, and full data exports. Each entry shows who
+did it, to what, when, and from where. Secrets are never logged: changing
+an API key records *that* it changed, not its value.
+
+Entries are append-only: the application's own database role can insert and
+read them, never change or delete them. Viewing the log needs the
+`audit:read` permission, which the built-in admin role has (including on
+existing installs, after upgrading).
+
 ## API Keys
 
 **Administration → API Keys** — for external integrations, not for human

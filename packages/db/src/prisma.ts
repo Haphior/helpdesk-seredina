@@ -73,6 +73,10 @@ const TENANT_SCOPE_FIELD: Record<string, string> = {
   CsatResponse: 'tenantId',
   DeviceEnrollmentToken: 'tenantId',
   Device: 'tenantId',
+  AuditLog: 'tenantId',
+  TenantSsoSettings: 'tenantId',
+  Contract: 'tenantId',
+  ContractAsset: 'tenantId',
 };
 
 const WRITE_OPERATIONS = new Set(['create']);

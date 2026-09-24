@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPut, ApiError } from '../lib/api';
 import type { SlaPolicy, TicketPriority } from '../lib/types';
 import { PRIORITY_TONE } from '../lib/format';
@@ -18,6 +19,7 @@ interface RowState {
 const EMPTY_ROW: RowState = { firstResponseMinutes: '', resolutionMinutes: '', businessHoursOnly: false };
 
 export function SlaPolicies() {
+  const { t } = useTranslation();
   const [policies, setPolicies] = useState<SlaPolicy[] | null>(null);
   const [rows, setRows] = useState<Record<TicketPriority, RowState>>({
     LOW: EMPTY_ROW,
@@ -42,7 +44,7 @@ export function SlaPolicies() {
         }
         setRows(next);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load SLA policies'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('sla.loadFailed')));
   }
 
   useEffect(load, []);
@@ -64,7 +66,7 @@ export function SlaPolicies() {
       });
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save SLA policy');
+      setError(err instanceof ApiError ? err.message : t('sla.saveFailed'));
     } finally {
       setSavingPriority(null);
     }
@@ -73,25 +75,24 @@ export function SlaPolicies() {
   async function remove(priority: TicketPriority) {
     const existing = policies?.find((p) => p.priority === priority);
     if (!existing) return;
-    if (!confirm(`Remove the SLA policy for ${priority} priority? Tickets at this priority will no longer get due dates.`)) return;
+    if (!confirm(t('sla.confirmRemove', { priority: t(`priority.${priority}`) }))) return;
     try {
       await apiDelete(`/sla-policies/${existing.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to remove SLA policy');
+      setError(err instanceof ApiError ? err.message : t('sla.removeFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
-      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">SLA Policies</h1>
+      <h1 className="mb-1 text-[22px] font-extrabold tracking-tight text-slate-900">{t('sla.title')}</h1>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        First response and resolution targets, per priority. A priority with no policy here gets no due dates at all —
-        SLA tracking is opt-in. Business-hours-only targets use the schedule set on the Business Hours page.
+        {t('sla.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {policies === null && !error && <p className="text-sm text-slate-500">Loading…</p>}
+      {policies === null && !error && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
 
       {policies !== null && (
         <div className="flex flex-col gap-2.5">
@@ -102,40 +103,40 @@ export function SlaPolicies() {
               <Card key={priority} className="flex items-center gap-4">
                 <span className="w-24 flex-shrink-0">
                   <Badge tone={PRIORITY_TONE[priority]} dot>
-                    {priority}
+                    {t(`priority.${priority}`)}
                   </Badge>
                 </span>
 
                 <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">
-                  First response
+                  {t('sla.firstResponse')}
                   <div className="w-24">
                     <Input
                       hideLabel
-                      aria-label={`First response minutes for ${priority} priority`}
+                      aria-label={t('sla.firstResponseAria', { priority: t(`priority.${priority}`) })}
                       type="number"
                       min={1}
                       value={row.firstResponseMinutes}
                       onChange={(e) => updateRow(priority, { firstResponseMinutes: e.target.value })}
-                      placeholder="e.g. 30"
+                      placeholder={t('sla.placeholder')}
                     />
                   </div>
-                  min
+                  {t('sla.min')}
                 </label>
 
                 <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">
-                  Resolution
+                  {t('sla.resolution')}
                   <div className="w-24">
                     <Input
                       hideLabel
-                      aria-label={`Resolution minutes for ${priority} priority`}
+                      aria-label={t('sla.resolutionAria', { priority: t(`priority.${priority}`) })}
                       type="number"
                       min={1}
                       value={row.resolutionMinutes}
                       onChange={(e) => updateRow(priority, { resolutionMinutes: e.target.value })}
-                      placeholder="e.g. 30"
+                      placeholder={t('sla.placeholder')}
                     />
                   </div>
-                  min
+                  {t('sla.min')}
                 </label>
 
                 <label className="flex items-center gap-1.5 text-[12.5px] text-slate-600">
@@ -145,13 +146,13 @@ export function SlaPolicies() {
                     onChange={(e) => updateRow(priority, { businessHoursOnly: e.target.checked })}
                     className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
                   />
-                  Business hours only
+                  {t('sla.businessHoursOnly')}
                 </label>
 
                 <div className="ml-auto flex items-center gap-3">
                   {configured && (
                     <button onClick={() => remove(priority)} className="text-xs text-slate-400 hover:text-rose-600">
-                      remove
+                      {t('sla.remove')}
                     </button>
                   )}
                   <Button
@@ -160,7 +161,7 @@ export function SlaPolicies() {
                     isLoading={savingPriority === priority}
                     disabled={!row.firstResponseMinutes || !row.resolutionMinutes}
                   >
-                    {savingPriority === priority ? 'Saving…' : configured ? 'Update' : 'Save'}
+                    {savingPriority === priority ? t('common.saving') : configured ? t('sla.update') : t('common.save')}
                   </Button>
                 </div>
               </Card>

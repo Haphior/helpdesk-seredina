@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiGet, ApiError } from '../lib/api';
 import { PortalBrand } from './PortalBrand';
 import { Button } from './Button';
@@ -16,6 +17,7 @@ import { LockIcon } from './icons';
  * hands the now-known-good code back to the caller to store and retry with.
  */
 export function KbAccessGate({ tenantSlug, onUnlocked }: { tenantSlug: string; onUnlocked: (code: string) => void }) {
+  const { t } = useTranslation();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -28,7 +30,7 @@ export function KbAccessGate({ tenantSlug, onUnlocked }: { tenantSlug: string; o
       await apiGet(`/public/${tenantSlug}/kb-articles`, { headers: { 'X-Kb-Access-Code': code } });
       onUnlocked(code);
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 401 ? 'Incorrect access code.' : 'Something went wrong — try again.');
+      setError(err instanceof ApiError && err.status === 401 ? t('kbGate.incorrect') : t('kbGate.failed'));
     } finally {
       setSubmitting(false);
     }
@@ -37,17 +39,17 @@ export function KbAccessGate({ tenantSlug, onUnlocked }: { tenantSlug: string; o
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10">
       <div className="mx-auto max-w-sm">
-        <PortalBrand tenantSlug={tenantSlug} title="Help Center" />
+        <PortalBrand tenantSlug={tenantSlug} title={t('publicKb.helpCenter')} />
         <Card className="!p-6">
           <div className="mb-4 flex items-center gap-2 text-slate-700">
             <LockIcon width={16} height={16} />
-            <h1 className="text-[15px] font-semibold">This help center requires an access code</h1>
+            <h1 className="text-[15px] font-semibold">{t('kbGate.title')}</h1>
           </div>
           <form onSubmit={onSubmit} className="space-y-3">
-            <Input label="Access code" type="password" value={code} onChange={(e) => setCode(e.target.value)} autoFocus required />
+            <Input label={t('kbGate.code')} type="password" value={code} onChange={(e) => setCode(e.target.value)} autoFocus required />
             {error && <p className="text-sm text-rose-600">{error}</p>}
             <Button type="submit" className="w-full" isLoading={submitting}>
-              {submitting ? 'Checking…' : 'Continue'}
+              {submitting ? t('kbGate.checking') : t('kbGate.continue')}
             </Button>
           </form>
         </Card>

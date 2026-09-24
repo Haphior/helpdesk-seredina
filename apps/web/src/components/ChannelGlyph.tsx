@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 // The "Meet in the Middle" theme's signature detail (docs/adr/0042-tenant-
 // theme-system.md): the logo's own 3-circle convergence, made functional --
 // highlights which of the 3 channel-groups a ticket actually arrived
@@ -24,19 +26,10 @@ function activeIndex(channel: string): number | null {
   return null; // 'agent' and anything unrecognized: no channel converged
 }
 
-const CHANNEL_LABEL: Record<string, string> = {
-  email: 'Via email',
-  api: 'Via API',
-  catalog: 'Via service catalog',
-  widget: 'Via chat widget',
-  telegram: 'Via Telegram',
-  alert: 'Via monitoring alert',
-  agent: 'Logged by an agent',
-};
-
 export function ChannelGlyph({ channel }: { channel: string }) {
+  const { t } = useTranslation();
   const active = activeIndex(channel);
-  const label = CHANNEL_LABEL[channel] ?? `Via ${channel}`;
+  const label = t(`channel.via.${channel}`, { defaultValue: t('channel.viaOther', { channel }) });
 
   return (
     <svg width="20" height="14" viewBox="0 0 200 160" role="img" aria-label={label}>

@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from '../lib/api';
+import type { TFunction } from 'i18next';
 import type { Macro, Team, TicketPriority, TicketStatus, UserSummary } from '../lib/types';
 import { Modal } from '../components/Modal';
 import { Badge } from '../components/Badge';
@@ -11,18 +13,20 @@ import { Card } from '../components/Card';
 
 const PRIORITIES: TicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
 
-function describeActions(macro: Macro, statuses: TicketStatus[], teams: Team[], users: UserSummary[]): string[] {
+function describeActions(t: TFunction, macro: Macro, statuses: TicketStatus[], teams: Team[], users: UserSummary[]): string[] {
   const parts: string[] = [];
   const { actions } = macro;
-  if (actions.setStatusId) parts.push(`status → ${statuses.find((s) => s.id === actions.setStatusId)?.label ?? '?'}`);
-  if (actions.setPriority) parts.push(`priority → ${actions.setPriority}`);
-  if (actions.setTeamId !== undefined) parts.push(`team → ${teams.find((t) => t.id === actions.setTeamId)?.name ?? 'unassigned'}`);
-  if (actions.setAssigneeId !== undefined) parts.push(`assignee → ${users.find((u) => u.id === actions.setAssigneeId)?.name ?? 'unassigned'}`);
-  if (actions.addReply) parts.push(actions.addReply.isPrivateNote ? 'add internal note' : 'send reply');
+  const unassigned = t('macros.unassigned');
+  if (actions.setStatusId) parts.push(t('macros.desc.status', { value: statuses.find((s) => s.id === actions.setStatusId)?.label ?? '?' }));
+  if (actions.setPriority) parts.push(t('macros.desc.priority', { value: t(`priority.${actions.setPriority}`) }));
+  if (actions.setTeamId !== undefined) parts.push(t('macros.desc.team', { value: teams.find((tm) => tm.id === actions.setTeamId)?.name ?? unassigned }));
+  if (actions.setAssigneeId !== undefined) parts.push(t('macros.desc.assignee', { value: users.find((u) => u.id === actions.setAssigneeId)?.name ?? unassigned }));
+  if (actions.addReply) parts.push(actions.addReply.isPrivateNote ? t('macros.desc.note') : t('macros.desc.reply'));
   return parts;
 }
 
 export function Macros() {
+  const { t } = useTranslation();
   const [macros, setMacros] = useState<Macro[] | null>(null);
   const [statuses, setStatuses] = useState<TicketStatus[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -38,40 +42,40 @@ export function Macros() {
       apiGet<{ teams: Team[] }>('/teams'),
       apiGet<{ users: UserSummary[] }>('/users'),
     ])
-      .then(([m, s, t, u]) => {
+      .then(([m, s, tm, u]) => {
         setMacros(m.macros);
         setStatuses(s.statuses);
-        setTeams(t.teams);
+        setTeams(tm.teams);
         setUsers(u.users);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load macros'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('macros.loadFailed')));
   }
 
   useEffect(load, []);
 
   async function remove(macro: Macro) {
-    if (!confirm(`Delete macro "${macro.name}"?`)) return;
+    if (!confirm(t('macros.confirmDelete', { name: macro.name }))) return;
     try {
       await apiDelete(`/macros/${macro.id}`);
       load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to delete macro');
+      setError(err instanceof ApiError ? err.message : t('macros.deleteFailed'));
     }
   }
 
   return (
     <div className="px-8 py-7">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">Macros</h1>
-        <Button onClick={() => setShowCreate(true)}>New macro</Button>
+        <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900">{t('macros.title')}</h1>
+        <Button onClick={() => setShowCreate(true)}>{t('macros.new')}</Button>
       </div>
       <p className="mb-5 text-[13.5px] text-slate-500">
-        A saved bundle of actions applied to a ticket in one click — set fields, send a canned reply, or both.
+        {t('macros.intro')}
       </p>
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
-      {macros === null && <p className="text-sm text-slate-500">Loading…</p>}
-      {macros?.length === 0 && <p className="text-sm text-slate-500">No macros yet.</p>}
+      {macros === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
+      {macros?.length === 0 && <p className="text-sm text-slate-500">{t('macros.empty')}</p>}
 
       {macros && macros.length > 0 && (
         <div className="flex flex-col gap-2.5">
@@ -80,7 +84,7 @@ export function Macros() {
               <div>
                 <div className="mb-1 text-[14px] font-semibold text-slate-800">{m.name}</div>
                 <div className="flex flex-wrap gap-1.5">
-                  {describeActions(m, statuses, teams, users).map((desc) => (
+                  {describeActions(t, m, statuses, teams, users).map((desc) => (
                     <Badge key={desc} tone="slate">
                       {desc}
                     </Badge>
@@ -89,10 +93,10 @@ export function Macros() {
               </div>
               <div className="flex flex-shrink-0 items-center gap-3">
                 <button onClick={() => setEditing(m)} className="text-xs text-slate-400 hover:text-indigo-600">
-                  edit
+                  {t('macros.edit')}
                 </button>
                 <button onClick={() => remove(m)} className="text-xs text-slate-400 hover:text-rose-600">
-                  delete
+                  {t('macros.delete')}
                 </button>
               </div>
             </Card>
@@ -132,6 +136,7 @@ function MacroModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const a = macro?.actions;
   const [name, setName] = useState(macro?.name ?? '');
   const [enableStatus, setEnableStatus] = useState(a?.setStatusId !== undefined);
@@ -171,7 +176,7 @@ function MacroModal({
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save macro');
+      setError(err instanceof ApiError ? err.message : t('macros.saveFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -180,13 +185,13 @@ function MacroModal({
   const noActionsSelected = !enableStatus && !enablePriority && !enableTeam && !enableAssignee && !enableReply;
 
   return (
-    <Modal title={macro ? `Edit "${macro.name}"` : 'New macro'} onClose={onClose}>
+    <Modal title={macro ? t('macros.editTitle', { name: macro.name }) : t('macros.new')} onClose={onClose}>
       <form onSubmit={onSubmit} className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Escalate to urgent" required />
+        <Input label={t('macros.name')} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('macros.namePlaceholder')} required />
 
         <div className="space-y-2 border-t border-slate-200 pt-2">
-          <ActionRow label="Set status" enabled={enableStatus} onToggle={setEnableStatus}>
-            <Select hideLabel aria-label="Status to set" value={statusId} onChange={(e) => setStatusId(e.target.value)}>
+          <ActionRow label={t('macros.setStatus')} enabled={enableStatus} onToggle={setEnableStatus}>
+            <Select hideLabel aria-label={t('macros.setStatus')} value={statusId} onChange={(e) => setStatusId(e.target.value)}>
               {statuses.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
@@ -195,30 +200,30 @@ function MacroModal({
             </Select>
           </ActionRow>
 
-          <ActionRow label="Set priority" enabled={enablePriority} onToggle={setEnablePriority}>
-            <Select hideLabel aria-label="Priority to set" value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)}>
+          <ActionRow label={t('macros.setPriority')} enabled={enablePriority} onToggle={setEnablePriority}>
+            <Select hideLabel aria-label={t('macros.setPriority')} value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)}>
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {t(`priority.${p}`)}
                 </option>
               ))}
             </Select>
           </ActionRow>
 
-          <ActionRow label="Set team" enabled={enableTeam} onToggle={setEnableTeam}>
-            <Select hideLabel aria-label="Team to set" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-              <option value="">Unassigned</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
+          <ActionRow label={t('macros.setTeam')} enabled={enableTeam} onToggle={setEnableTeam}>
+            <Select hideLabel aria-label={t('macros.setTeam')} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+              <option value="">{t('macros.unassignedOption')}</option>
+              {teams.map((tm) => (
+                <option key={tm.id} value={tm.id}>
+                  {tm.name}
                 </option>
               ))}
             </Select>
           </ActionRow>
 
-          <ActionRow label="Set assignee" enabled={enableAssignee} onToggle={setEnableAssignee}>
-            <Select hideLabel aria-label="Assignee to set" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-              <option value="">Unassigned</option>
+          <ActionRow label={t('macros.setAssignee')} enabled={enableAssignee} onToggle={setEnableAssignee}>
+            <Select hideLabel aria-label={t('macros.setAssignee')} value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+              <option value="">{t('macros.unassignedOption')}</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
@@ -227,14 +232,14 @@ function MacroModal({
             </Select>
           </ActionRow>
 
-          <ActionRow label="Add reply" enabled={enableReply} onToggle={setEnableReply}>
+          <ActionRow label={t('macros.addReply')} enabled={enableReply} onToggle={setEnableReply}>
             <div className="flex-1 space-y-1.5">
               <Textarea
                 hideLabel
-                aria-label="Reply text"
+                aria-label={t('macros.replyText')}
                 value={replyBody}
                 onChange={(e) => setReplyBody(e.target.value)}
-                placeholder="Reply text"
+                placeholder={t('macros.replyText')}
                 rows={2}
               />
               <label className="flex items-center gap-1.5 text-xs text-slate-600">
@@ -244,7 +249,7 @@ function MacroModal({
                   onChange={(e) => setReplyIsPrivate(e.target.checked)}
                   className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-100"
                 />
-                Internal note (not sent to customer)
+                {t('macros.internalNote')}
               </label>
             </div>
           </ActionRow>
@@ -254,10 +259,10 @@ function MacroModal({
 
         <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" isLoading={submitting} disabled={noActionsSelected}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </form>

@@ -5,6 +5,8 @@ import { getAiAdapter } from './adapter';
 import { getAiUsageSummary, getTicketAiUsage, suggestReply, summarizeTicket } from './service';
 import { runAutonomousLoop } from '../ai-tools/autonomousLoop';
 import { AI_PROVIDERS, clearTenantAiSettings, getTenantAiSettings, updateTenantAiSettings } from './settings';
+import { auditRequest } from '../audit/service';
+import { AI_TRIAGE_MODES, applyAiTriage, getAiTriageMode, setAiTriageMode } from './triage';
 
 const updateAiSettingsSchema = z.object({
   provider: z.enum(AI_PROVIDERS).nullable().optional(),
@@ -32,6 +34,13 @@ export default async function aiRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     try {
       const settings = await updateTenantAiSettings(request.user.tenantId, parsed.data);
+      // The key itself never goes in the log -- only that it was replaced.
+      await auditRequest(request, 'ai_settings.updated', { type: 'ai_settings' }, {
+        ...(parsed.data.provider !== undefined ? { provider: parsed.data.provider } : {}),
+        ...(parsed.data.model !== undefined ? { model: parsed.data.model } : {}),
+        ...(parsed.data.baseUrl !== undefined ? { baseUrl: parsed.data.baseUrl } : {}),
+        ...(parsed.data.apiKey ? { apiKeyChanged: true } : {}),
+      });
       return reply.send(settings);
     } catch (err) {
       return reply.code(400).send({ error: (err as Error).message });
@@ -40,8 +49,36 @@ export default async function aiRoutes(app: FastifyInstance) {
 
   app.delete('/ai-settings', { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] }, async (request, reply) => {
     await clearTenantAiSettings(request.user.tenantId);
+    await auditRequest(request, 'ai_settings.cleared', { type: 'ai_settings' });
     return reply.code(204).send();
   });
+
+  // AI triage of new tickets (docs/adr/0063-ai-triage.md) -- tenant-wide, same tier as the rest of AI settings.
+  app.get('/ai-triage-settings', { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] }, async (request, reply) => {
+    return reply.send({ mode: await getAiTriageMode(request.user.tenantId) });
+  });
+
+  app.put('/ai-triage-settings', { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] }, async (request, reply) => {
+    const parsed = z.object({ mode: z.enum(AI_TRIAGE_MODES) }).safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    await setAiTriageMode(request.user.tenantId, parsed.data.mode);
+    await auditRequest(request, 'ai_settings.triage_mode_changed', { type: 'ai_settings' }, { mode: parsed.data.mode });
+    return reply.send({ mode: parsed.data.mode });
+  });
+
+  app.post(
+    '/tickets/:id/ai/triage/apply',
+    { preHandler: [app.authenticate, requirePermission('tickets:write')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      try {
+        await applyAiTriage(request.user.tenantId, id);
+        return reply.code(204).send();
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
 
   // Gated on tickets:write, same as sending a reply -- suggesting one is a lighter
   // version of the same action, never something a read-only agent should trigger.

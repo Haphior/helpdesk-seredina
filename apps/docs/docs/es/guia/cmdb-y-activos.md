@@ -50,6 +50,26 @@ solo con una columna extra indicando de dónde salió el dato. Revocar un
 dispositivo desde esta pantalla corta sus futuros reportes sin borrar el
 historial ya guardado.
 
+## Contratos, garantías y licencias
+
+**CMDB → Contratos** registra contratos de soporte, garantías, licencias de
+software, arriendos y suscripciones: proveedor, número de contrato u orden,
+fechas de inicio y término, costo (pago único, mensual o anual, en
+cualquier moneda), puestos para licencias, y los activos que cubre cada uno.
+La página de cada activo muestra los contratos que lo cubren.
+
+Cada contrato indica si está vigente, por vencer o vencido. El encabezado
+de la página suma lo que está por vencer, lo vencido y el costo recurrente
+anual por moneda. **Avisar días antes** (30 por defecto) controla el aviso
+de renovación: cuando un contrato entra en ese plazo, todas las personas
+cuyo rol puede gestionar activos reciben una notificación *Contrato por
+vencer*, en la aplicación y por correo si lo activaron en sus preferencias
+de notificación. Hay un aviso por fecha de término; cambiar la fecha (una
+renovación) lo vuelve a activar.
+
+No pongas claves de licencia en estos campos: los ve cualquiera que pueda
+ver los activos y se incluyen en las exportaciones de datos.
+
 ## Catálogo de Equipos
 
 Un catálogo de fabricantes y modelos de hardware (por ejemplo, "Dell" →

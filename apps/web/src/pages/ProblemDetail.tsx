@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { apiGet, apiPatch, ApiError } from '../lib/api';
 import type { Problem, ProblemStatus, ProcessInstance, Ticket, UserSummary } from '../lib/types';
@@ -13,6 +14,7 @@ import { formatDateTime, PROBLEM_STATUS_TONE } from '../lib/format';
 const STATUSES: ProblemStatus[] = ['UNDER_INVESTIGATION', 'KNOWN_ERROR', 'RESOLVED', 'CLOSED'];
 
 export function ProblemDetail() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [changeInstances, setChangeInstances] = useState<ProcessInstance[]>([]);
@@ -37,10 +39,10 @@ export function ProblemDetail() {
       setRootCause(p.rootCause ?? '');
       setWorkaround(p.workaround ?? '');
       setChangeInstances(instances.instances.filter((i) => i.riskLevel));
-      setUnlinkedTickets(tickets.tickets.filter((t) => !t.problemId));
+      setUnlinkedTickets(tickets.tickets.filter((tk) => !tk.problemId));
       setUsers(u.users);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to load problem');
+      setError(err instanceof ApiError ? err.message : t('problemDetail.loadFailed'));
     }
   }, [id]);
 
@@ -54,7 +56,7 @@ export function ProblemDetail() {
       await apiPatch(`/problems/${id}`, data);
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Update failed');
+      setError(err instanceof ApiError ? err.message : t('problemDetail.updateFailed'));
     }
   }
 
@@ -65,7 +67,7 @@ export function ProblemDetail() {
       setTicketToLink('');
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to link ticket');
+      setError(err instanceof ApiError ? err.message : t('problemDetail.linkFailed'));
     }
   }
 
@@ -74,18 +76,18 @@ export function ProblemDetail() {
       await apiPatch(`/tickets/${ticketId}`, { problemId: null });
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to unlink ticket');
+      setError(err instanceof ApiError ? err.message : t('problemDetail.unlinkFailed'));
     }
   }
 
   if (error && !problem) return <div className="p-6 text-sm text-rose-600">{error}</div>;
-  if (!problem) return <div className="p-6 text-sm text-slate-500">Loading…</div>;
+  if (!problem) return <div className="p-6 text-sm text-slate-500">{t('common.loading')}</div>;
 
   return (
     <div className="px-9 py-7">
       <Link to="/problems" className="mb-3.5 flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-slate-600">
         <BackArrowIcon width={15} height={15} />
-        Problems
+        {t('problems.title')}
       </Link>
 
       <div className="mb-5">
@@ -95,9 +97,9 @@ export function ProblemDetail() {
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={PROBLEM_STATUS_TONE[problem.status]} dot>
-            {problem.status.replace('_', ' ')}
+            {t(`problemStatus.${problem.status}`)}
           </Badge>
-          {problem.resolvedAt && <span className="text-[13px] text-slate-400">resolved {formatDateTime(problem.resolvedAt)}</span>}
+          {problem.resolvedAt && <span className="text-[13px] text-slate-400">{t('problemDetail.resolvedAt', { when: formatDateTime(problem.resolvedAt) })}</span>}
         </div>
         {problem.description && <p className="mt-2 text-[13.5px] text-slate-600">{problem.description}</p>}
       </div>
@@ -108,30 +110,30 @@ export function ProblemDetail() {
         <div className="flex flex-col gap-4">
           <Card>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Root cause</span>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">{t('problemDetail.rootCause')}</span>
               <Textarea
                 hideLabel
-                aria-label="Root cause"
+                aria-label={t('problemDetail.rootCause')}
                 value={rootCause}
                 onChange={(e) => setRootCause(e.target.value)}
                 onBlur={() => rootCause !== (problem.rootCause ?? '') && patch({ rootCause: rootCause || null })}
                 rows={3}
-                placeholder="Not yet identified"
+                placeholder={t('problemDetail.rootCausePlaceholder')}
               />
             </label>
           </Card>
 
           <Card>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Workaround</span>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">{t('problemDetail.workaround')}</span>
               <Textarea
                 hideLabel
-                aria-label="Workaround"
+                aria-label={t('problemDetail.workaround')}
                 value={workaround}
                 onChange={(e) => setWorkaround(e.target.value)}
                 onBlur={() => workaround !== (problem.workaround ?? '') && patch({ workaround: workaround || null })}
                 rows={3}
-                placeholder="None documented yet"
+                placeholder={t('problemDetail.workaroundPlaceholder')}
               />
             </label>
           </Card>
@@ -139,35 +141,35 @@ export function ProblemDetail() {
           <Card>
             <div className="mb-2.5 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Linked tickets ({problem.tickets.length})
+                {t('problemDetail.linkedTickets', { count: problem.tickets.length })}
               </span>
             </div>
             <div className="mb-3 flex items-end gap-2">
               <div className="flex-1">
-                <Select hideLabel aria-label="Link an existing ticket" value={ticketToLink} onChange={(e) => setTicketToLink(e.target.value)}>
-                  <option value="">Link an existing ticket…</option>
-                  {unlinkedTickets.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      #{t.number} {t.subject}
+                <Select hideLabel aria-label={t('problemDetail.linkExisting')} value={ticketToLink} onChange={(e) => setTicketToLink(e.target.value)}>
+                  <option value="">{t('problemDetail.linkExistingPlaceholder')}</option>
+                  {unlinkedTickets.map((tk) => (
+                    <option key={tk.id} value={tk.id}>
+                      #{tk.number} {tk.subject}
                     </option>
                   ))}
                 </Select>
               </div>
               <Button size="sm" onClick={linkTicket} disabled={!ticketToLink}>
-                Link
+                {t('problemDetail.link')}
               </Button>
             </div>
             {problem.tickets.length === 0 ? (
-              <p className="text-[13px] text-slate-400">No tickets linked yet.</p>
+              <p className="text-[13px] text-slate-400">{t('problemDetail.noTickets')}</p>
             ) : (
               <div className="flex flex-col gap-1.5">
-                {problem.tickets.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-1.5">
-                    <Link to={`/tickets/${t.id}`} className="text-[13px] font-medium text-indigo-700 hover:underline">
-                      #{t.number} {t.subject}
+                {problem.tickets.map((tk) => (
+                  <div key={tk.id} className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-1.5">
+                    <Link to={`/tickets/${tk.id}`} className="text-[13px] font-medium text-indigo-700 hover:underline">
+                      #{tk.number} {tk.subject}
                     </Link>
-                    <button onClick={() => unlinkTicket(t.id)} className="text-xs text-slate-400 hover:text-rose-600">
-                      unlink
+                    <button onClick={() => unlinkTicket(tk.id)} className="text-xs text-slate-400 hover:text-rose-600">
+                      {t('problemDetail.unlink')}
                     </button>
                   </div>
                 ))}
@@ -178,20 +180,20 @@ export function ProblemDetail() {
 
         <Card className="flex flex-col gap-3.5">
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Status</span>
-            <Select hideLabel aria-label="Status" value={problem.status} onChange={(e) => patch({ status: e.target.value })}>
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">{t('problemDetail.status')}</span>
+            <Select hideLabel aria-label={t('problemDetail.status')} value={problem.status} onChange={(e) => patch({ status: e.target.value })}>
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s.replace('_', ' ')}
+                  {t(`problemStatus.${s}`)}
                 </option>
               ))}
             </Select>
           </label>
 
           <label className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Owner</span>
-            <Select hideLabel aria-label="Owner" value={problem.ownerId ?? ''} onChange={(e) => patch({ ownerId: e.target.value || null })}>
-              <option value="">Unowned</option>
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">{t('problemDetail.owner')}</span>
+            <Select hideLabel aria-label={t('problemDetail.owner')} value={problem.ownerId ?? ''} onChange={(e) => patch({ ownerId: e.target.value || null })}>
+              <option value="">{t('problems.unowned')}</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
@@ -202,14 +204,14 @@ export function ProblemDetail() {
 
           <div>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">Fixed by Change</span>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400">{t('problemDetail.fixedBy')}</span>
               <Select
                 hideLabel
-                aria-label="Fixed by Change"
+                aria-label={t('problemDetail.fixedBy')}
                 value={problem.changeInstanceId ?? ''}
                 onChange={(e) => patch({ changeInstanceId: e.target.value || null })}
               >
-                <option value="">No linked change</option>
+                <option value="">{t('problemDetail.noChange')}</option>
                 {changeInstances.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.subject}
@@ -222,7 +224,7 @@ export function ProblemDetail() {
                 to={`/processes/${problem.changeInstance.id}`}
                 className="mt-1.5 block text-[12.5px] font-medium text-indigo-700 hover:underline"
               >
-                View {problem.changeInstance.subject} →
+                {t('problemDetail.viewChange', { subject: problem.changeInstance.subject })} →
               </Link>
             )}
           </div>
