@@ -8,6 +8,8 @@ apps/docs/docs/.vitepress/cache/
 # TLS certificates and keys for the `proxy` compose profile (docs/adr/0054).
 certs/
 *.log
+# Redis snapshots from a local redis-server started in the repo directory.
+*.rdb
 .DS_Store
 coverage/
 apps/api/prisma/generated/

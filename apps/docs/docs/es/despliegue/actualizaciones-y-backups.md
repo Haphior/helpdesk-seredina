@@ -42,7 +42,7 @@ copiá el archivo **fuera de la máquina** — un backup en el mismo disco que
 la base de datos no sobrevive a ese disco. Por ejemplo, todas las noches a
 las 02:30 guardando 14 días:
 
-```cron
+```text
 30 2 * * * cd /opt/seredina && docker compose -f infra/docker-compose.yml exec -T postgres pg_dump -U app_migrator -Fc seredina > /var/backups/seredina/seredina-$(date +\%Y\%m\%d).dump && find /var/backups/seredina -name '*.dump' -mtime +14 -delete
 ```
 

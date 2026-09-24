@@ -32,8 +32,13 @@ del widget.
 Todavía no existe un flujo de invitación por email — desde
 **Administración → Usuarios**, un admin crea la cuenta directamente
 (nombre, email, contraseña inicial, rol) y comparte la contraseña por
-fuera de la aplicación. La persona invitada puede cambiarla después desde
-su propio perfil.
+fuera de la aplicación. Por ahora nadie puede cambiar su propia
+contraseña: un admin la restablece desde la misma página.
+
+Con el [inicio de sesión único](/es/guia/administracion#inicio-de-sesion-unico-sso)
+y la creación automática de cuentas activados, no hace falta crear
+cuentas: cada persona entra con su cuenta de Microsoft o Google y recibe
+el rol que elegiste.
 
 ## Cómo está organizada esta guía
 
@@ -42,7 +47,7 @@ lateral de la propia consola:
 
 - **[Tickets](/es/guia/tickets)** — la cola, el detalle, macros, fusión, acciones en lote
 - **[SLA y escalamiento](/es/guia/sla-y-escalamiento)**
-- **[CMDB y activos](/es/guia/cmdb-y-activos)** — activos, dispositivos con agente, catálogo de equipos
+- **[CMDB y activos](/es/guia/cmdb-y-activos)** — activos, dispositivos con agente, contratos y garantías, catálogo de equipos
 - **[Base de conocimiento](/es/guia/base-de-conocimiento)**
 - **[Catálogo de servicios](/es/guia/catalogo-de-servicios)**
 - **[Procesos, cambios y problemas](/es/guia/procesos-y-plantillas)**
@@ -50,5 +55,5 @@ lateral de la propia consola:
 - **[Canales de entrada](/es/guia/canales)** — correo, API, widget, Telegram, Slack/Teams, alertas
 - **[Reportes y panel](/es/guia/reportes-y-panel)**
 - **[Encuestas CSAT](/es/guia/encuestas-csat)**
-- **[Administración](/es/guia/administracion)** — usuarios, roles, claves de API, apariencia, idioma
-- **[Portal público](/es/guia/portal-publico)** — autoservicio y página de estado
+- **[Administración](/es/guia/administracion)** — usuarios, roles, inicio de sesión único, verificación en dos pasos, registro de auditoría, claves de API, apariencia, idioma
+- **[Portal público](/es/guia/portal-publico)** — portal de clientes, base de conocimiento pública y página de estado

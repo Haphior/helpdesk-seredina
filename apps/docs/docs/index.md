@@ -21,7 +21,7 @@ hero:
 
 features:
   - title: User & Agent Guide
-    details: How to use every feature of the console — tickets, SLA, CMDB, knowledge base, AI copilot, service catalog, and administration.
+    details: How to use every feature of the console — tickets, SLA, CMDB, knowledge base, AI copilot, service catalog, the customer portal, and administration, including single sign-on, two-factor sign-in, and the audit log.
     link: /guide/
     linkText: Start reading
   - title: Deployment & Hosting

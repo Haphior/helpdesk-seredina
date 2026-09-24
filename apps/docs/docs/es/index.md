@@ -21,7 +21,7 @@ hero:
 
 features:
   - title: Guía de usuario y agente
-    details: Cómo usar cada funcionalidad de la consola — tickets, SLA, CMDB, base de conocimiento, copiloto de IA, catálogo de servicios y administración.
+    details: Cómo usar cada funcionalidad de la consola — tickets, SLA, CMDB, base de conocimiento, copiloto de IA, catálogo de servicios, el portal de clientes y la administración, con inicio de sesión único, verificación en dos pasos y registro de auditoría.
     link: /es/guia/
     linkText: Empezar a leer
   - title: Despliegue y hosting

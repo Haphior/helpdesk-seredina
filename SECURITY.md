@@ -20,9 +20,11 @@ This is a single-maintainer open-source project, not a company with a bug bounty
 program — there's no payout, but every real report gets read and, if valid, fixed.
 In scope: anything that breaks tenant isolation (see
 [docs/adr/0001-multi-tenancy-rls.md](docs/adr/0001-multi-tenancy-rls.md) for how
-that's supposed to hold), authentication/authorization bypasses, injection
-(SQL/XSS/SSRF), and credential handling (password storage, secret encryption, API
-key/webhook signing).
+that's supposed to hold), authentication/authorization bypasses (including
+getting past two-factor sign-in or SSO enforcement, or into another customer's
+tickets on the customer portal), injection (SQL/XSS/SSRF), and credential
+handling (password and recovery-code storage, secret encryption, OAuth tokens,
+API key/webhook signing).
 
 ## Response time
 
@@ -31,6 +33,6 @@ fix or mitigation plan communicated before any public disclosure.
 
 ## Supported versions
 
-There's no versioned release line yet — `main` is the only supported branch.
-Fixes land there and self-hosted operators pick them up with a normal `git pull`
-+ redeploy.
+Releases are pre-1.0 alphas (see [CHANGELOG.md](CHANGELOG.md)), and only the
+latest code on `main` is supported: fixes land there, not on older tags, and
+self-hosted operators pick them up with a normal `git pull` + redeploy.
