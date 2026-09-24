@@ -30,8 +30,13 @@ with the eye icon in the widget's corner.
 
 There's no email invitation flow yet — from **Administration → Users**,
 an admin creates the account directly (name, email, initial password,
-role) and shares the password outside the app. The invited person can
-change it afterward from their own profile.
+role) and shares the password outside the app. People can't change their
+own password yet: an admin resets it from the same page.
+
+With [single sign-on](/guide/administration#single-sign-on-sso) and
+automatic account creation turned on, you don't create accounts at all:
+people sign in with their Microsoft or Google account and get the role you
+chose.
 
 ## How this guide is organized
 
@@ -40,7 +45,7 @@ sidebar:
 
 - **[Tickets](/guide/tickets)** — the queue, ticket detail, macros, merging, bulk actions
 - **[SLA & Escalation](/guide/sla-and-escalation)**
-- **[CMDB & Assets](/guide/cmdb-and-assets)** — assets, agent-enrolled devices, equipment catalog
+- **[CMDB & Assets](/guide/cmdb-and-assets)** — assets, agent-enrolled devices, contracts and warranties, equipment catalog
 - **[Knowledge Base](/guide/knowledge-base)**
 - **[Service Catalog](/guide/service-catalog)**
 - **[Processes, Changes & Problems](/guide/processes-and-templates)**
@@ -48,5 +53,5 @@ sidebar:
 - **[Inbound Channels](/guide/channels)** — email, API, widget, Telegram, Slack/Teams, alerts
 - **[Reports & Dashboard](/guide/reports-and-dashboard)**
 - **[CSAT Surveys](/guide/csat-surveys)**
-- **[Administration](/guide/administration)** — users, roles, API keys, appearance, language
-- **[Public Portal](/guide/public-portal)** — self-service and the status page
+- **[Administration](/guide/administration)** — users, roles, single sign-on, two-factor sign-in, audit log, API keys, appearance, language
+- **[Public Portal](/guide/public-portal)** — the customer portal, the public knowledge base and the status page

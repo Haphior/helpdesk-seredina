@@ -43,11 +43,73 @@ channel or the API instead.
 
 ## An email channel stopped syncing
 
-IMAP/SMTP passwords are encrypted with `ENCRYPTION_KEY` when saved. If you
-rotated that key without migrating existing data, every password saved
-before the change becomes undecryptable — reload it from Settings → Email
-Channels. Otherwise, check the `worker` logs (it's the one doing IMAP
-polling, not `api`).
+Start on **Email Channels**: the last sign-in error for each mailbox shows
+there.
+
+- **"Reconnect needed"** on a Microsoft 365 or Gmail channel: the provider
+  revoked access (the mailbox password changed, an admin removed the app,
+  or the consent expired). The channel stops being polled until you click
+  **reconnect** and sign in as the mailbox again. Nothing is lost:
+  unread mail is picked up once it's connected.
+- **Microsoft or Google says the redirect URI doesn't match**: the URI
+  registered in your app must be exactly
+  `<WEB_ORIGIN>/api/email-channels/oauth/callback` (or
+  `<API_PUBLIC_URL>/email-channels/oauth/callback` when that's set). See
+  [Connecting Microsoft 365 or Gmail](/guide/channels#connecting-microsoft-365-or-gmail).
+- **Password mailboxes after changing `ENCRYPTION_KEY`**: every secret saved
+  with the old key is unreadable. Re-enter the password (or reconnect an
+  OAuth channel) from Email Channels.
+
+Otherwise, check the `worker` logs: `worker` polls the mailboxes, not
+`api`.
+
+## Someone lost their authenticator app
+
+They can sign in with one of their **recovery codes** instead of the
+6-digit code. Each works once.
+
+With no recovery codes left, another admin resets their two-factor
+sign-in from **Administration → Users** (reset 2FA). They set it up again
+at their next sign-in if the workspace requires it.
+
+If the person locked out is the **only admin**, nobody can reset them from
+the console. Reset it in the database directly (replace the slug and the
+email):
+
+```bash
+docker compose -f infra/docker-compose.yml exec postgres psql -U app_migrator seredina -c "
+  UPDATE users SET mfa_secret_encrypted = NULL, mfa_pending_secret_encrypted = NULL,
+    mfa_enabled_at = NULL, mfa_last_used_step = NULL, mfa_recovery_code_hashes = '{}',
+    failed_login_attempts = 0, locked_until = NULL
+  WHERE email = 'admin@example.com'
+    AND tenant_id = (SELECT id FROM tenants WHERE slug = 'your-organization');"
+```
+
+A change made this way doesn't appear in the audit log. Make sure a second
+admin exists afterwards so this isn't needed again.
+
+## Single sign-on isn't working
+
+- **The provider shows an error before coming back**: the redirect URI
+  registered with the provider must match the one shown on
+  **Administration → Single sign-on** exactly.
+- **"Accounts from example.com can't sign in to this workspace"**: that
+  domain isn't in the allowed domains list. Add it, or clear the list.
+- **"There's no account for … in this workspace"**: automatic account
+  creation is off. Create the user first, or turn it on and choose the role
+  new users get.
+- **Locked out by "require SSO"** while the provider is down: admins can
+  always sign in with their password. Turn "require SSO" off until the
+  provider is back.
+
+## Customer portal sign-in emails don't arrive
+
+The portal sends its sign-in links through your email channels, so at
+least one must be **connected** (check Email Channels for errors). Each
+address can get at most 3 links per hour, and the page says the same thing
+whether or not the address is known, so a typo looks like success. A send
+that fails is logged by `worker`. Links go to `WEB_ORIGIN`, which must be the
+address customers can reach.
 
 ## Port already in use
 

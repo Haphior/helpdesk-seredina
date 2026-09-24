@@ -1576,8 +1576,8 @@ real endpoint, unlike everything else in this codebase so far):**
   2. Remote script/command execution — opt-in per tenant, every run audited.
   3. Software/patch deployment — highest trust tier, opt-in, capped.
 - **Every remote action gets a real audit log entry.** This is what makes the
-  "real security-event audit log" already flagged as deferred in the security-
-  hardening pass load-bearing rather than nice-to-have — the same relationship
+  "real security-event audit log" (flagged as deferred in the security-hardening
+  pass, since shipped as ADR 0060) load-bearing rather than nice-to-have — the same relationship
   `AiAgentRun` has to Phase 3's autonomous AI mode.
 - **Signed agent binary and signed auto-update**, verified before executing — an
   agent able to silently update itself is the single highest-value supply-chain

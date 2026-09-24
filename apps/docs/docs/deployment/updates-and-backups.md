@@ -39,7 +39,7 @@ Schedule it with cron (or your provider's own backup mechanism) and copy
 the file **off the machine** — a backup on the same disk as the database
 doesn't survive the disk. For example, nightly at 02:30 keeping 14 days:
 
-```cron
+```text
 30 2 * * * cd /opt/seredina && docker compose -f infra/docker-compose.yml exec -T postgres pg_dump -U app_migrator -Fc seredina > /var/backups/seredina/seredina-$(date +\%Y\%m\%d).dump && find /var/backups/seredina -name '*.dump' -mtime +14 -delete
 ```
 

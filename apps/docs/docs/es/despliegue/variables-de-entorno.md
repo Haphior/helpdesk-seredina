@@ -60,9 +60,9 @@ del despliegue.
 |---|---|---|
 | `API_PORT` | No | Puerto de la API (`4000` por defecto). |
 | `WEB_PORT` | No | Puerto de la consola web (`8080` por defecto). |
-| `WEB_ORIGIN` | Sí | Debe ser como el navegador llega a la consola (nunca el hostname interno de compose). También la usa `api` para construir enlaces públicos propios (por ejemplo, un link de encuesta CSAT) — sin definir, esa funcionalidad puntual simplemente no hace nada. También es adonde Microsoft 365 / Gmail devuelven el navegador al conectar un canal de correo (`<WEB_ORIGIN>/api/email-channels/oauth/callback`, salvo que `API_PUBLIC_URL` esté definida). |
+| `WEB_ORIGIN` | Sí | Debe ser como el navegador llega a la consola (nunca el hostname interno de compose). `api` también arma con ella todos los enlaces públicos: los de encuestas CSAT, los de acceso al portal de clientes, y la dirección a la que Microsoft 365 / Gmail y tu proveedor de SSO devuelven el navegador (`<WEB_ORIGIN>/api/email-channels/oauth/callback` y `<WEB_ORIGIN>/api/auth/sso/callback`, salvo que `API_PUBLIC_URL` esté definida). Sin definir, esas funciones no andan. |
 | `VITE_API_URL` | No | Déjala vacía: la consola llega a la API en `/api` de su propia dirección. Defínela solo para apuntar la consola a una API en otro origen (queda fija al compilar). |
-| `API_PUBLIC_URL` | Solo si usás Telegram | URL HTTPS real, accesible desde internet, de tu API — Telegram la llama directamente para entregar mensajes, así que nunca puede ser `localhost` ni un hostname interno de compose. También es la dirección que la página Dispositivos pone en los comandos de enrolamiento de agentes. `configure-address.sh` la define como `https://<dirección>/api`. |
+| `API_PUBLIC_URL` | Solo si usás Telegram | URL HTTPS real, accesible desde internet, de tu API — Telegram la llama directamente para entregar mensajes, así que nunca puede ser `localhost` ni un hostname interno de compose. También es la dirección que la página Dispositivos pone en los comandos de enrolamiento de agentes y, si está definida, la base de las URI de redirección de OAuth y SSO (`<API_PUBLIC_URL>/email-channels/oauth/callback`, `<API_PUBLIC_URL>/auth/sso/callback`). `configure-address.sh` la define como `https://<dirección>/api`. |
 | `SEREDINA_SITE` | Con el perfil `proxy` | La dirección que sirve el proxy HTTPS: un dominio o IP (`http://…` si `TLS_MODE=off`). La define `scripts/configure-address.sh`. |
 | `TLS_MODE` | Con el perfil `proxy` | `acme` (Let's Encrypt), `custom` (`certs/cert.pem` + `certs/key.pem`), `internal` (CA generada) u `off`. |
 | `ACME_EMAIL` | Con `TLS_MODE=acme` | Recibe avisos de vencimiento si la renovación llegara a fallar. |
@@ -77,7 +77,8 @@ del despliegue.
 
 | Variable | Requerida | Descripción |
 |---|---|---|
-| `SENTRY_DSN` | No | Seguimiento de errores (`api`/`worker`/`web`). Sin definir, no hace nada — apunta a Sentry.io o a una instancia propia de [GlitchTip](https://glitchtip.com/) (compatible con el protocolo de Sentry). |
+| `SENTRY_DSN` | No | Seguimiento de errores (`api`/`worker`). Sin definir, no hace nada — apunta a Sentry.io o a una instancia propia de [GlitchTip](https://glitchtip.com/) (compatible con el protocolo de Sentry). |
+| `VITE_SENTRY_DSN` | No | Lo mismo, para la consola web. Queda fija al construir la imagen `web`. |
 | `EMAIL_POLL_INTERVAL_MS` | No | Cada cuánto el worker revisa el buzón IMAP de cada canal de correo activo (`30000` ms por defecto). |
 | `MCP_HTTP_PORT` | No | Solo usada por el servicio `mcp-server-http`, gated por perfil (`docker compose --profile mcp up`). Ver [Servidor MCP](/es/api/mcp-server). |
 

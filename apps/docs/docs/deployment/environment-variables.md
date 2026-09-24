@@ -58,9 +58,9 @@ used *exclusively*, never falling back to the deployment's global config.
 |---|---|---|
 | `API_PORT` | No | The API's port (`4000` by default). |
 | `WEB_PORT` | No | The web console's port (`8080` by default). |
-| `WEB_ORIGIN` | Yes | Must match how the browser reaches the console (never the in-compose-network hostname). Also read by `api` to build its own public links (e.g. a CSAT survey link) — left unset, that one feature just silently no-ops. Also where Microsoft 365 / Gmail send the browser back after connecting an email channel (`<WEB_ORIGIN>/api/email-channels/oauth/callback`, unless `API_PUBLIC_URL` is set). |
+| `WEB_ORIGIN` | Yes | Must match how the browser reaches the console (never the in-compose-network hostname). `api` also builds every public link from it: CSAT survey links, customer portal sign-in links, and the address Microsoft 365 / Gmail and your SSO provider send the browser back to (`<WEB_ORIGIN>/api/email-channels/oauth/callback` and `<WEB_ORIGIN>/api/auth/sso/callback`, unless `API_PUBLIC_URL` is set). Left unset, those features don't work. |
 | `VITE_API_URL` | No | Leave empty: the console reaches the API at `/api` on its own address. Only set it to point the console at an API on a different origin (baked in at build time). |
-| `API_PUBLIC_URL` | Only if using Telegram | A real, internet-reachable HTTPS base URL for your API — Telegram calls it directly to deliver messages, so it can never be `localhost` or an internal compose hostname. Also the address the Devices page puts in agent enrollment commands. `configure-address.sh` sets it to `https://<address>/api`. |
+| `API_PUBLIC_URL` | Only if using Telegram | A real, internet-reachable HTTPS base URL for your API — Telegram calls it directly to deliver messages, so it can never be `localhost` or an internal compose hostname. Also the address the Devices page puts in agent enrollment commands, and, when set, the base of the OAuth and SSO redirect URIs (`<API_PUBLIC_URL>/email-channels/oauth/callback`, `<API_PUBLIC_URL>/auth/sso/callback`). `configure-address.sh` sets it to `https://<address>/api`. |
 | `SEREDINA_SITE` | With the `proxy` profile | The address the HTTPS proxy serves: a domain or IP (`http://…` when `TLS_MODE=off`). Set by `scripts/configure-address.sh`. |
 | `TLS_MODE` | With the `proxy` profile | `acme` (Let's Encrypt), `custom` (`certs/cert.pem` + `certs/key.pem`), `internal` (generated CA), or `off`. |
 | `ACME_EMAIL` | With `TLS_MODE=acme` | Gets certificate expiry warnings if renewal ever fails. |
@@ -75,7 +75,8 @@ used *exclusively*, never falling back to the deployment's global config.
 
 | Variable | Required | Description |
 |---|---|---|
-| `SENTRY_DSN` | No | Error tracking (`api`/`worker`/`web`). Unset, it no-ops — points at Sentry.io or a self-hosted [GlitchTip](https://glitchtip.com/) instance (protocol-compatible with the Sentry SDK). |
+| `SENTRY_DSN` | No | Error tracking (`api`/`worker`). Unset, it no-ops — points at Sentry.io or a self-hosted [GlitchTip](https://glitchtip.com/) instance (protocol-compatible with the Sentry SDK). |
+| `VITE_SENTRY_DSN` | No | The same, for the web console. Baked in when the `web` image is built. |
 | `EMAIL_POLL_INTERVAL_MS` | No | How often the worker checks each active email channel's IMAP inbox (`30000` ms by default). |
 | `MCP_HTTP_PORT` | No | Only used by the `mcp-server-http` service, profile-gated (`docker compose --profile mcp up`). See [MCP Server](/api/mcp-server). |
 

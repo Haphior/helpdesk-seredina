@@ -28,10 +28,21 @@ and deployed via `.github/workflows/docs.yml`.
 Status: Phases 0-5 done (multi-tenant ticketing core, SLA + macros + service
 catalog + change/problem/release management, AI copilot with autonomous mode and
 an MCP server, cloud hardening, Slack/Teams/Telegram/Zabbix integrations, and a
-real endpoint agent for hardware/software inventory), plus a first pass of
-console internationalization (English + Spanish) — see
-[docs/ROADMAP.md](docs/ROADMAP.md) for the full breakdown of what's shipped,
-what's disclosed-but-deferred, and what's still backlog. See
+real endpoint agent for hardware/software inventory). On top of that:
+
+- **Email**: IMAP/SMTP or **Gmail / Microsoft 365 over OAuth**, attachments kept
+  on the ticket, replies sent from the mailbox the customer wrote to.
+- **Sign-in security**: two-factor sign-in (TOTP + recovery codes), single
+  sign-on over OpenID Connect (Microsoft Entra ID, Google Workspace, any OIDC
+  provider), and an append-only **audit log**.
+- **Customer portal**: customers sign in with an emailed link to follow and
+  reply to their own tickets and request catalog items.
+- **Contracts, warranties and licenses** linked to assets, with renewal
+  reminders; **AI triage** of new tickets (suggest or auto-set priority/team).
+- The console in **English and Spanish**.
+
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the full breakdown of what's shipped,
+what's disclosed-but-deferred, and what's still backlog, and
 [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Stack
@@ -42,7 +53,8 @@ what's disclosed-but-deferred, and what's still backlog. See
 - **Worker**: BullMQ (Redis) for agentless network discovery, outbound email/
   webhook/notification delivery, and SLA escalation timers; a plain interval
   loop for inbound email polling (see docs/adr/0004-email-channel.md for why
-  that one isn't BullMQ too)
+  that one isn't BullMQ too), with a per-mailbox Redis lock so several worker
+  replicas never poll the same mailbox twice (docs/adr/0059-email-poll-lock.md)
 - **AI**: pluggable provider adapters (`packages/ai-adapters`; Anthropic and
   OpenAI implemented, plus a local Ollama option — bring your own key, or unset
   it entirely and the feature 503s cleanly) power a copilot (suggest-reply/
@@ -90,9 +102,12 @@ there's no separate CLI bootstrap step, the same registration flow works
 identically in self-hosted and cloud mode.
 
 `./scripts/setup.sh` won't touch an existing `.env` — delete it first if you
-want to regenerate secrets from scratch (this invalidates any already-stored
-email channel passwords, encrypted with the old `ENCRYPTION_KEY`). See
-`.env.example` for what every variable does and which ones are optional
+want to regenerate secrets from scratch. **Never do that on an instance in use**:
+`ENCRYPTION_KEY` encrypts every stored secret (mailbox passwords and OAuth
+tokens, SSO settings, users' MFA secrets, AI keys), and a new key makes all of
+them unreadable. Back it up separately from your database backups — see
+[Updates and Backups](https://haphior.github.io/helpdesk-seredina/deployment/updates-and-backups).
+See `.env.example` for what every variable does and which ones are optional
 (`ANTHROPIC_API_KEY` for the AI copilot, `SENTRY_DSN` for error tracking).
 
 If a container fails to become healthy, `docker compose -f
@@ -138,7 +153,7 @@ Drop this on any page of your own website — no login, no API key, works
 from any domain:
 
 ```html
-<script src="https://<your-seredina-instance>/widget.js" data-tenant="<your-tenant-slug>"></script>
+<script src="https://<your-seredina-instance>/api/widget.js" data-tenant="<your-tenant-slug>"></script>
 ```
 
 A visitor gets a floating chat bubble; the conversation lands in Seredina
@@ -174,6 +189,10 @@ dev since auth is a Bearer token, never a cookie).
 
 Database schema/migrations/seed now live in `packages/db`, not `apps/api` — run
 `npm run prisma:generate|prisma:migrate|prisma:deploy|prisma:seed --workspace=@seredina/db`.
+
+To check that the Docker images still build and the whole stack comes up (what
+CI's `compose-smoke` job runs), use `./scripts/compose-smoke.sh`. It uses its
+own compose project and ports, and removes everything when it finishes.
 
 See [docs/PRD.md](docs/PRD.md) for the consolidated product requirements
 (problem/ICP/scope/risks in one place), [docs/adr/](docs/adr/) for the reasoning
