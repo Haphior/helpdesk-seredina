@@ -1,4 +1,4 @@
--- OAuth (Gmail / Microsoft 365) email channels -- see docs/adr/0055-email-oauth.md.
+-- OAuth (Gmail / Microsoft 365) email channels -- see docs/adr/0057-email-oauth.md.
 ALTER TABLE "email_channels"
   ALTER COLUMN "imap_password_encrypted" DROP NOT NULL,
   ALTER COLUMN "smtp_password_encrypted" DROP NOT NULL,

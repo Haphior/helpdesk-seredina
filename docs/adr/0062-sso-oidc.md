@@ -1,4 +1,4 @@
-# ADR 0060: Single sign-on over OpenID Connect
+# ADR 0062: Single sign-on over OpenID Connect
 
 ## Status
 
@@ -48,7 +48,7 @@ role, and an "enforced" flag.
 ### Stateless round trip, no token in any URL
 
 1. `GET /auth/sso/start?tenantSlug=` redirects to the IdP. `state` is a
-   10-minute purpose-bound HMAC token (ADR 0059's `purposeToken`) holding the
+   10-minute purpose-bound HMAC token (ADR 0061's `purposeToken`) holding the
    tenant and a nonce. The PKCE verifier is an HMAC of that nonce under a
    server key, so nothing needs storing and the IdP only ever sees the
    challenge.
@@ -77,7 +77,7 @@ hand). Each provisioned account is audited as `user.created` via `sso`.
 
 ### MFA
 
-An SSO sign-in doesn't additionally ask for Seredina's own TOTP (ADR 0059).
+An SSO sign-in doesn't additionally ask for Seredina's own TOTP (ADR 0061).
 The IdP is the place to require MFA, and doubling it up only trains people
 to click through prompts.
 

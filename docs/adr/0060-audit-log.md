@@ -1,4 +1,4 @@
-# ADR 0058: Security audit log
+# ADR 0060: Security audit log
 
 ## Status
 

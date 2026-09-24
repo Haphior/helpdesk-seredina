@@ -1,4 +1,4 @@
-# ADR 0057: Email polling across several worker replicas
+# ADR 0059: Email polling across several worker replicas
 
 ## Status
 

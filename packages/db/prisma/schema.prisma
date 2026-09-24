@@ -89,17 +89,17 @@ model Tenant {
   auditLogs AuditLog[]
 
   // Every user must set up two-factor sign-in before they can use the console
-  // (docs/adr/0059-mfa-totp.md). Off by default; users can still opt in.
+  // (docs/adr/0061-mfa-totp.md). Off by default; users can still opt in.
   mfaRequired Boolean @default(false) @map("mfa_required")
   ssoSettings TenantSsoSettings?
 
-  // 'off' | 'suggest' | 'auto' -- see docs/adr/0061-ai-triage.md. Off by
+  // 'off' | 'suggest' | 'auto' -- see docs/adr/0063-ai-triage.md. Off by
   // default: every new ticket costs a model call once it's on.
   aiTriageMode String @default("off") @map("ai_triage_mode")
   contracts      Contract[]
   contractAssets ContractAsset[]
 
-  // Customer portal (docs/adr/0063-customer-portal.md): contacts sign in with
+  // Customer portal (docs/adr/0065-customer-portal.md): contacts sign in with
   // an emailed link to follow and reply to their own tickets. Off by default.
   customerPortalEnabled Boolean @default(false) @map("customer_portal_enabled")
 }
@@ -163,7 +163,7 @@ model User {
   lockedUntil         DateTime? @map("locked_until")
 
   // Two-factor sign-in with an authenticator app (TOTP) -- see
-  // docs/adr/0059-mfa-totp.md. The secret is encrypted with ENCRYPTION_KEY
+  // docs/adr/0061-mfa-totp.md. The secret is encrypted with ENCRYPTION_KEY
   // (the server must recompute codes from it, so it can't be hashed); the
   // pending one exists only between "show QR code" and "confirm first code".
   // mfaLastUsedStep blocks replaying a code inside its validity window.
@@ -307,7 +307,7 @@ model Ticket {
   // so replies go out from the same address the customer wrote to (not just
   // the tenant's first channel). Null (channel deleted) falls back to the
   // first connected one.
-  // AI triage (docs/adr/0061-ai-triage.md): what the model suggested for this
+  // AI triage (docs/adr/0063-ai-triage.md): what the model suggested for this
   // ticket -- { priority, teamId, teamName, reason, model, at, applied } -- or
   // null if triage is off, no AI is configured, or it hasn't run yet.
   aiTriage Json? @map("ai_triage")
@@ -324,6 +324,11 @@ model Ticket {
   // "Met" is resolvedAt (already existed) and firstRespondedAt below; a milestone
   // is breached when its due-at has passed and the matching "met" timestamp is
   // still null. See docs/adr/0011-sla-engine.md.
+  // When the current SLA clock started: creation, or the latest priority change
+  // (which recomputes both due-ats from that moment). The console's countdown
+  // measures "how much of the window is used" against it. Null on tickets from
+  // before it existed -- the console falls back to createdAt.
+  slaStartedAt       DateTime? @map("sla_started_at")
   firstResponseDueAt DateTime? @map("first_response_due_at")
   firstRespondedAt   DateTime? @map("first_responded_at")
   resolutionDueAt    DateTime? @map("resolution_due_at")
@@ -456,7 +461,7 @@ model Message {
 }
 
 // File attachments -- manual uploads on a reply/note, and files attached to
-// inbound email (docs/adr/0056-inbound-email-attachments.md). Bytes stored directly in Postgres, not an
+// inbound email (docs/adr/0058-inbound-email-attachments.md). Bytes stored directly in Postgres, not an
 // object-storage bucket: no MinIO/S3 exists in this stack yet (self-hosted
 // Docker Compose has none), and a hard per-file size cap enforced at the
 // service layer (modules/attachments/service.ts) keeps row/table bloat bounded
@@ -511,7 +516,7 @@ model EmailChannel {
   imapSecure            Boolean   @default(true) @map("imap_secure")
   imapUsername          String    @map("imap_username")
   // Null for an OAuth channel (authType != 'password'), which authenticates
-  // with a refreshed access token instead -- see docs/adr/0055-email-oauth.md.
+  // with a refreshed access token instead -- see docs/adr/0057-email-oauth.md.
   imapPasswordEncrypted String?   @map("imap_password_encrypted")
   smtpHost              String    @map("smtp_host")
   smtpPort              Int       @map("smtp_port")
@@ -609,7 +614,7 @@ enum AssetDiscoverySource {
   AGENTLESS_SCAN
   AGENT
   // Seen in an enrolled agent's ARP/neighbor table -- passive discovery, no
-  // scanning (docs/adr/0052-agent-based-discovery.md).
+  // scanning (docs/adr/0055-agent-based-discovery.md).
   AGENT_NEIGHBOR
 }
 
@@ -711,7 +716,7 @@ model Device {
   // sha256 of the OS's own stable machine id (/etc/machine-id, Windows
   // MachineGuid, macOS IOPlatformUUID), hashed on the device so the raw id
   // never leaves it. Re-enrolling the same machine reuses its Device+Asset
-  // instead of creating a duplicate (docs/adr/0052-agent-based-discovery.md).
+  // instead of creating a duplicate (docs/adr/0055-agent-based-discovery.md).
   // Nullable: agents older than this send none.
   machineFingerprint String?   @map("machine_fingerprint")
   enrolledAt       DateTime  @default(now()) @map("enrolled_at")
@@ -1520,7 +1525,7 @@ model TenantKbSettings {
   @@map("tenant_kb_settings")
 }
 
-// Security audit log (docs/adr/0058-audit-log.md): who signed in, who changed
+// Security audit log (docs/adr/0060-audit-log.md): who signed in, who changed
 // access, who touched integrations and secrets. Append-only for the app --
 // app_tenant is granted SELECT/INSERT only (prisma/rls/policies.sql), so not
 // even a compromised API process can rewrite history. actorUserId is a plain
@@ -1549,7 +1554,7 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// Single sign-on over OpenID Connect (docs/adr/0060-sso-oidc.md), one per
+// Single sign-on over OpenID Connect (docs/adr/0062-sso-oidc.md), one per
 // tenant. Like the email OAuth app (ADR 0055) the identity-provider app is
 // the tenant's own; its client secret is encrypted with ENCRYPTION_KEY.
 model TenantSsoSettings {
@@ -1577,7 +1582,7 @@ model TenantSsoSettings {
   @@map("tenant_sso_settings")
 }
 
-// Contracts, warranties and licenses tied to assets -- docs/adr/0062-contracts.md.
+// Contracts, warranties and licenses tied to assets -- docs/adr/0064-contracts.md.
 enum ContractType {
   SUPPORT
   WARRANTY

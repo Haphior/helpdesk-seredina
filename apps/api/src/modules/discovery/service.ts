@@ -7,7 +7,7 @@ import { discoveryQueue } from '../../lib/queue';
  * customer's own network -- i.e. self-hosted. In cloud mode the worker is on
  * OUR network, so a tenant "scanning 10.0.0.0/22" would be probing our own
  * infrastructure. Cloud tenants discover devices through enrolled agents
- * instead (docs/adr/0052-agent-based-discovery.md).
+ * instead (docs/adr/0055-agent-based-discovery.md).
  */
 export function isServerSideScanAllowed(): boolean {
   return process.env.SEREDINA_MODE === 'self_hosted';

@@ -12,7 +12,7 @@ import { createAttachment, getAttachment } from '../attachments/service';
 import { notifyUser } from '../notifications/service';
 
 /**
- * The customer portal -- docs/adr/0063-customer-portal.md. Contacts never
+ * The customer portal -- docs/adr/0065-customer-portal.md. Contacts never
  * have passwords: they prove they own their email address by clicking a
  * one-time link sent to it, and get a portal session that can only ever see
  * their own tickets' public conversation.

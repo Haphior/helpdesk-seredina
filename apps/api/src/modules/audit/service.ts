@@ -2,7 +2,7 @@ import type { FastifyRequest } from 'fastify';
 import { Prisma, prisma, withTenantTx } from '@seredina/db';
 
 /**
- * Security audit log (docs/adr/0058-audit-log.md). Records who signed in, who
+ * Security audit log (docs/adr/0060-audit-log.md). Records who signed in, who
  * changed access, and who touched integrations and secrets -- not every ticket
  * edit (tickets have their own history). Entries are append-only: the
  * app_tenant role can't UPDATE or DELETE them.

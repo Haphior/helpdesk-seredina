@@ -61,7 +61,7 @@ export interface EnrolledDevice {
  * then atomically finds-or-creates the Asset + Device pair and consumes the
  * token, all inside one tenant-scoped transaction.
  *
- * Which Asset the device gets (docs/adr/0052-agent-based-discovery.md):
+ * Which Asset the device gets (docs/adr/0055-agent-based-discovery.md):
  * 1. Same machineFingerprint already enrolled -> reuse that Device and Asset
  *    (a reinstall, not a new machine). The credential is rotated, so the old
  *    install's credential stops working, and a revoked device is reactivated:

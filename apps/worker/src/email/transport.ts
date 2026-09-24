@@ -7,7 +7,7 @@ import { resolveMailAuth } from './credentials';
  * modules/notifications/sendEmail.ts can build the same tenant SMTP transport
  * without duplicating the credential and configuration logic. See
  * docs/adr/0022-notifications.md. OAuth channels authenticate with XOAUTH2
- * (docs/adr/0055-email-oauth.md).
+ * (docs/adr/0057-email-oauth.md).
  */
 export async function createTransportForChannel(channel: EmailChannel) {
   const auth = await resolveMailAuth(channel, 'smtp');

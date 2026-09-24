@@ -1,7 +1,7 @@
 import { Prisma, prisma, withTenantTx, type ContractType } from '@seredina/db';
 
 /**
- * Contracts, warranties and licenses, linked to assets -- docs/adr/0062-contracts.md.
+ * Contracts, warranties and licenses, linked to assets -- docs/adr/0064-contracts.md.
  * Status is derived from the end date, never stored, so it can't go stale.
  */
 

@@ -1,4 +1,4 @@
-# ADR 0056: Inbound email attachments and replying from the right mailbox
+# ADR 0058: Inbound email attachments and replying from the right mailbox
 
 ## Status
 

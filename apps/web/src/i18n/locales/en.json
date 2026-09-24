@@ -179,7 +179,8 @@
     "link": "Link",
     "unassigned": "Unassigned",
     "copied": "Copied",
-    "copy": "Copy"
+    "copy": "Copy",
+    "someone": "Someone"
   },
   "tickets": {
     "title": "Tickets",
@@ -216,7 +217,8 @@
       "assignee": "Assignee",
       "channel": "Channel",
       "updated": "Updated",
-      "slaOverdue": "SLA overdue"
+      "slaOverdue": "SLA overdue",
+      "sla": "SLA"
     },
     "empty": "No tickets here.",
     "loadFailed": "Failed to load tickets",
@@ -335,7 +337,13 @@
       "suggestion": "AI suggests priority {{priority}}, team {{team}}",
       "noTeam": "unchanged",
       "apply": "Apply"
-    }
+    },
+    "typing_one": "{{names}} is typing…",
+    "typing_other": "{{names}} are typing…",
+    "collisionReply": "{{name}} replied while you were writing. Check their reply before sending yours, so the customer doesn't get two.",
+    "collisionNote": "{{name}} added an internal note while you were writing.",
+    "collisionCustomer": "{{name}} wrote back while you were writing — read it before sending.",
+    "collisionDismiss": "Got it"
   },
   "tour": {
     "stepCount": "Step {{current}} of {{total}}",
@@ -1019,7 +1027,13 @@
     "min": "min",
     "businessHoursOnly": "Business hours only",
     "remove": "remove",
-    "update": "Update"
+    "update": "Update",
+    "left": "{{time}} left",
+    "overdueBy": "{{time}} overdue",
+    "firstResponseDue": "First response due {{time}}",
+    "resolutionDue": "Resolution due {{time}}",
+    "firstResponseShort": "Response",
+    "resolutionShort": "Resolution"
   },
   "assetStatus": {
     "ACTIVE": "Active",

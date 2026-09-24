@@ -1,7 +1,7 @@
 import { API_URL, ApiError, extractErrorMessage } from './api';
 
 /**
- * The customer portal's own client (docs/adr/0063-customer-portal.md). It
+ * The customer portal's own client (docs/adr/0065-customer-portal.md). It
  * sends the portal session, never the console's token -- an agent signed in
  * to the console in the same browser must not leak their session to, or be
  * mistaken for a contact on, the portal.

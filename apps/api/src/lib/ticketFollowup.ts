@@ -5,7 +5,7 @@ import { finalizeWorkerCreatedTicket } from '../modules/tickets/service';
 import { triageTicket } from '../modules/ai/triage';
 
 /**
- * Follow-up work on a new ticket (docs/adr/0061-ai-triage.md). Consumed here,
+ * Follow-up work on a new ticket (docs/adr/0063-ai-triage.md). Consumed here,
  * in the api process, not in apps/worker: it needs the ticket service (SLA,
  * webhooks) and the AI adapter / bring-your-own-key / cost-logging code, which
  * all live here -- running it in the worker would mean duplicating them.

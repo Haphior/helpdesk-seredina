@@ -1,4 +1,4 @@
-// OAuth 2.0 for email channels (docs/adr/0055-email-oauth.md). Google and
+// OAuth 2.0 for email channels (docs/adr/0057-email-oauth.md). Google and
 // Microsoft no longer accept a plain password for IMAP/SMTP on most accounts
 // (Microsoft 365 retired Basic Auth; Google Workspace admins commonly disable
 // app passwords), so a channel can instead authenticate with an access token

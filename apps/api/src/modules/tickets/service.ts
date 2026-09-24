@@ -86,6 +86,7 @@ export async function createTicketFromApi(tenantId: string, input: CreateTicketF
         customFields: input.customFields as Prisma.InputJsonValue | undefined,
         assigneeId: input.assigneeId,
         createdAt,
+        slaStartedAt: dueAts.firstResponseDueAt || dueAts.resolutionDueAt ? createdAt : null,
         firstResponseDueAt: dueAts.firstResponseDueAt,
         resolutionDueAt: dueAts.resolutionDueAt,
       },
@@ -197,6 +198,7 @@ export async function ingestAlert(tenantId: string, input: IngestAlertInput) {
         channel: 'alert',
         externalId: input.externalId,
         createdAt,
+        slaStartedAt: dueAts.firstResponseDueAt || dueAts.resolutionDueAt ? createdAt : null,
         firstResponseDueAt: dueAts.firstResponseDueAt,
         resolutionDueAt: dueAts.resolutionDueAt,
       },
@@ -461,7 +463,7 @@ export async function addMessage(tenantId: string, ticketId: string, input: AddM
     const shouldNotifyCustomer = authorType !== 'CONTACT' && !input.isPrivateNote;
     return {
       message,
-      // Portal tickets (docs/adr/0063-customer-portal.md) get agent replies by
+      // Portal tickets (docs/adr/0065-customer-portal.md) get agent replies by
       // email too, so the customer doesn't have to keep checking the portal.
       shouldEmail: (ticket.channel === 'email' || ticket.channel === 'portal') && shouldNotifyCustomer,
       shouldTelegram: ticket.channel === 'telegram' && shouldNotifyCustomer,
@@ -536,7 +538,9 @@ export async function updateTicket(tenantId: string, ticketId: string, input: Up
     // never touches an already-running clock.
     if (input.priority && input.priority !== ticket.priority) {
       priorityChanged = true;
-      const dueAts = await computeSlaDueAts(tx, tenantId, input.priority, new Date());
+      const now = new Date();
+      const dueAts = await computeSlaDueAts(tx, tenantId, input.priority, now);
+      data.slaStartedAt = dueAts.firstResponseDueAt || dueAts.resolutionDueAt ? now : null;
       data.firstResponseDueAt = dueAts.firstResponseDueAt;
       data.resolutionDueAt = dueAts.resolutionDueAt;
     }
@@ -680,7 +684,7 @@ export async function mergeTicket(tenantId: string, sourceTicketId: string, into
 }
 
 /**
- * AI triage runs off the request path (docs/adr/0061-ai-triage.md): a model
+ * AI triage runs off the request path (docs/adr/0063-ai-triage.md): a model
  * call must never hold up creating a ticket. Best-effort -- a Redis hiccup
  * costs a suggestion, never the ticket.
  */

@@ -39,7 +39,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   TO app_tenant;
 
 -- Append-only: the app can write and read audit entries, never change or delete
--- them (docs/adr/0058-audit-log.md). REVOKE first so a re-run after a future
+-- them (docs/adr/0060-audit-log.md). REVOKE first so a re-run after a future
 -- grant change still lands on exactly this set.
 REVOKE ALL ON audit_logs FROM app_tenant;
 GRANT SELECT, INSERT ON audit_logs TO app_tenant;
@@ -142,7 +142,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   -- connection_status: an OAuth channel still waiting for consent, or whose
-  -- grant was revoked, has nothing to log in with -- see docs/adr/0055-email-oauth.md.
+  -- grant was revoked, has nothing to log in with -- see docs/adr/0057-email-oauth.md.
   SELECT id, tenant_id FROM email_channels WHERE is_active = true AND connection_status = 'connected';
 $$;
 
@@ -214,7 +214,7 @@ $$;
 REVOKE ALL ON FUNCTION public.resolve_tenant_id_by_device_credential_hash(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_tenant_id_by_device_credential_hash(text) TO app_tenant;
 
--- Contract renewal reminders (docs/adr/0062-contracts.md): the worker's
+-- Contract renewal reminders (docs/adr/0064-contracts.md): the worker's
 -- periodic check has no tenant context and needs to find which contracts in
 -- which tenants are due for a reminder. Same escape-hatch shape as
 -- list_active_email_channels(): (id, tenant_id) only; everything else is read

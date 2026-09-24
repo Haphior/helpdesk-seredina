@@ -179,7 +179,8 @@
     "link": "Vincular",
     "unassigned": "Sin asignar",
     "copied": "Copiado",
-    "copy": "Copiar"
+    "copy": "Copiar",
+    "someone": "Alguien"
   },
   "tickets": {
     "title": "Tickets",
@@ -216,7 +217,8 @@
       "assignee": "Responsable",
       "channel": "Canal",
       "updated": "Actualizado",
-      "slaOverdue": "SLA vencido"
+      "slaOverdue": "SLA vencido",
+      "sla": "SLA"
     },
     "empty": "No hay tickets aquí.",
     "loadFailed": "No se pudieron cargar los tickets",
@@ -335,7 +337,13 @@
       "suggestion": "La IA sugiere prioridad {{priority}}, equipo {{team}}",
       "noTeam": "sin cambios",
       "apply": "Aplicar"
-    }
+    },
+    "typing_one": "{{names}} está escribiendo…",
+    "typing_other": "{{names}} están escribiendo…",
+    "collisionReply": "{{name}} respondió mientras escribías. Revisa su respuesta antes de enviar la tuya, para que el cliente no reciba dos.",
+    "collisionNote": "{{name}} agregó una nota interna mientras escribías.",
+    "collisionCustomer": "{{name}} volvió a escribir mientras redactabas: léelo antes de enviar.",
+    "collisionDismiss": "Entendido"
   },
   "tour": {
     "stepCount": "Paso {{current}} de {{total}}",
@@ -1019,7 +1027,13 @@
     "min": "min",
     "businessHoursOnly": "Solo horario laboral",
     "remove": "quitar",
-    "update": "Actualizar"
+    "update": "Actualizar",
+    "left": "Quedan {{time}}",
+    "overdueBy": "Vencido hace {{time}}",
+    "firstResponseDue": "Primera respuesta vence {{time}}",
+    "resolutionDue": "Resolución vence {{time}}",
+    "firstResponseShort": "Respuesta",
+    "resolutionShort": "Resolución"
   },
   "assetStatus": {
     "ACTIVE": "Activo",

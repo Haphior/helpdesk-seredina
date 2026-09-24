@@ -1,7 +1,7 @@
 import { createHash, createPublicKey, verify as cryptoVerify, type JsonWebKey } from 'node:crypto';
 
 /**
- * A minimal OpenID Connect relying party (docs/adr/0060-sso-oidc.md):
+ * A minimal OpenID Connect relying party (docs/adr/0062-sso-oidc.md):
  * discovery, the authorization-code flow with PKCE, and ID token validation
  * (signature against the provider's JWKS, issuer, audience, expiry, nonce).
  * Written against node:crypto rather than a client library -- it's the

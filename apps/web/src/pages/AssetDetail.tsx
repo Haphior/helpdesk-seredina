@@ -206,7 +206,7 @@ function Spec({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-/** Contracts, warranties and licenses covering this asset (docs/adr/0062-contracts.md). */
+/** Contracts, warranties and licenses covering this asset (docs/adr/0064-contracts.md). */
 function AssetContracts({ assetId }: { assetId: string }) {
   const { t } = useTranslation();
   const [contracts, setContracts] = useState<Contract[] | null>(null);

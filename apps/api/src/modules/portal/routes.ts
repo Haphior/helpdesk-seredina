@@ -21,7 +21,7 @@ import {
   setPortalEnabled,
 } from './service';
 
-// Customer portal -- docs/adr/0063-customer-portal.md. Public routes live
+// Customer portal -- docs/adr/0065-customer-portal.md. Public routes live
 // under /public/:tenantSlug/portal/, like the KB portal and the widget. The
 // session is a portal-only bearer token, never a console JWT.
 

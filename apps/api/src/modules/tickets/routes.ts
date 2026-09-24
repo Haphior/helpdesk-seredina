@@ -16,6 +16,7 @@ import {
 } from './service';
 import { linkAssetToTicket, unlinkAssetFromTicket } from '../assets/service';
 import { listPresence, markPresence } from '../../lib/presence';
+import { publishLive } from '../../lib/live';
 
 const PRIORITY = z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']);
 const STATUS_CATEGORY = z.enum(['OPEN', 'PENDING', 'RESOLVED', 'CLOSED']);
@@ -301,6 +302,24 @@ export default async function ticketRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params as { id: string };
       await markPresence(request.user.tenantId, id, request.user.sub);
+      return reply.code(204).send();
+    },
+  );
+
+  // "Ana is typing…" (docs/adr/0056-sla-countdown.md): the composer pings this
+  // at most every few seconds while someone types, and colleagues with the
+  // ticket open see it through the live stream. Nothing is stored and nothing
+  // of the draft is sent -- only who, and on which ticket.
+  app.post(
+    '/tickets/:id/typing',
+    {
+      preHandler: [app.authenticate, requirePermission('tickets:write')],
+      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      if (!z.string().uuid().safeParse(id).success) return reply.code(400).send({ error: 'invalid ticket id' });
+      await publishLive(request.user.tenantId, { type: 'ticket.typing', ticketId: id, userId: request.user.sub });
       return reply.code(204).send();
     },
   );

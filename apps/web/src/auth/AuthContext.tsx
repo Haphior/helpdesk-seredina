@@ -9,7 +9,7 @@ interface TokenPayload {
   exp?: number;
 }
 
-/** What /auth/login answered: signed in, or a second step (docs/adr/0059-mfa-totp.md) is owed. */
+/** What /auth/login answered: signed in, or a second step (docs/adr/0061-mfa-totp.md) is owed. */
 export type LoginOutcome = { kind: 'signed_in' } | { kind: 'mfa_verify'; mfaToken: string } | { kind: 'mfa_setup'; mfaToken: string };
 
 interface AuthContextValue {

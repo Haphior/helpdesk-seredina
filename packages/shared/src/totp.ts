@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
-// TOTP (RFC 6238) for two-factor sign-in -- docs/adr/0059-mfa-totp.md.
+// TOTP (RFC 6238) for two-factor sign-in -- docs/adr/0061-mfa-totp.md.
 // SHA-1, 6 digits, 30-second steps: the only parameters every authenticator
 // app (Google/Microsoft Authenticator, 1Password, Authy, ...) agrees on.
 // Implemented on node:crypto directly rather than pulling in a dependency for

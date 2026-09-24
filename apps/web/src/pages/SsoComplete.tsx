@@ -7,7 +7,7 @@ import { apiPost, ApiError } from '../lib/api';
 
 /**
  * Where the API sends the browser after a successful single sign-on
- * (docs/adr/0060-sso-oidc.md). The one-time exchange token rides in the URL
+ * (docs/adr/0062-sso-oidc.md). The one-time exchange token rides in the URL
  * fragment -- never sent to a server -- and is traded here for a session.
  */
 export function SsoComplete() {

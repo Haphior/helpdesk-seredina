@@ -1,4 +1,4 @@
--- Two-factor sign-in (TOTP) -- see docs/adr/0059-mfa-totp.md.
+-- Two-factor sign-in (TOTP) -- see docs/adr/0061-mfa-totp.md.
 ALTER TABLE "users"
   ADD COLUMN "mfa_secret_encrypted" TEXT,
   ADD COLUMN "mfa_pending_secret_encrypted" TEXT,

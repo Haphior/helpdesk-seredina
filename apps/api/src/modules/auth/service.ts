@@ -27,7 +27,7 @@ export interface AuthResult {
   permissions: Permission[];
   /**
    * Set when the password was right but a second step is still owed
-   * (docs/adr/0059-mfa-totp.md): 'verify' = enter a code from the app,
+   * (docs/adr/0061-mfa-totp.md): 'verify' = enter a code from the app,
    * 'setup' = the tenant requires MFA and this user hasn't enrolled yet. No
    * session token may be issued while this is set.
    */
@@ -115,7 +115,7 @@ type LoginFailure = 'unknown_user' | 'account_inactive' | 'account_locked' | 'wr
 
 /**
  * The password was right, but this workspace signs in through its identity
- * provider (docs/adr/0060-sso-oidc.md). Only thrown after the password
+ * provider (docs/adr/0062-sso-oidc.md). Only thrown after the password
  * checked out, so it reveals nothing to someone guessing.
  */
 export class SsoRequiredError extends Error {}

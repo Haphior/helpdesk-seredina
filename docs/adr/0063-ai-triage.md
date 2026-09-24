@@ -1,4 +1,4 @@
-# ADR 0061: AI triage of new tickets, and a follow-up queue for new tickets
+# ADR 0063: AI triage of new tickets, and a follow-up queue for new tickets
 
 ## Status
 

@@ -1,4 +1,4 @@
-# ADR 0055: Microsoft 365 and Gmail email channels over OAuth
+# ADR 0057: Microsoft 365 and Gmail email channels over OAuth
 
 ## Status
 

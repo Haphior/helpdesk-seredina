@@ -87,7 +87,7 @@ export async function createEmailChannel(tenantId: string, input: EmailChannelIn
 }
 
 /**
- * Gmail / Microsoft 365 channel (docs/adr/0055-email-oauth.md). Server
+ * Gmail / Microsoft 365 channel (docs/adr/0057-email-oauth.md). Server
  * settings are the provider's fixed ones and the mailbox address is the login,
  * so all the admin supplies is their own OAuth app's client id and secret. The
  * channel starts in pending_authorization -- the worker skips it until the

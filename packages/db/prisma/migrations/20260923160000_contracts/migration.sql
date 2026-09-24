@@ -1,4 +1,4 @@
--- Contracts, warranties and licenses linked to assets -- see docs/adr/0062-contracts.md.
+-- Contracts, warranties and licenses linked to assets -- see docs/adr/0064-contracts.md.
 -- CreateEnum
 CREATE TYPE "ContractType" AS ENUM ('SUPPORT', 'WARRANTY', 'LICENSE', 'LEASE', 'SUBSCRIPTION', 'OTHER');
 

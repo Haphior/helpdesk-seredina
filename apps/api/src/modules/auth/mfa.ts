@@ -17,7 +17,7 @@ import { recordAudit } from '../audit/service';
 import { LOCKOUT_DURATION_MS, MAX_FAILED_LOGIN_ATTEMPTS, type AuthResult, type RequestOrigin } from './service';
 
 /**
- * Two-factor sign-in with an authenticator app -- docs/adr/0059-mfa-totp.md.
+ * Two-factor sign-in with an authenticator app -- docs/adr/0061-mfa-totp.md.
  *
  * Sign-in becomes two requests when MFA applies: /auth/login checks the
  * password and returns a short-lived "mfa" purpose token instead of a

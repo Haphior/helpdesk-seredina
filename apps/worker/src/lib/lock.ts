@@ -22,7 +22,7 @@ export interface Lock {
 /**
  * A plain SET NX PX lock, one Redis key per resource -- enough to stop two
  * worker replicas from working on the same mailbox at once (see
- * docs/adr/0057-email-poll-lock.md). The TTL is a safety net for a replica
+ * docs/adr/0059-email-poll-lock.md). The TTL is a safety net for a replica
  * that dies mid-poll, not the expected release path.
  */
 export const redisLock: Lock = {

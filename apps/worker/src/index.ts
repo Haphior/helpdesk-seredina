@@ -179,7 +179,7 @@ telegramSendWorker.on('failed', (job, err) => {
 // (mainly: registering/deregistering repeatable jobs in step with channel CRUD is
 // real complexity this doesn't need). Safe with several worker replicas: each
 // mailbox is polled under a per-channel Redis lock, and ingestion is idempotent
-// on Message-ID -- see docs/adr/0057-email-poll-lock.md.
+// on Message-ID -- see docs/adr/0059-email-poll-lock.md.
 const EMAIL_POLL_INTERVAL_MS = Number(process.env.EMAIL_POLL_INTERVAL_MS ?? 30_000);
 
 async function pollLoop() {
@@ -195,7 +195,7 @@ async function pollLoop() {
 
 pollLoop();
 
-// Contract renewal reminders (docs/adr/0062-contracts.md). A few times a day
+// Contract renewal reminders (docs/adr/0064-contracts.md). A few times a day
 // is plenty for date-granular deadlines; the lock keeps replicas from running
 // it at the same moment, and each reminder is claimed atomically anyway.
 const CONTRACT_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;

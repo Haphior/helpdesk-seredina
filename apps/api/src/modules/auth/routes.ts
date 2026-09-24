@@ -134,7 +134,7 @@ export default async function authRoutes(app: FastifyInstance) {
       try {
         const result = await login(parsed.data, requestOrigin(request));
         // Password right, second step owed: no session yet, just a 5-minute
-        // token for the next request (docs/adr/0059-mfa-totp.md).
+        // token for the next request (docs/adr/0061-mfa-totp.md).
         if (result.mfa === 'verify') return reply.send({ mfaRequired: true, mfaToken: issueMfaChallenge(result) });
         if (result.mfa === 'setup') return reply.send({ mfaSetupRequired: true, mfaToken: issueMfaChallenge(result) });
         const token = app.jwt.sign({

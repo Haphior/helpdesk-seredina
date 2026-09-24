@@ -38,7 +38,7 @@ function money(amount: number, currency: string | null, locale: string) {
   }
 }
 
-/** CMDB → Contracts: support, warranties, licenses, leases -- docs/adr/0062-contracts.md. */
+/** CMDB → Contracts: support, warranties, licenses, leases -- docs/adr/0064-contracts.md. */
 export function Contracts() {
   const { t, i18n } = useTranslation();
   const { hasPermission } = useAuth();

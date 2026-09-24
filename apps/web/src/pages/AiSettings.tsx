@@ -153,7 +153,7 @@ export function AiSettings() {
 
 type TriageMode = 'off' | 'suggest' | 'auto';
 
-/** AI triage of new tickets -- docs/adr/0061-ai-triage.md. */
+/** AI triage of new tickets -- docs/adr/0063-ai-triage.md. */
 function AiTriageSettings() {
   const { t } = useTranslation();
   const [mode, setMode] = useState<TriageMode | null>(null);

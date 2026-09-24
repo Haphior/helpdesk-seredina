@@ -88,6 +88,9 @@ export interface Ticket {
   resolvedAt: string | null;
   closedAt: string | null;
   customFields: Record<string, unknown> | null;
+  // When the current SLA clock started (creation or the latest priority
+  // change); null on older tickets -- see lib/sla.ts.
+  slaStartedAt?: string | null;
   firstResponseDueAt: string | null;
   firstRespondedAt: string | null;
   resolutionDueAt: string | null;

@@ -161,7 +161,7 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<IngestRes
   await publishLive(email.tenantId, { type: createdTicket ? 'ticket.created' : 'message.created', ticketId: result.ticketId });
   if (createdTicket) {
     // SLA clock, ticket.created webhook and AI triage live in apps/api's ticket
-    // service -- see docs/adr/0061-ai-triage.md. Best-effort: the ticket exists
+    // service -- see docs/adr/0063-ai-triage.md. Best-effort: the ticket exists
     // either way.
     await ticketFollowupQueue
       .add(
@@ -179,7 +179,7 @@ export async function ingestInboundEmail(email: InboundEmail): Promise<IngestRes
  * attachments are kept before inline images, so a signature logo can't push
  * out the file the customer actually sent. Whatever doesn't fit is named in a
  * note on the message instead of disappearing silently -- see
- * docs/adr/0056-inbound-email-attachments.md.
+ * docs/adr/0058-inbound-email-attachments.md.
  */
 export function selectInboundAttachments(attachments: InboundAttachment[]): {
   kept: InboundAttachment[];

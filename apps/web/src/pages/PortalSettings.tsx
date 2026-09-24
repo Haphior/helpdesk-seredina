@@ -11,7 +11,7 @@ interface PortalSettingsView {
   hasEmailChannel: boolean;
 }
 
-/** Administration → Customer Portal (docs/adr/0063-customer-portal.md). */
+/** Administration → Customer Portal (docs/adr/0065-customer-portal.md). */
 export function PortalSettings() {
   const { t } = useTranslation();
   const [view, setView] = useState<PortalSettingsView | null>(null);

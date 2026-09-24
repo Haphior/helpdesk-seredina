@@ -5,7 +5,7 @@ import { logAiUsage } from './service';
 import { addMessage, updateTicket } from '../tickets/service';
 
 /**
- * AI triage of new tickets -- docs/adr/0061-ai-triage.md. One small model
+ * AI triage of new tickets -- docs/adr/0063-ai-triage.md. One small model
  * call per new ticket suggests a priority and a team from the subject and
  * first message. 'suggest' stores it for an agent to apply with one click;
  * 'auto' applies it -- but only to fields nobody has set yet, and says so in

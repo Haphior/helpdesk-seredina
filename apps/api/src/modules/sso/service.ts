@@ -18,7 +18,7 @@ import {
 } from './oidc';
 
 /**
- * Single sign-on over OpenID Connect -- docs/adr/0060-sso-oidc.md.
+ * Single sign-on over OpenID Connect -- docs/adr/0062-sso-oidc.md.
  *
  * GET /auth/sso/start -> the IdP -> GET /auth/sso/callback -> the console at
  * /login/sso#<one-time exchange token> -> POST /auth/sso/exchange -> session.

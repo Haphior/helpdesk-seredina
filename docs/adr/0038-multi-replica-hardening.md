@@ -93,7 +93,7 @@ it automatically with its own namespaced counter.
   not resolved by this pass. A future fix would need a distributed lock
   (e.g., a Redis `SET NX` per channel) or moving polling into a BullMQ
   repeatable job. *(Since fixed with exactly that per-channel lock, see
-  ADR 0057.)*
+  ADR 0059.)*
 - **No real multi-replica load test was run** — this sandbox has no way to
   actually run more than one `api`/`worker` process behind a load balancer
   and generate concurrent load against them. What's verified is the

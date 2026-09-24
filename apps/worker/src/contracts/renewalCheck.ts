@@ -3,7 +3,7 @@ import { notifyUser } from '../notifications/notify';
 
 /**
  * Renewal reminders for contracts, warranties and licenses
- * (docs/adr/0062-contracts.md): once a contract is inside its notice window,
+ * (docs/adr/0064-contracts.md): once a contract is inside its notice window,
  * everyone who manages assets gets a CONTRACT_EXPIRING notification (in-app,
  * and email if they opted in) -- once per end date.
  */

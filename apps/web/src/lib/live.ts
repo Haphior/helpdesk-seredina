@@ -10,6 +10,7 @@ export type LiveEvent =
   | { type: 'ticket.updated'; ticketId: string }
   | { type: 'message.created'; ticketId: string }
   | { type: 'sla.breached'; ticketId: string }
+  | { type: 'ticket.typing'; ticketId: string; userId: string }
   | { type: 'notification.created'; userId: string }
   // Sent locally after a reconnect: events may have been missed while offline,
   // so every view should refetch what it shows.

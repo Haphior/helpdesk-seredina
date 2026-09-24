@@ -53,7 +53,7 @@ export default async function aiRoutes(app: FastifyInstance) {
     return reply.code(204).send();
   });
 
-  // AI triage of new tickets (docs/adr/0061-ai-triage.md) -- tenant-wide, same tier as the rest of AI settings.
+  // AI triage of new tickets (docs/adr/0063-ai-triage.md) -- tenant-wide, same tier as the rest of AI settings.
   app.get('/ai-triage-settings', { preHandler: [app.authenticate, requirePermission('tickets:manage_all')] }, async (request, reply) => {
     return reply.send({ mode: await getAiTriageMode(request.user.tenantId) });
   });

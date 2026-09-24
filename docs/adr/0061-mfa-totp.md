@@ -1,4 +1,4 @@
-# ADR 0059: Two-factor sign-in with an authenticator app (TOTP)
+# ADR 0061: Two-factor sign-in with an authenticator app (TOTP)
 
 ## Status
 
@@ -70,7 +70,7 @@ on, move it to a new phone, generate new recovery codes (a current code is
 required), and turn it off (the password is required again, so a stolen
 session alone can't strip the second factor). An admin with `users:manage`
 can **reset** a user's MFA from the Users page for a lost phone. Every step is
-in the audit log (ADR 0058).
+in the audit log (ADR 0060).
 
 ## Consequences
 

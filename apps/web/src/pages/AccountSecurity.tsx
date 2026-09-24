@@ -17,7 +17,7 @@ interface MfaStatus {
 
 type Mode = 'idle' | 'enrolling' | 'disabling' | 'regenerating' | { codes: string[] };
 
-/** Every user's own two-factor settings -- docs/adr/0059-mfa-totp.md. */
+/** Every user's own two-factor settings -- docs/adr/0061-mfa-totp.md. */
 export function AccountSecurity() {
   const { t } = useTranslation();
   const [status, setStatus] = useState<MfaStatus | null>(null);

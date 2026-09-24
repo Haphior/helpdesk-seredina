@@ -114,7 +114,7 @@ certificate is publicly trusted.
 
 - Agents enrolled at `http://<ip>:4000` stop reaching the server once the
   direct ports are bound to localhost. They need the new command;
-  re-enrolling keeps their record (machine fingerprint, ADR 0052).
+  re-enrolling keeps their record (machine fingerprint, ADR 0055).
 - Integrations (Grafana/Zabbix webhooks, the widget) point at
   `https://<address>/api/...` from now on. The console already shows the new
   URLs.

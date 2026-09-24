@@ -27,7 +27,7 @@ type Refresh = typeof refreshEmailOAuthToken;
  * an OAuth channel reuses its cached access token while it's fresh, otherwise
  * refreshes it and stores the new one (and Microsoft's rotated refresh token).
  * A rejected grant flips the channel to needs_reconnect, which takes it out of
- * the polling list until an admin re-consents -- see docs/adr/0055-email-oauth.md.
+ * the polling list until an admin re-consents -- see docs/adr/0057-email-oauth.md.
  */
 export async function resolveMailAuth(
   channel: EmailChannel,

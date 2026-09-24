@@ -1,4 +1,4 @@
--- Security audit log -- see docs/adr/0058-audit-log.md.
+-- Security audit log -- see docs/adr/0060-audit-log.md.
 CREATE TABLE "audit_logs" (
     "id" UUID NOT NULL,
     "tenant_id" UUID NOT NULL,

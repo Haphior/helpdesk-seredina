@@ -12,7 +12,7 @@ import { Textarea } from '../components/Textarea';
 import { formatDateTime } from '../lib/format';
 import type { TicketStatusCategory } from '../lib/types';
 
-// Customer portal -- docs/adr/0063-customer-portal.md. Everything here is
+// Customer portal -- docs/adr/0065-customer-portal.md. Everything here is
 // the contact's view: their own tickets, the public conversation only.
 
 interface PortalTicketSummary {

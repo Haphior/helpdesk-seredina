@@ -1,4 +1,4 @@
--- Single sign-on over OpenID Connect -- see docs/adr/0060-sso-oidc.md.
+-- Single sign-on over OpenID Connect -- see docs/adr/0062-sso-oidc.md.
 CREATE TABLE "tenant_sso_settings" (
     "id" UUID NOT NULL,
     "tenant_id" UUID NOT NULL,

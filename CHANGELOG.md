@@ -10,7 +10,7 @@ contain breaking changes).
 ### Added
 
 - **Connect Microsoft 365 and Gmail mailboxes with OAuth**
-  (`docs/adr/0055-email-oauth.md`): the Email Channels page now offers
+  (`docs/adr/0057-email-oauth.md`): the Email Channels page now offers
   "Microsoft 365 / Outlook" and "Gmail / Google Workspace" next to plain
   IMAP/SMTP. You register your own app in Microsoft Entra or Google Cloud,
   paste its client ID and secret, and sign in as the mailbox; server
@@ -18,7 +18,7 @@ contain breaking changes).
   provider revokes access, the channel shows "Reconnect needed" and stops
   being polled until you reconnect. Login errors for any mailbox, including
   password ones, now show on the Email Channels page.
-- **Email attachments are kept** (`docs/adr/0056-inbound-email-attachments.md`):
+- **Email attachments are kept** (`docs/adr/0058-inbound-email-attachments.md`):
   files attached to an incoming email (including pasted screenshots) are
   saved on the ticket, with the same 8 MB / 5-per-message limits as manual
   uploads. Anything that doesn't fit is named in a note on the message
@@ -27,38 +27,47 @@ contain breaking changes).
   has more than one email channel, instead of always from the first one.
 - **`worker` can run as several replicas**: each mailbox is polled under a
   per-mailbox lock and a repeated Message-ID is ignored, so emails no longer
-  turn into duplicate tickets (`docs/adr/0057-email-poll-lock.md`).
-- **Audit log** (`docs/adr/0058-audit-log.md`): Administration → Audit Log
+  turn into duplicate tickets (`docs/adr/0059-email-poll-lock.md`).
+- **Audit log** (`docs/adr/0060-audit-log.md`): Administration → Audit Log
   shows sign-ins (including failed ones and lockouts, with IP and browser),
   changes to users and roles, and changes to API keys, webhooks, email
   channels, Telegram, agents, AI settings and the knowledge base portal, plus
   full data exports. Entries can't be edited or deleted, even by the app
   itself. Needs the new `audit:read` permission, which existing admin roles
   get automatically.
-- **Two-factor sign-in** (`docs/adr/0059-mfa-totp.md`): users can protect
+- **Two-factor sign-in** (`docs/adr/0061-mfa-totp.md`): users can protect
   their account with a code from an authenticator app (Account security, the
   shield icon in the sidebar), with one-time recovery codes. Admins can
   require it for the whole workspace (users set it up at their next sign-in)
   and reset it for someone who lost their phone.
-- **Single sign-on** (`docs/adr/0060-sso-oidc.md`): sign in with Microsoft
+- **Single sign-on** (`docs/adr/0062-sso-oidc.md`): sign in with Microsoft
   365 (Entra ID), Google Workspace, or any OpenID Connect provider
   (Administration → Single Sign-On). Optional allowed domains, automatic
   account creation with a chosen role, and "require SSO" (admins keep
   password sign-in as a way back in).
-- **AI triage of new tickets** (`docs/adr/0061-ai-triage.md`): the AI can
+- **AI triage of new tickets** (`docs/adr/0063-ai-triage.md`): the AI can
   suggest, or automatically set, a new ticket's priority and team from its
   subject and first message (AI Settings → AI triage). Automatic mode only
   fills fields nobody set, and leaves an internal note saying why.
-- **Contracts, warranties and licenses** (`docs/adr/0062-contracts.md`):
+- **Contracts, warranties and licenses** (`docs/adr/0064-contracts.md`):
   CMDB → Contracts tracks support contracts, warranties, licenses, leases and
   subscriptions with dates, cost and the assets they cover, shows what's
   ending soon, and reminds asset managers before one ends. Asset pages list
   the contracts covering them.
-- **Customer portal** (`docs/adr/0063-customer-portal.md`): the people you
+- **Customer portal** (`docs/adr/0065-customer-portal.md`): the people you
   support can sign in at `/portal/<your-organization>` with a one-time link
   sent to their email (no password) to follow their own requests, reply,
   attach files, open new requests and request service catalog items. Off by
   default: Administration → Customer Portal.
+- **SLA countdown** (`docs/adr/0056-sla-countdown.md`): the ticket queue has
+  an SLA column with the time left on the next milestone, and the ticket
+  page shows each milestone's countdown with a progress bar. Both tick every
+  second, turn amber once 75% of the window is used, and red once breached.
+- **"Ana is typing…"**: agents with the same ticket open see who is writing a
+  reply. Nothing of the draft is sent.
+- **Reply-collision warning**: if a colleague replies or adds a note, or the
+  customer writes back, while you're drafting, a notice asks you to check
+  before sending.
 - **Your own address, with HTTPS** (`docs/adr/0054-server-address-and-tls.md`):
   `scripts/configure-address.sh` asks for the server's domain or IP and how
   to get a certificate: Let's Encrypt (automatic), your own certificate or
@@ -94,7 +103,7 @@ contain breaking changes).
   configuring process templates. See
   `docs/adr/0052-process-ticket-creation-and-reorder.md`.
 - `JWT_EXPIRES_IN` env var for the console session length (default `8h`).
-- **Agent-based discovery** (`docs/adr/0052-agent-based-discovery.md`):
+- **Agent-based discovery** (`docs/adr/0055-agent-based-discovery.md`):
   - Reinstalling the agent on the same machine reuses its existing record
     (matched by a hashed OS machine id) instead of creating a duplicate; the
     old install's credential stops working.

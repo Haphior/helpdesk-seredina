@@ -16,6 +16,7 @@ import type {
 import { useAuth } from '../auth/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { Badge } from '../components/Badge';
+import { TicketSlaCell } from '../components/SlaCountdown';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -36,7 +37,7 @@ const TABS: { key: TicketStatusCategory | 'ALL'; labelKey: string }[] = [
 
 const CHANNEL_TONE: Record<string, 'rose' | 'slate'> = { alert: 'rose', email: 'slate', api: 'slate' };
 
-const ROW_COLUMNS = '24px 56px 1fr 108px 120px 130px 110px 100px';
+const ROW_COLUMNS = '24px 56px 1fr 108px 110px 118px 130px 110px 100px';
 
 const PAGE_SIZE = 50;
 
@@ -384,6 +385,7 @@ export function TicketsQueue() {
               <span>{t('tickets.table.subject')}</span>
               <span>{t('tickets.table.status')}</span>
               <span>{t('tickets.table.priority')}</span>
+              <span>{t('tickets.table.sla')}</span>
               <span>{t('tickets.table.assignee')}</span>
               <span>{t('tickets.table.channel')}</span>
               <span className="text-right">{t('tickets.table.updated')}</span>
@@ -429,6 +431,7 @@ export function TicketsQueue() {
                         {t(`priority.${ticket.priority}`)}
                       </Badge>
                     </span>
+                    <TicketSlaCell ticket={ticket} />
                     {ticket.assignee ? (
                       <div className="flex min-w-0 items-center gap-1.5">
                         <Avatar name={ticket.assignee.name} size={19} />

@@ -23,7 +23,7 @@ interface SsoSettingsView {
   redirectUri: string | null;
 }
 
-/** Administration → Single sign-on (docs/adr/0060-sso-oidc.md). */
+/** Administration → Single sign-on (docs/adr/0062-sso-oidc.md). */
 export function SsoSettings() {
   const { t } = useTranslation();
   const [view, setView] = useState<SsoSettingsView | null>(null);

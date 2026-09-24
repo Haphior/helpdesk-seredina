@@ -103,7 +103,7 @@ export async function pollActiveEmailChannels(lock: Lock = redisLock): Promise<v
     try {
       // One replica per mailbox at a time: with several worker replicas, each
       // walks the same list and skips whatever another is already polling --
-      // see docs/adr/0057-email-poll-lock.md.
+      // see docs/adr/0059-email-poll-lock.md.
       await lock.runExclusive(`seredina:email-poll:${id}`, POLL_LOCK_TTL_MS, async () => {
         const channel = await withTenantTx(prisma, tenantId, (tx) => tx.emailChannel.findUnique({ where: { id } }));
         if (!channel) return; // deleted between the list and the fetch -- fine, skip it
