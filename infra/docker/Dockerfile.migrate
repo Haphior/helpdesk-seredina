@@ -1,4 +1,8 @@
 FROM node:20-bookworm-slim AS build
+# Prisma's query engine links against OpenSSL, which the slim image lacks;
+# without it `prisma generate` picks the wrong engine and queries fail.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/package.json
@@ -11,7 +15,7 @@ COPY packages/db packages/db
 RUN npm run build --workspace=@seredina/shared && npm run prisma:generate --workspace=@seredina/db
 
 FROM node:20-bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client openssl \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
 COPY --from=build /repo/node_modules node_modules

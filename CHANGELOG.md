@@ -147,6 +147,12 @@ contain breaking changes).
 
 - The `api`, `worker` and `mcp-server` Docker images failed to build: they
   import `@seredina/ai-adapters` but never copied it into the image.
+- The Docker images didn't run against the database: the slim Node base
+  image has no OpenSSL, so Prisma generated the wrong query engine and
+  `migrate` failed while seeding (the others would fail on their first
+  query). Every image that uses Prisma now installs `openssl`.
+- Decoding a TOTP secret no longer takes quadratic time on a long run of
+  `=` padding.
 - Tickets created from **email** now get their SLA due dates and fire the
   `ticket.created` webhook (so Slack/Teams notifications include them);
   both were skipped before.

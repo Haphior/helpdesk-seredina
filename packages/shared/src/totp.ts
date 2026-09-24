@@ -27,11 +27,19 @@ export function base32Encode(buf: Buffer): string {
 }
 
 export function base32Decode(input: string): Buffer {
-  const clean = input.toUpperCase().replace(/=+$/, '').replace(/\s+/g, '');
+  // A character loop, not a regex: /=+$/ backtracks quadratically on a long run of '='.
+  const clean = input.toUpperCase();
   let bits = 0;
   let value = 0;
   const out: number[] = [];
+  let padding = false;
   for (const ch of clean) {
+    if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') continue;
+    if (ch === '=') {
+      padding = true;
+      continue;
+    }
+    if (padding) throw new Error('invalid base32');
     const idx = BASE32_ALPHABET.indexOf(ch);
     if (idx === -1) throw new Error('invalid base32');
     value = (value << 5) | idx;
