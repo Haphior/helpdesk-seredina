@@ -159,6 +159,10 @@ contain breaking changes).
 
 ### Security
 
+- MFA recovery codes are stored with bcrypt instead of SHA-256. They have
+  far less entropy than an API key, and an unsalted fast hash let one
+  offline guess be tested against every user's codes at once. Codes
+  already saved keep working; regenerating them stores bcrypt.
 - **Postgres and Redis are no longer published on every network
   interface.** Redis has no password, so anyone who could reach the server
   could read and write its queues. Both now listen on `127.0.0.1` only

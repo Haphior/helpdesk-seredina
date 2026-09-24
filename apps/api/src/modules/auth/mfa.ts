@@ -52,8 +52,24 @@ function readChallenge(token: string, stage: 'verify' | 'setup'): { tenantId: st
   return { tenantId: data.t, userId: data.u };
 }
 
-function hashRecoveryCode(code: string): string {
-  return sha256Hex(normalizeRecoveryCode(code));
+// bcrypt, like passwords: a code has ~59 bits of entropy, and a fast unsalted
+// hash would let one offline guess be tested against every stored code of
+// every user at once. Cost 10 because a recovery attempt compares up to ten.
+const RECOVERY_CODE_BCRYPT_COST = 10;
+
+function hashRecoveryCodes(codes: string[]): Promise<string[]> {
+  return Promise.all(codes.map((code) => bcrypt.hash(normalizeRecoveryCode(code), RECOVERY_CODE_BCRYPT_COST)));
+}
+
+/** The stored hash this code matches, if any. Also reads codes stored as SHA-256 before the switch to bcrypt. */
+async function matchRecoveryCode(code: string, hashes: string[]): Promise<string | null> {
+  const normalized = normalizeRecoveryCode(code);
+  if (normalized.length !== 12) return null;
+  const legacy = sha256Hex(normalized);
+  for (const hash of hashes) {
+    if (hash.startsWith('$2') ? await bcrypt.compare(normalized, hash) : hash === legacy) return hash;
+  }
+  return null;
 }
 
 async function permissionsOf(tenantId: string, userId: string): Promise<Permission[]> {
@@ -86,8 +102,8 @@ async function checkCode(tenantId: string, userId: string, code: string): Promis
       return { ok: true, method: 'totp' };
     }
 
-    const hash = hashRecoveryCode(code);
-    if (normalizeRecoveryCode(code).length === 12 && user.mfaRecoveryCodeHashes.includes(hash)) {
+    const hash = await matchRecoveryCode(code, user.mfaRecoveryCodeHashes);
+    if (hash) {
       await tx.user.update({
         where: { id: userId },
         data: { mfaRecoveryCodeHashes: user.mfaRecoveryCodeHashes.filter((h) => h !== hash), failedLoginAttempts: 0, lockedUntil: null },
@@ -174,6 +190,7 @@ export async function beginMfaSetup(tenantId: string, userId: string): Promise<M
 /** Confirms the pending secret with a first code from the app, turning MFA on. Returns fresh recovery codes, shown once. */
 export async function confirmMfaSetup(tenantId: string, userId: string, code: string): Promise<string[]> {
   const recoveryCodes = generateRecoveryCodes();
+  const recoveryCodeHashes = await hashRecoveryCodes(recoveryCodes);
   const enabled = await withTenantTx(prisma, tenantId, async (tx) => {
     const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
     if (!user.mfaPendingSecretEncrypted) throw new MfaError('Start the setup again: no pending authenticator.');
@@ -186,7 +203,7 @@ export async function confirmMfaSetup(tenantId: string, userId: string, code: st
         mfaPendingSecretEncrypted: null,
         mfaEnabledAt: new Date(),
         mfaLastUsedStep: step,
-        mfaRecoveryCodeHashes: recoveryCodes.map(hashRecoveryCode),
+        mfaRecoveryCodeHashes: recoveryCodeHashes,
       },
     });
     return true;
@@ -248,8 +265,9 @@ export async function regenerateRecoveryCodes(tenantId: string, userId: string, 
   const check = await checkCode(tenantId, userId, code);
   if (!check.ok) throw new MfaError('That code is not valid.');
   const recoveryCodes = generateRecoveryCodes();
+  const recoveryCodeHashes = await hashRecoveryCodes(recoveryCodes);
   await withTenantTx(prisma, tenantId, (tx) =>
-    tx.user.update({ where: { id: userId }, data: { mfaRecoveryCodeHashes: recoveryCodes.map(hashRecoveryCode) } }),
+    tx.user.update({ where: { id: userId }, data: { mfaRecoveryCodeHashes: recoveryCodeHashes } }),
   );
   return recoveryCodes;
 }

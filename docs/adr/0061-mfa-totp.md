@@ -36,9 +36,14 @@ deliberately excluded: it costs money per message and is weaker.
 - `mfaLastUsedStep` refuses any code at or before the last accepted step. A
   code seen over someone's shoulder can't be replayed within its 90-second
   window.
-- 10 one-time **recovery codes**, stored as SHA-256 hashes. They're
-  high-entropy, so a fast hash is correct, just like API keys. Each works
-  once. Using one is audited.
+- 10 one-time **recovery codes**, stored as bcrypt hashes (cost 10). Each
+  works once. Using one is audited. A code has about 59 bits of entropy,
+  far less than an API key's 256. With a fast unsalted hash, one offline
+  guess could be checked against every stored code of every user at once,
+  so across many users a leaked database would give up codes within
+  minutes. bcrypt salts each code and makes every guess slow. Codes stored
+  as SHA-256 by the first version of this feature are still accepted, and
+  regenerating them stores bcrypt.
 
 ### Sign-in becomes two requests
 
