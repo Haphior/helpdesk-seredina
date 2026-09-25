@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { DEFAULT_ROLES, PERMISSIONS, type Permission } from '@seredina/shared';
 import { prisma, withTenantTx } from '@seredina/db';
@@ -226,16 +226,34 @@ export async function login(input: LoginInput, origin: RequestOrigin = { ipAddre
  * The permissions baked into the token at login are never trusted for
  * authorization -- they'd keep a demoted or deactivated user's old access
  * alive until the token expired.
+ *
+ * `issuedAtSec` is the token's `iat`: a session issued before the user's
+ * password last changed is refused too (docs/adr/0067-account-self-service.md).
  */
-export async function getActiveUserPermissions(tenantId: string, userId: string): Promise<Permission[] | null> {
+export async function getActiveUserPermissions(tenantId: string, userId: string, issuedAtSec?: number): Promise<Permission[] | null> {
   const user = await withTenantTx(prisma, tenantId, (tx) =>
     tx.user.findUnique({
       where: { id: userId },
-      select: { isActive: true, role: { select: { permissions: { select: { permission: { select: { key: true } } } } } } },
+      select: {
+        isActive: true,
+        sessionsValidAfter: true,
+        role: { select: { permissions: { select: { permission: { select: { key: true } } } } } },
+      },
     }),
   );
   if (!user || !user.isActive) return null;
+  if (!sessionStillValid(user.sessionsValidAfter, issuedAtSec)) return null;
   return (user.role?.permissions.map((rp) => rp.permission.key) ?? []) as Permission[];
+}
+
+/**
+ * `iat` has one-second resolution, so compare in whole seconds: a token issued
+ * in the same second as the change (the new one handed back to whoever changed
+ * their own password) stays valid, and anything from an earlier second doesn't.
+ */
+export function sessionStillValid(sessionsValidAfter: Date | null, issuedAtSec: number | undefined): boolean {
+  if (!sessionsValidAfter || issuedAtSec === undefined) return true;
+  return issuedAtSec >= Math.floor(sessionsValidAfter.getTime() / 1000);
 }
 
 /**
@@ -298,15 +316,17 @@ export async function listUsers(tenantId: string) {
         isActive: true,
         lockedUntil: true,
         mfaEnabledAt: true,
+        invitedAt: true,
       },
       orderBy: { name: 'asc' },
     }),
   );
   const now = new Date();
-  return users.map(({ lockedUntil, mfaEnabledAt, ...u }) => ({
+  return users.map(({ lockedUntil, mfaEnabledAt, invitedAt, ...u }) => ({
     ...u,
     isLocked: !!lockedUntil && lockedUntil > now,
     mfaEnabled: Boolean(mfaEnabledAt),
+    invitationPending: Boolean(invitedAt),
   }));
 }
 
@@ -424,7 +444,8 @@ export async function deleteRole(tenantId: string, id: string) {
 export interface CreateUserInput {
   email: string;
   name: string;
-  password: string;
+  /** Omitted for an invited account: the person chooses it from the emailed link (password.ts). */
+  password?: string;
   roleKey: string;
 }
 
@@ -443,9 +464,11 @@ export async function createUser(tenantId: string, input: CreateUserInput, calle
     if (!role) throw new Error('role not found');
     assertCanAssignRole(role.permissions.map((rp) => rp.permission.key), callerPermissions);
 
-    const passwordHash = await bcrypt.hash(input.password, 12);
+    // An invited account gets a hash of random bytes nobody knows, until the
+    // invitation is accepted.
+    const passwordHash = await bcrypt.hash(input.password ?? randomBytes(32).toString('hex'), 12);
     return tx.user.create({
-      data: { tenantId, email: input.email, name: input.name, passwordHash, roleId: role.id },
+      data: { tenantId, email: input.email, name: input.name, passwordHash, roleId: role.id, invitedAt: input.password ? null : new Date() },
       select: { id: true, name: true, email: true, role: { select: { key: true } } },
     });
   });
@@ -521,6 +544,9 @@ export async function resetUserPassword(tenantId: string, userId: string, newPas
     const existing = await tx.user.findUnique({ where: { id: userId } });
     if (!existing) throw new Error('user not found');
     // A reset password shouldn't inherit a stale lockout from before the reset.
-    await tx.user.update({ where: { id: userId }, data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null } });
+    await tx.user.update({
+      where: { id: userId },
+      data: { passwordHash, failedLoginAttempts: 0, lockedUntil: null, sessionsValidAfter: new Date(), invitedAt: null },
+    });
   });
 }

@@ -29,7 +29,11 @@ const CustomerPortalAuth = lazy(() => import('./pages/CustomerPortal').then((m) 
 const CustomerPortalTicket = lazy(() => import('./pages/CustomerPortal').then((m) => ({ default: m.CustomerPortalTicket })));
 const PortalSettings = lazy(() => import('./pages/PortalSettings').then((m) => ({ default: m.PortalSettings })));
 const Contracts = lazy(() => import('./pages/Contracts').then((m) => ({ default: m.Contracts })));
+const Contacts = lazy(() => import('./pages/Contacts').then((m) => ({ default: m.Contacts })));
+const ContactDetail = lazy(() => import('./pages/ContactDetail').then((m) => ({ default: m.ContactDetail })));
 const SsoComplete = lazy(() => import('./pages/SsoComplete').then((m) => ({ default: m.SsoComplete })));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })));
+const SetPassword = lazy(() => import('./pages/SetPassword').then((m) => ({ default: m.SetPassword })));
 const SsoSettings = lazy(() => import('./pages/SsoSettings').then((m) => ({ default: m.SsoSettings })));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity').then((m) => ({ default: m.AccountSecurity })));
 const AuditLog = lazy(() => import('./pages/AuditLog').then((m) => ({ default: m.AuditLog })));
@@ -80,6 +84,9 @@ export function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/login/sso" element={<SsoComplete />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<SetPassword />} />
+          <Route path="/accept-invite" element={<SetPassword />} />
           <Route path="/portal/:tenantSlug" element={<CustomerPortal />} />
           <Route path="/portal/:tenantSlug/auth" element={<CustomerPortalAuth />} />
           <Route path="/portal/:tenantSlug/tickets/:id" element={<CustomerPortalTicket />} />
@@ -99,6 +106,8 @@ export function App() {
               <Route path="/devices" element={<Devices />} />
               <Route path="/assets/:id" element={<AssetDetail />} />
               <Route path="/contracts" element={<Contracts />} />
+              <Route path="/contacts" element={<Contacts />} />
+              <Route path="/contacts/:id" element={<ContactDetail />} />
               <Route path="/api-keys" element={<ApiKeys />} />
               <Route path="/users" element={<Users />} />
               <Route path="/roles" element={<Roles />} />

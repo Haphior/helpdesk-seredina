@@ -7,7 +7,8 @@ export type Permission =
   | 'assets:read'
   | 'assets:manage'
   | 'channels:manage'
-  | 'audit:read';
+  | 'audit:read'
+  | 'contacts:manage';
 
 export type TicketStatusCategory = 'OPEN' | 'PENDING' | 'RESOLVED' | 'CLOSED';
 export type TicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
@@ -32,6 +33,26 @@ export interface Contact {
   name: string;
 }
 
+/** Contacts and their data rights -- docs/adr/0066-contact-data-rights.md. */
+export interface ContactSummary extends Contact {
+  createdAt: string;
+  anonymizedAt: string | null;
+  ticketCount: number;
+}
+
+export interface ContactDetail extends Contact {
+  createdAt: string;
+  anonymizedAt: string | null;
+  tickets: {
+    id: string;
+    number: number;
+    subject: string;
+    channel: string;
+    createdAt: string;
+    status: { label: string; category: TicketStatusCategory };
+  }[];
+}
+
 export interface UserSummary {
   id: string;
   name: string;
@@ -40,6 +61,8 @@ export interface UserSummary {
   isActive: boolean;
   isLocked: boolean;
   mfaEnabled: boolean;
+  /** Invited by email and hasn't chosen a password yet (docs/adr/0067-account-self-service.md). */
+  invitationPending: boolean;
 }
 
 export interface Role {

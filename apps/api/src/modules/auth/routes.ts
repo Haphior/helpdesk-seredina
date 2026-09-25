@@ -7,6 +7,7 @@ import {
   createRole,
   createUser,
   deleteRole,
+  getActiveUserPermissions,
   getMe,
   listRoles,
   listUsers,
@@ -19,6 +20,15 @@ import {
   updateUser,
 } from './service';
 import { auditRequest, recordAudit, requestOrigin } from '../audit/service';
+import {
+  changeOwnPassword,
+  completePasswordSetup,
+  describeSetupToken,
+  hasConnectedEmailChannel,
+  PasswordError,
+  requestPasswordReset,
+  sendInvitation,
+} from './password';
 import {
   beginMfaSetup,
   beginMfaSetupForLogin,
@@ -52,12 +62,22 @@ const loginSchema = z.object({
   password: z.string(),
 });
 
-const createUserSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1),
-  password: z.string().min(8).max(128),
-  roleKey: z.string().min(1),
-});
+// Either a password the admin shares, or `invite: true` to email the person a
+// link to choose their own (docs/adr/0067-account-self-service.md).
+const createUserSchema = z
+  .object({
+    email: z.string().email(),
+    name: z.string().min(1),
+    password: z.string().min(8).max(128).optional(),
+    invite: z.boolean().optional(),
+    roleKey: z.string().min(1),
+  })
+  .refine((v) => (v.invite ? v.password === undefined : v.password !== undefined), {
+    message: 'give an initial password, or send an invitation instead',
+    path: ['password'],
+  });
+
+const newPassword = z.string().min(8).max(128);
 
 const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
@@ -307,13 +327,29 @@ export default async function authRoutes(app: FastifyInstance) {
       if (!parsed.success) {
         return reply.code(400).send({ error: parsed.error.flatten() });
       }
+      const { invite, ...input } = parsed.data;
+      // Checked before the account exists, so a failed invitation never leaves
+      // behind an account nobody can sign in to.
+      if (invite && !(await hasConnectedEmailChannel(request.user.tenantId))) {
+        return reply.code(409).send({ error: 'Connect an email channel first: invitations are sent from it.' });
+      }
+      let user;
       try {
-        const user = await createUser(request.user.tenantId, parsed.data, request.user.permissions);
-        await auditRequest(request, 'user.created', { type: 'user', id: user.id, label: user.email }, { role: parsed.data.roleKey });
-        return reply.code(201).send(user);
+        user = await createUser(request.user.tenantId, input, request.user.permissions);
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
       }
+      await auditRequest(request, invite ? 'user.invited' : 'user.created', { type: 'user', id: user.id, label: user.email }, { role: input.roleKey });
+      if (invite) {
+        const inviter = await getMe(request.user.tenantId, request.user.sub).catch(() => null);
+        try {
+          await sendInvitation(request.user.tenantId, user.id, inviter?.name ?? null);
+        } catch (err) {
+          request.log.error({ err }, 'failed to queue an invitation');
+          return reply.code(201).send({ ...user, invitationSent: false });
+        }
+      }
+      return reply.code(201).send({ ...user, invitationSent: Boolean(invite) });
     },
   );
 
@@ -373,6 +409,98 @@ export default async function authRoutes(app: FastifyInstance) {
         return reply.code(204).send();
       } catch (err) {
         return reply.code(404).send({ error: (err as Error).message });
+      }
+    },
+  );
+
+  app.post(
+    '/users/:id/invite',
+    { preHandler: [app.authenticate, requirePermission('users:manage')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      if (!z.string().uuid().safeParse(id).success) return reply.code(404).send({ error: 'user not found' });
+      try {
+        const inviter = await getMe(request.user.tenantId, request.user.sub).catch(() => null);
+        await sendInvitation(request.user.tenantId, id, inviter?.name ?? null);
+        await auditRequest(request, 'user.invite_sent', { type: 'user', id });
+        return reply.code(202).send({ ok: true });
+      } catch (err) {
+        if (err instanceof PasswordError) return reply.code(err.status).send({ error: err.message });
+        throw err;
+      }
+    },
+  );
+
+  // --- Account self-service (docs/adr/0067-account-self-service.md) ---------
+
+  // Your own password. Ends your other sessions; this one gets a fresh token.
+  app.post(
+    '/auth/password',
+    { preHandler: app.authenticate, config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const parsed = z.object({ currentPassword: z.string().min(1).max(200), newPassword }).safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      const { tenantId, sub } = request.user;
+      try {
+        await changeOwnPassword(tenantId, sub, parsed.data.currentPassword, parsed.data.newPassword);
+      } catch (err) {
+        if (err instanceof PasswordError) return reply.code(err.status).send({ error: err.message });
+        throw err;
+      }
+      await auditRequest(request, 'auth.password_changed', { type: 'user', id: sub });
+      const permissions = await getActiveUserPermissions(tenantId, sub);
+      return reply.send({ token: app.jwt.sign({ sub, tenantId, permissions: permissions ?? [] }) });
+    },
+  );
+
+  // Same answer whether or not the address has an account.
+  app.post(
+    '/auth/password/forgot',
+    { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const parsed = z.object({ tenantSlug: z.string().min(1).max(63), email: z.string().email().max(320) }).safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: 'Enter your organization and a valid email address.' });
+      await requestPasswordReset(parsed.data.tenantSlug, parsed.data.email);
+      return reply.code(202).send({ ok: true });
+    },
+  );
+
+  // What a reset or invitation link is for, before anything changes.
+  app.post(
+    '/auth/password/token',
+    { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const parsed = z.object({ token: z.string().min(1).max(2000) }).safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: 'missing token' });
+      try {
+        return reply.send(await describeSetupToken(parsed.data.token));
+      } catch (err) {
+        if (err instanceof PasswordError) return reply.code(err.status).send({ error: err.message });
+        throw err;
+      }
+    },
+  );
+
+  app.post(
+    '/auth/password/set',
+    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const parsed = z.object({ token: z.string().min(1).max(2000), password: newPassword }).safeParse(request.body);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        const done = await completePasswordSetup(parsed.data.token, parsed.data.password);
+        await recordAudit(done.tenantId, {
+          action: done.kind === 'invite' ? 'user.invite_accepted' : 'auth.password_reset_by_email',
+          actorType: 'user',
+          actorUserId: done.userId,
+          actorLabel: done.email,
+          target: { type: 'user', id: done.userId, label: done.email },
+          ...requestOrigin(request),
+        });
+        return reply.send({ tenantSlug: done.tenantSlug, email: done.email });
+      } catch (err) {
+        if (err instanceof PasswordError) return reply.code(err.status).send({ error: err.message });
+        throw err;
       }
     },
   );

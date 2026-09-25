@@ -18,6 +18,7 @@ const ALL_PERMISSIONS: Permission[] = [
   'users:manage',
   'roles:manage',
   'audit:read',
+  'contacts:manage',
 ];
 
 export function Roles() {

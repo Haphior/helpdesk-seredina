@@ -46,6 +46,32 @@
       "completing": "Iniciando sesión…",
       "missingToken": "Este enlace de inicio de sesión está incompleto. Vuelve a empezar.",
       "failed": "Falló el inicio de sesión único. Inténtalo de nuevo."
+    },
+    "forgot": {
+      "link": "¿Olvidaste tu contraseña?",
+      "title": "Restablecer tu contraseña",
+      "subtitle": "Te enviaremos por correo un enlace para elegir una nueva.",
+      "submit": "Enviarme un enlace",
+      "submitting": "Enviando…",
+      "failed": "No se pudo enviar el enlace. Inténtalo de nuevo.",
+      "sentTitle": "Revisa tu correo",
+      "sentBody": "Si {{email}} tiene una cuenta en esa organización, ya va en camino un enlace para restablecer la contraseña. Vence en 30 minutos. ¿No llegó nada? Pídeselo a un administrador: puede restablecerla por ti.",
+      "back": "Volver a iniciar sesión"
+    },
+    "setPassword": {
+      "invalidLink": "Este enlace venció o ya se usó.",
+      "linkProblem": "Este enlace ya no funciona",
+      "askNew": "Pedir un enlace nuevo",
+      "resetTitle": "Elige una contraseña nueva",
+      "inviteTitle": "Bienvenido a {{org}}",
+      "for": "Para {{email}} en la organización “{{org}}”.",
+      "new": "Contraseña nueva",
+      "confirm": "Repite la contraseña",
+      "rules": "Al menos 8 caracteres.",
+      "mismatch": "Las dos contraseñas no coinciden.",
+      "submit": "Guardar contraseña",
+      "failed": "No se pudo guardar la contraseña.",
+      "done": "Contraseña guardada. Inicia sesión con tu contraseña nueva."
     }
   },
   "nav": {
@@ -91,7 +117,8 @@
       "auditLog": "Registro de auditoría",
       "sso": "Inicio de sesión único",
       "contracts": "Contratos",
-      "customerPortal": "Portal de clientes"
+      "customerPortal": "Portal de clientes",
+      "contacts": "Contactos"
     }
   },
   "layout": {
@@ -140,7 +167,13 @@
       "empty": "No hay tickets abiertos."
     },
     "onboarding": {
-      "allDone": "Todo configurado — oculta este widget cuando quieras con el ícono del ojo."
+      "allDone": "Todo configurado — oculta este widget cuando quieras con el ícono del ojo.",
+      "items": {
+        "customize_status": "Personaliza tus estados de tickets",
+        "set_sla_policy": "Define una política de SLA",
+        "create_macro": "Crea una macro",
+        "invite_teammate": "Invita a un compañero de equipo"
+      }
     },
     "recentActivity": {
       "empty": "Aún no hay tickets."
@@ -576,7 +609,16 @@
     "newRecoveryCodes": "Nuevos códigos de recuperación",
     "newDevice": "Cambiar a un teléfono nuevo",
     "disableExplain": "Escribe tu contraseña para desactivar la verificación en dos pasos.",
-    "password": "Contraseña",
+    "password": {
+      "title": "Contraseña",
+      "intro": "Cambiar tu contraseña cierra tu sesión en todos los demás lugares.",
+      "current": "Contraseña actual",
+      "new": "Contraseña nueva",
+      "confirm": "Repite la contraseña nueva",
+      "submit": "Cambiar contraseña",
+      "done": "Contraseña cambiada. Se cerraron tus otras sesiones.",
+      "failed": "No se pudo cambiar la contraseña."
+    },
     "disable": "Desactivar",
     "regenerateExplain": "Escribe un código de tu app. Tus códigos de recuperación anteriores dejarán de funcionar.",
     "regenerate": "Crear códigos nuevos"
@@ -604,7 +646,7 @@
     "resetFailed": "No se pudo restablecer la contraseña",
     "title": "Usuarios",
     "newUser": "Nuevo usuario",
-    "intro": "Agentes y administradores de esta organización. Todavía no hay correo de invitación: comparte la contraseña directamente.",
+    "intro": "Agentes y administradores de esta organización. Invita a alguien por correo para que elija su propia contraseña, o define una inicial y compártela con esa persona.",
     "col": {
       "name": "Nombre",
       "email": "Correo",
@@ -621,10 +663,18 @@
     "reactivate": "reactivar",
     "initialPassword": "Contraseña inicial",
     "resetTitle": "Restablecer la contraseña de {{name}}",
-    "resetDone": "Contraseña restablecida. Comparte la nueva contraseña directamente con {{name}} — no hay un correo que la envíe por ti.",
+    "resetDone": "Contraseña restablecida, y se cerraron sus sesiones abiertas. Comparte la nueva contraseña directamente con {{name}}, o pídele que use “¿Olvidaste tu contraseña?” en la página de inicio de sesión.",
     "done": "Listo",
     "newPassword": "Nueva contraseña",
-    "resetPasswordButton": "Restablecer contraseña"
+    "resetPasswordButton": "Restablecer contraseña",
+    "invite": {
+      "option": "Enviarle una invitación por correo",
+      "optionHint": "Elige su propia contraseña desde el enlace. Necesita un canal de correo conectado.",
+      "pending": "Invitación pendiente",
+      "resend": "reenviar invitación",
+      "resent": "Se reenvió la invitación a {{email}}.",
+      "failed": "No se pudo enviar la invitación."
+    }
   },
   "sso": {
     "title": "Inicio de sesión único",
@@ -978,7 +1028,8 @@
       "channels:manage": "Gestionar canales",
       "users:manage": "Gestionar usuarios",
       "roles:manage": "Gestionar roles",
-      "audit:read": "Ver el registro de auditoría"
+      "audit:read": "Ver el registro de auditoría",
+      "contacts:manage": "Gestionar los datos personales de los contactos"
     }
   },
   "equipment": {
@@ -1695,5 +1746,66 @@
     "noTickets": "Ningún ticket hace referencia a este activo todavía.",
     "services": "Servicios que sostiene ({{count}})",
     "noServices": "Todavía no está vinculado a ningún servicio de negocio — adminístralo desde la página Servicios."
+  },
+  "contacts": {
+    "loadFailed": "No se pudieron cargar los contactos",
+    "saveFailed": "No se pudo guardar el contacto",
+    "exportFailed": "No se pudieron exportar los datos del contacto",
+    "title": "Contactos",
+    "intro": "Las personas que escriben, por correo, el portal, el widget o cualquier otro canal. Abre uno para ver sus tickets, corregir sus datos, entregarle una copia de sus datos o borrarlos.",
+    "searchPlaceholder": "Buscar por nombre o correo…",
+    "empty": "No se encontraron contactos.",
+    "loadMore": "Cargar más",
+    "fields": {
+      "name": "Nombre",
+      "email": "Correo",
+      "tickets": "Tickets",
+      "since": "Desde"
+    },
+    "anonymized": "anonimizado",
+    "anonymizedOn": "Anonimizado el {{date}}",
+    "edit": "Editar",
+    "editTitle": "Editar contacto",
+    "ticketsHeading": "Tickets ({{count}})",
+    "noTickets": "Este contacto no tiene tickets.",
+    "rights": {
+      "title": "Datos personales",
+      "intro": "Lo que este contacto puede pedir según la ley de protección de datos: una copia de sus datos, una corrección (usa Editar) o su eliminación.",
+      "exportTitle": "Entregarle una copia",
+      "exportHint": "Un archivo JSON con sus datos, sus tickets y la conversación pública.",
+      "includeNotes": "Incluir notas internas (léelas antes de enviarlas)",
+      "export": "Descargar datos",
+      "anonymizeTitle": "Borrar sus datos",
+      "anonymizeHint": "Elimina su nombre, su correo y todo lo escrito en sus tickets. Los tickets quedan como registros vacíos para que los reportes no cambien.",
+      "anonymize": "Anonimizar contacto…",
+      "anonymizeModalTitle": "Anonimizar este contacto",
+      "anonymizeWhat_one": "Esto borra los datos personales de este contacto y de su {{count}} ticket:",
+      "anonymizeWhat_other": "Esto borra los datos personales de este contacto y de sus {{count}} tickets:",
+      "goes1": "Su nombre y su correo.",
+      "goes2": "Cada asunto, mensaje, nota interna, adjunto, valor de campo personalizado y comentario de encuesta de sus tickets.",
+      "stays": "Los tickets quedan como registros vacíos (número, estado, fechas, SLA, calificación), así que los reportes y estadísticas no cambian.",
+      "noUndo": "No se puede deshacer.",
+      "typeEmail": "Escribe {{email}} para confirmar",
+      "anonymizeConfirm": "Anonimizar",
+      "anonymizeFailed": "No se pudo anonimizar el contacto",
+      "anonymizedNotice_one": "Contacto anonimizado, junto con {{count}} ticket.",
+      "anonymizedNotice_other": "Contacto anonimizado, junto con {{count}} tickets.",
+      "introAnonymized": "Los datos personales de este contacto se borraron. La exportación muestra lo que queda: los registros vacíos de sus tickets."
+    },
+    "retention": {
+      "title": "Retención automática",
+      "intro": "Anonimiza automáticamente a los contactos que no tienen tickets abiertos ni actividad durante una cantidad de días. Viene desactivada.",
+      "statusOn": "Activada: los contactos se anonimizan después de {{days}} días sin actividad.",
+      "statusOff": "Desactivada: los contactos se conservan hasta que alguien los anonimice.",
+      "after": "Anonimizar después de",
+      "days": "días sin actividad",
+      "daysLabel": "Días sin actividad",
+      "turnOff": "Desactivar",
+      "range": "Entre {{min}} y {{max}} días.",
+      "confirm": "Los contactos sin tickets abiertos ni actividad durante {{days}} días se anonimizarán automáticamente, a partir de las próximas horas. Para ellos no se puede deshacer. ¿Continuar?",
+      "savedOn": "Guardado. Los contactos inactivos durante {{days}} días se anonimizarán.",
+      "savedOff": "La retención automática está desactivada.",
+      "failed": "No se pudo guardar la política de retención"
+    }
   }
 }

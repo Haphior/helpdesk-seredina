@@ -102,14 +102,15 @@ admin exists afterwards so this isn't needed again.
   always sign in with their password. Turn "require SSO" off until the
   provider is back.
 
-## Customer portal sign-in emails don't arrive
+## Portal links, invitations or password resets don't arrive
 
-The portal sends its sign-in links through your email channels, so at
-least one must be **connected** (check Email Channels for errors). Each
-address can get at most 3 links per hour, and the page says the same thing
+These emails go out through your email channels, so at least one must be
+**connected** (check Email Channels for errors). Invitations refuse to
+send without one; a password reset or portal link silently can't. For portal and reset links, each
+address can get at most 3 per hour, and the page says the same thing
 whether or not the address is known, so a typo looks like success. A send
 that fails is logged by `worker`. Links go to `WEB_ORIGIN`, which must be the
-address customers can reach.
+address people can reach.
 
 ## Port already in use
 

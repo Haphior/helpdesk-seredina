@@ -38,6 +38,7 @@ export default async function liveRoutes(app: FastifyInstance, opts: LiveRoutesO
     async (request, reply) => {
       const { tenantId, sub: userId } = request.user;
       const expiresAt = (request.user as { exp?: number }).exp;
+      const issuedAt = (request.user as { iat?: number }).iat;
       const raw = reply.raw;
 
       let open = false;
@@ -88,7 +89,7 @@ export default async function liveRoutes(app: FastifyInstance, opts: LiveRoutesO
       timers.push(
         setInterval(async () => {
           try {
-            const permissions = await getActiveUserPermissions(tenantId, userId);
+            const permissions = await getActiveUserPermissions(tenantId, userId, issuedAt);
             if (!permissions?.includes('tickets:read')) close();
           } catch (err) {
             request.log.warn({ err }, 'live stream revalidation failed; keeping stream open');

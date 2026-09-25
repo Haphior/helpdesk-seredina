@@ -70,6 +70,10 @@ docker compose -f infra/docker-compose.yml up -d
 really mean to replace that data. Restore into a test machine now and
 then: a backup you've never restored is a guess, not a backup.
 
+Backups also keep personal data that was later
+[anonymized](/guide/contacts-and-personal-data) in the live database, until
+they rotate out. Keep them only as long as you need them.
+
 ### What else you need to back up
 
 A database dump **isn't enough on its own**. Keep a copy of your `.env`

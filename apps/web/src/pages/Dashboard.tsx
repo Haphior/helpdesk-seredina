@@ -550,7 +550,7 @@ function OnboardingChecklistWidget({ checklist }: { checklist: OnboardingCheckli
           >
             <CheckIcon width={12} height={12} />
           </span>
-          <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.label}</span>
+          <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>{t(`dashboard.onboarding.items.${item.key}`, { defaultValue: item.label })}</span>
         </Link>
       ))}
     </div>

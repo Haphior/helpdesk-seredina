@@ -66,6 +66,7 @@ const navGroups: {
     items: [
       { to: '/dashboard', itemKey: 'dashboard', icon: DashboardIcon },
       { to: '/tickets', itemKey: 'tickets', icon: TicketIcon },
+      { to: '/contacts', itemKey: 'contacts', icon: UsersIcon, permission: 'tickets:read' },
       { to: '/processes', itemKey: 'processes', icon: ChecklistIcon, permission: 'tickets:write' },
       { to: '/problems', itemKey: 'problems', icon: WarningIcon, permission: 'tickets:write' },
       { to: '/knowledge-base', itemKey: 'knowledgeBase', icon: BookIcon, permission: 'tickets:read' },

@@ -34,7 +34,8 @@ export default fp(async function jwtPlugin(app: FastifyInstance) {
       return reply.code(401).send({ error: 'unauthorized' });
     }
 
-    const permissions = await getActiveUserPermissions(request.user.tenantId, request.user.sub);
+    const issuedAt = (request.user as { iat?: number }).iat;
+    const permissions = await getActiveUserPermissions(request.user.tenantId, request.user.sub, issuedAt);
     if (!permissions) {
       return reply.code(401).send({ error: 'unauthorized' });
     }

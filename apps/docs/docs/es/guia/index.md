@@ -29,11 +29,10 @@ del widget.
 
 ## Invitar a tu equipo
 
-Todavía no existe un flujo de invitación por email — desde
-**Administración → Usuarios**, un admin crea la cuenta directamente
-(nombre, email, contraseña inicial, rol) y comparte la contraseña por
-fuera de la aplicación. Por ahora nadie puede cambiar su propia
-contraseña: un admin la restablece desde la misma página.
+Desde **Administración → Usuarios**, invitá a cada persona por correo para
+que elija su propia contraseña (necesita un canal de correo conectado), o
+creá la cuenta con una contraseña inicial y compartila vos. Ver
+[Usuarios y roles](/es/guia/administracion#usuarios-y-roles).
 
 Con el [inicio de sesión único](/es/guia/administracion#inicio-de-sesion-unico-sso)
 y la creación automática de cuentas activados, no hace falta crear
@@ -57,3 +56,4 @@ lateral de la propia consola:
 - **[Encuestas CSAT](/es/guia/encuestas-csat)**
 - **[Administración](/es/guia/administracion)** — usuarios, roles, inicio de sesión único, verificación en dos pasos, registro de auditoría, claves de API, apariencia, idioma
 - **[Portal público](/es/guia/portal-publico)** — portal de clientes, base de conocimiento pública y página de estado
+- **[Contactos y datos personales](/es/guia/contactos-y-datos-personales)** — corregir, exportar y borrar los datos de un contacto, y retención automática

@@ -46,6 +46,32 @@
       "completing": "Signing you in…",
       "missingToken": "This sign-in link is incomplete. Start again.",
       "failed": "Single sign-on failed. Try again."
+    },
+    "forgot": {
+      "link": "Forgot your password?",
+      "title": "Reset your password",
+      "subtitle": "We'll email you a link to choose a new one.",
+      "submit": "Email me a link",
+      "submitting": "Sending…",
+      "failed": "Couldn't send the link. Try again.",
+      "sentTitle": "Check your email",
+      "sentBody": "If {{email}} has an account in that organization, a link to reset the password is on its way. It expires in 30 minutes. Nothing arrived? Ask an admin: they can reset it for you.",
+      "back": "Back to sign in"
+    },
+    "setPassword": {
+      "invalidLink": "This link has expired or was already used.",
+      "linkProblem": "This link doesn't work anymore",
+      "askNew": "Ask for a new link",
+      "resetTitle": "Choose a new password",
+      "inviteTitle": "Welcome to {{org}}",
+      "for": "For {{email}} in the organization “{{org}}”.",
+      "new": "New password",
+      "confirm": "Repeat the password",
+      "rules": "At least 8 characters.",
+      "mismatch": "The two passwords don't match.",
+      "submit": "Save password",
+      "failed": "Couldn't save the password.",
+      "done": "Password saved. Sign in with your new password."
     }
   },
   "nav": {
@@ -91,7 +117,8 @@
       "auditLog": "Audit Log",
       "sso": "Single Sign-On",
       "contracts": "Contracts",
-      "customerPortal": "Customer Portal"
+      "customerPortal": "Customer Portal",
+      "contacts": "Contacts"
     }
   },
   "layout": {
@@ -140,7 +167,13 @@
       "empty": "No open tickets."
     },
     "onboarding": {
-      "allDone": "All set up — hide this widget any time with the eye icon above."
+      "allDone": "All set up — hide this widget any time with the eye icon above.",
+      "items": {
+        "customize_status": "Customize your ticket statuses",
+        "set_sla_policy": "Set an SLA policy",
+        "create_macro": "Create a macro",
+        "invite_teammate": "Invite a teammate"
+      }
     },
     "recentActivity": {
       "empty": "No tickets yet."
@@ -576,7 +609,16 @@
     "newRecoveryCodes": "New recovery codes",
     "newDevice": "Move to a new phone",
     "disableExplain": "Enter your password to turn off two-factor sign-in.",
-    "password": "Password",
+    "password": {
+      "title": "Password",
+      "intro": "Changing your password signs you out everywhere else.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Repeat the new password",
+      "submit": "Change password",
+      "done": "Password changed. Your other sessions were signed out.",
+      "failed": "Couldn't change the password."
+    },
     "disable": "Turn off",
     "regenerateExplain": "Enter a code from your app. Your old recovery codes stop working.",
     "regenerate": "Create new codes"
@@ -604,7 +646,7 @@
     "resetFailed": "Failed to reset password",
     "title": "Users",
     "newUser": "New user",
-    "intro": "Agents/admins in this organization. No invite email yet: share the password with them directly.",
+    "intro": "Agents and admins in this organization. Invite someone by email so they choose their own password, or set an initial one and share it with them.",
     "col": {
       "name": "Name",
       "email": "Email",
@@ -621,10 +663,18 @@
     "reactivate": "reactivate",
     "initialPassword": "Initial password",
     "resetTitle": "Reset password for {{name}}",
-    "resetDone": "Password reset. Share the new password with {{name}} directly — there's no email flow to send it for you.",
+    "resetDone": "Password reset, and their open sessions were signed out. Share the new password with {{name}} directly, or ask them to use “Forgot your password?” on the sign-in page instead.",
     "done": "Done",
     "newPassword": "New password",
-    "resetPasswordButton": "Reset password"
+    "resetPasswordButton": "Reset password",
+    "invite": {
+      "option": "Email them an invitation instead",
+      "optionHint": "They choose their own password from the link. Needs a connected email channel.",
+      "pending": "Invitation pending",
+      "resend": "resend invitation",
+      "resent": "Invitation sent again to {{email}}.",
+      "failed": "Couldn't send the invitation."
+    }
   },
   "sso": {
     "title": "Single sign-on",
@@ -978,7 +1028,8 @@
       "channels:manage": "Manage channels",
       "users:manage": "Manage users",
       "roles:manage": "Manage roles",
-      "audit:read": "See the audit log"
+      "audit:read": "See the audit log",
+      "contacts:manage": "Manage contacts’ personal data"
     }
   },
   "equipment": {
@@ -1695,5 +1746,66 @@
     "noTickets": "No tickets reference this asset yet.",
     "services": "Services underpinned ({{count}})",
     "noServices": "Not linked to any business service yet — manage this from the Services page."
+  },
+  "contacts": {
+    "loadFailed": "Failed to load contacts",
+    "saveFailed": "Failed to save the contact",
+    "exportFailed": "Failed to export the contact’s data",
+    "title": "Contacts",
+    "intro": "The people who write in, by email, the portal, the widget or any other channel. Open one to see their tickets, correct their details, give them a copy of their data, or erase it.",
+    "searchPlaceholder": "Search by name or email…",
+    "empty": "No contacts found.",
+    "loadMore": "Load more",
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "tickets": "Tickets",
+      "since": "Since"
+    },
+    "anonymized": "anonymized",
+    "anonymizedOn": "Anonymized on {{date}}",
+    "edit": "Edit",
+    "editTitle": "Edit contact",
+    "ticketsHeading": "Tickets ({{count}})",
+    "noTickets": "No tickets from this contact.",
+    "rights": {
+      "title": "Personal data",
+      "intro": "What this contact can ask for under data protection law: a copy of their data, a correction (use Edit), or its deletion.",
+      "exportTitle": "Give them a copy",
+      "exportHint": "A JSON file with their details, their tickets and the public conversation.",
+      "includeNotes": "Include internal notes (read them before sending)",
+      "export": "Download data",
+      "anonymizeTitle": "Erase their data",
+      "anonymizeHint": "Removes their name, email and everything written on their tickets. The tickets stay as empty records so reports don't change.",
+      "anonymize": "Anonymize contact…",
+      "anonymizeModalTitle": "Anonymize this contact",
+      "anonymizeWhat_one": "This erases the personal data of this contact and of their {{count}} ticket:",
+      "anonymizeWhat_other": "This erases the personal data of this contact and of their {{count}} tickets:",
+      "goes1": "Their name and email.",
+      "goes2": "Every subject, message, internal note, attachment, custom field value and survey comment on their tickets.",
+      "stays": "The tickets stay as empty records (number, status, dates, SLA, rating), so reports and statistics don't change.",
+      "noUndo": "This can't be undone.",
+      "typeEmail": "Type {{email}} to confirm",
+      "anonymizeConfirm": "Anonymize",
+      "anonymizeFailed": "Failed to anonymize the contact",
+      "anonymizedNotice_one": "Contact anonymized, along with {{count}} ticket.",
+      "anonymizedNotice_other": "Contact anonymized, along with {{count}} tickets.",
+      "introAnonymized": "This contact's personal data was erased. The export shows what's left: the empty ticket records."
+    },
+    "retention": {
+      "title": "Automatic retention",
+      "intro": "Anonymize contacts automatically once they have no open ticket and no activity for a set number of days. Off by default.",
+      "statusOn": "On: contacts are anonymized after {{days}} days without activity.",
+      "statusOff": "Off: contacts are kept until someone anonymizes them.",
+      "after": "Anonymize after",
+      "days": "days without activity",
+      "daysLabel": "Days without activity",
+      "turnOff": "Turn off",
+      "range": "Between {{min}} and {{max}} days.",
+      "confirm": "Contacts with no open ticket and no activity for {{days}} days will be anonymized automatically, starting within a few hours. This can't be undone for them. Continue?",
+      "savedOn": "Saved. Contacts inactive for {{days}} days will be anonymized.",
+      "savedOff": "Automatic retention is off.",
+      "failed": "Failed to save the retention policy"
+    }
   }
 }

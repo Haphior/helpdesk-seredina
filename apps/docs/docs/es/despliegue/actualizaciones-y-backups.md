@@ -74,6 +74,10 @@ cuando de verdad quieras reemplazar esos datos. Probá restaurar en una
 máquina de prueba de vez en cuando: un backup que nunca restauraste es una
 suposición, no un backup.
 
+Los backups también conservan los datos personales que después se
+[anonimizaron](/es/guia/contactos-y-datos-personales) en la base en uso,
+hasta que se rotan. Guardalos solo el tiempo que los necesites.
+
 ### Lo que también necesitás respaldar
 
 Un volcado de la base de datos **no alcanza por sí solo**. Guardá una copia

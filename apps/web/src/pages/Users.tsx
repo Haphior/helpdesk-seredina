@@ -16,6 +16,7 @@ export function Users() {
   const [mfaRequired, setMfaRequired] = useState<boolean | null>(null);
   const [users, setUsers] = useState<UserSummary[] | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [resettingPassword, setResettingPassword] = useState<UserSummary | null>(null);
@@ -74,6 +75,17 @@ export function Users() {
     }
   }
 
+  async function resendInvite(user: UserSummary) {
+    setError(null);
+    setNotice(null);
+    try {
+      await apiPost(`/users/${user.id}/invite`);
+      setNotice(t('users.invite.resent', { email: user.email }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('users.invite.failed'));
+    }
+  }
+
   async function unlock(user: UserSummary) {
     try {
       await apiPost(`/users/${user.id}/unlock`);
@@ -106,6 +118,7 @@ export function Users() {
       )}
 
       {error && <p className="mb-4 text-sm text-rose-600">{error}</p>}
+      {notice && <p className="mb-4 text-sm text-emerald-600">{notice}</p>}
       {users === null && <p className="text-sm text-slate-500">{t('common.loading')}</p>}
 
       {users && users.length > 0 && (
@@ -147,12 +160,18 @@ export function Users() {
                     <Badge tone="slate">{t('users.deactivated')}</Badge>
                   )}
                   {u.isLocked && <Badge tone="rose">{t('users.locked')}</Badge>}
+                  {u.invitationPending && <Badge tone="amber">{t('users.invite.pending')}</Badge>}
                   {u.mfaEnabled && <Badge tone="indigo">{t('users.mfa.badge')}</Badge>}
                 </div>
                 <div className="flex flex-shrink-0 items-center justify-end gap-2.5 text-xs">
                   {u.isLocked && (
                     <button onClick={() => unlock(u)} className="text-slate-400 hover:text-indigo-600">
                       {t('users.unlock')}
+                    </button>
+                  )}
+                  {u.invitationPending && u.isActive && (
+                    <button onClick={() => resendInvite(u)} className="text-slate-400 hover:text-indigo-600">
+                      {t('users.invite.resend')}
                     </button>
                   )}
                   <button onClick={() => setResettingPassword(u)} className="text-slate-400 hover:text-indigo-600">
@@ -199,6 +218,7 @@ function CreateUserModal({
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [invite, setInvite] = useState(false);
   const [roleKey, setRoleKey] = useState(roles.find((r) => r.key === 'agent')?.key ?? roles[0]?.key ?? '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -218,7 +238,7 @@ function CreateUserModal({
     setError(null);
     setSubmitting(true);
     try {
-      await apiPost('/users', { email, name, password, roleKey });
+      await apiPost('/users', invite ? { email, name, invite: true, roleKey } : { email, name, password, roleKey });
       onCreated();
       onClose();
     } catch (err) {
@@ -233,14 +253,23 @@ function CreateUserModal({
       <form onSubmit={onSubmit} className="space-y-3">
         <Input label={t('users.col.name')} value={name} onChange={(e) => setName(e.target.value)} required />
         <Input label={t('users.col.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <Input
-          label={t('users.initialPassword')}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-        />
+        <label className="flex items-start gap-2 text-[13px] text-slate-600">
+          <input type="checkbox" checked={invite} onChange={(e) => setInvite(e.target.checked)} className="mt-0.5" />
+          <span>
+            {t('users.invite.option')}
+            <span className="block text-xs text-slate-400">{t('users.invite.optionHint')}</span>
+          </span>
+        </label>
+        {!invite && (
+          <Input
+            label={t('users.initialPassword')}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+          />
+        )}
         <Select label={t('users.col.role')} value={roleKey} onChange={(e) => setRoleKey(e.target.value)}>
           {roles.map((r) => (
             <option key={r.id} value={r.key}>

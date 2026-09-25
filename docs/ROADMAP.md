@@ -219,20 +219,23 @@ rendered conversation thread, zero console errors.
   channels per tenant are meaningfully supported.
 - ✅ *Resolved, ADR 0058:* No email attachment handling (`mailparser` extracts them; nothing stores/surfaces
   them yet).
-- Realtime updates over WebSockets via Redis pub/sub (the web app currently polls by
-  navigation/refetch-after-mutation only — no live push).
+- ✅ *Shipped, ADR 0053:* ~~Realtime updates over WebSockets via Redis pub/sub~~ — live
+  console updates over Server-Sent Events, fanned out through Redis pub/sub.
 - ~~AI copilot v1 (reply suggestions, summarization, auto-classify)~~ — reply
   suggestions and summarization shipped (below); auto-classify shipped as AI
   triage (priority + team), ADR 0063.
-- Knowledge base CRUD + full-text search.
-- `SEREDINA_MODE=self_hosted` auto-bootstrapping a default tenant in the `migrate`
-  container.
-- `infra/docker-compose.yml` has not been run as a single `docker compose up` in this
+- ✅ *Shipped, ADR 0018 (and semantic search, ADR 0032):* ~~Knowledge base CRUD + full-text search.~~
+- ✅ *Resolved differently, ADR 0036:* ~~`SEREDINA_MODE=self_hosted` auto-bootstrapping a
+  default tenant in the `migrate` container~~ — the first visitor registers the one
+  organization at `/register` instead.
+- ✅ *Done:* CI's `compose-smoke` job (`scripts/compose-smoke.sh`) now builds every image
+  and boots the whole stack on every pull request. Original note: ~~`infra/docker-compose.yml`
+  has not been run as a single `docker compose up` in this
   environment (no compose plugin here) — verified by running each of its steps by
   hand instead (`docker run` for postgres/redis, manual migrate+RLS+seed, `tsx` for
   api). Worth an actual `docker compose up` smoke test in an environment that has the
   plugin before calling Phase 1 done.
-- MAC-address-based asset identity instead of (or alongside) IP-based upsert, to
+- ✅ *Shipped, ADR 0055 (agents and passive discovery match by MAC):* MAC-address-based asset identity instead of (or alongside) IP-based upsert, to
   survive DHCP lease churn on re-scans — a known limitation, see the ADR.
 
 **Manual Asset CRUD ✅ (this pass).** `POST/PATCH/DELETE /assets` (`assets:manage`),
@@ -1625,8 +1628,8 @@ these real users actually want:
   Microsoft Intune), effectively a separate product — revisit only if there's
   real demand, not preemptively.
 
-**Console internationalization (i18n) — 🚧 v1/v1.1 shipped 2026-09-21, partial
-coverage (ADR 0049).** The admin console was English-only; real value for a
+**Console internationalization (i18n) — ✅ complete in English and Spanish since
+2026-09-23 (ADR 0049); the notes below are the history of how it got there.** The admin console was English-only; real value for a
 self-hosted, open-source tool whose adopter base skews international (unlike a
 hosted SaaS with one default locale, a self-hosted operator's own staff and
 customers may not read English at all). Shipped: `react-i18next`, a per-user
@@ -1644,10 +1647,10 @@ copy, it can't live in a static locale file. The file format (one JSON per
 locale, namespaced by feature) lets a community contributor add a language by
 editing one file, no build tooling or paid localization vendor required —
 deliberately a cost-free way to grow, unlike the OAuth-app/code-signing items
-above. **Not yet covered, named explicitly rather than silently incomplete**:
-every other page under CMDB/Configuration/Operations/Administration (~49
-files); the dashboard's onboarding-checklist item text is backend-supplied and
-needs a locale-aware API response, not just a frontend string sweep.
+above. ~~Not yet covered: every other page under CMDB/Configuration/Operations/
+Administration (~49 files)~~ — all translated since, including the dashboard's
+onboarding checklist (translated in the console by item key, with the API's
+English label as the fallback).
 
 **AI-assisted initial setup, added 2026-09-21.** Phase 2's first-run product tour
 (✅, `getOnboardingChecklist`) is a static checklist — customize a status, set an

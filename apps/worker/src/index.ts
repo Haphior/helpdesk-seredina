@@ -34,6 +34,7 @@ import { advanceEscalation } from './oncall/escalate';
 import { sendNotificationEmail } from './notifications/sendEmail';
 import { embedKbArticle } from './kb/embed';
 import { sendDueContractReminders } from './contracts/renewalCheck';
+import { anonymizeContactsPastRetention } from './contacts/retention';
 import { redisLock } from './lib/lock';
 import { captureError, initErrorTracking } from './lib/errorTracking';
 
@@ -215,6 +216,27 @@ async function contractReminderLoop() {
 }
 
 setTimeout(contractReminderLoop, 60_000);
+
+// Contact retention (docs/adr/0066-contact-data-rights.md). Periods are counted
+// in days, so every few hours is plenty; each run handles at most 500 contacts
+// and the next one picks up the rest.
+const CONTACT_RETENTION_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+async function contactRetentionLoop() {
+  try {
+    await redisLock.runExclusive('seredina:contact-retention', 30 * 60 * 1000, async () => {
+      const count = await anonymizeContactsPastRetention();
+      if (count > 0) console.log(`[worker] anonymized ${count} contact(s) past their retention period`);
+    });
+  } catch (err) {
+    console.error('[worker] contact retention run failed:', err);
+    captureError(err);
+  } finally {
+    setTimeout(contactRetentionLoop, CONTACT_RETENTION_INTERVAL_MS);
+  }
+}
+
+setTimeout(contactRetentionLoop, 90_000);
 
 console.log(
   '[worker] listening on queues:',
