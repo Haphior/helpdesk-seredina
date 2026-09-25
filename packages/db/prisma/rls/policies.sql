@@ -235,3 +235,35 @@ $$;
 
 REVOKE ALL ON FUNCTION public.list_contracts_due_for_renewal_notice() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.list_contracts_due_for_renewal_notice() TO app_tenant;
+
+-- Contact retention (docs/adr/0066-contact-data-rights.md): the worker's
+-- periodic sweep has no tenant context and needs the contacts, across every
+-- tenant that turned retention on, with no open ticket and no activity inside
+-- the tenant's window. Same escape hatch as above: (id, tenant_id) only; the
+-- anonymization itself runs through the normal tenant-scoped path.
+CREATE OR REPLACE FUNCTION public.list_contacts_due_for_retention()
+RETURNS TABLE (id uuid, tenant_id uuid)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT c.id, c.tenant_id
+  FROM contacts c
+  JOIN tenants t ON t.id = c.tenant_id
+  WHERE t.contact_retention_days IS NOT NULL
+    AND c.anonymized_at IS NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM tickets tk
+      JOIN ticket_statuses ts ON ts.id = tk.status_id
+      WHERE tk.contact_id = c.id AND ts.category NOT IN ('RESOLVED', 'CLOSED')
+    )
+    AND GREATEST(
+      c.created_at,
+      COALESCE((SELECT max(tk.updated_at) FROM tickets tk WHERE tk.contact_id = c.id), c.created_at),
+      COALESCE((SELECT max(m.created_at) FROM messages m JOIN tickets tk ON tk.id = m.ticket_id WHERE tk.contact_id = c.id), c.created_at)
+    ) < now() - make_interval(days => t.contact_retention_days)
+  LIMIT 500;
+$$;
+
+REVOKE ALL ON FUNCTION public.list_contacts_due_for_retention() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.list_contacts_due_for_retention() TO app_tenant;

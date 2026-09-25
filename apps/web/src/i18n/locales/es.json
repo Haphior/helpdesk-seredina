@@ -91,7 +91,8 @@
       "auditLog": "Registro de auditoría",
       "sso": "Inicio de sesión único",
       "contracts": "Contratos",
-      "customerPortal": "Portal de clientes"
+      "customerPortal": "Portal de clientes",
+      "contacts": "Contactos"
     }
   },
   "layout": {
@@ -978,7 +979,8 @@
       "channels:manage": "Gestionar canales",
       "users:manage": "Gestionar usuarios",
       "roles:manage": "Gestionar roles",
-      "audit:read": "Ver el registro de auditoría"
+      "audit:read": "Ver el registro de auditoría",
+      "contacts:manage": "Gestionar los datos personales de los contactos"
     }
   },
   "equipment": {
@@ -1695,5 +1697,65 @@
     "noTickets": "Ningún ticket hace referencia a este activo todavía.",
     "services": "Servicios que sostiene ({{count}})",
     "noServices": "Todavía no está vinculado a ningún servicio de negocio — adminístralo desde la página Servicios."
+  },
+  "contacts": {
+    "loadFailed": "No se pudieron cargar los contactos",
+    "saveFailed": "No se pudo guardar el contacto",
+    "exportFailed": "No se pudieron exportar los datos del contacto",
+    "title": "Contactos",
+    "intro": "Las personas que escriben, por correo, el portal, el widget o cualquier otro canal. Abre uno para ver sus tickets, corregir sus datos, entregarle una copia de sus datos o borrarlos.",
+    "searchPlaceholder": "Buscar por nombre o correo…",
+    "empty": "No se encontraron contactos.",
+    "loadMore": "Cargar más",
+    "fields": {
+      "name": "Nombre",
+      "email": "Correo",
+      "tickets": "Tickets",
+      "since": "Desde"
+    },
+    "anonymized": "anonimizado",
+    "anonymizedOn": "Anonimizado el {{date}}",
+    "edit": "Editar",
+    "editTitle": "Editar contacto",
+    "ticketsHeading": "Tickets ({{count}})",
+    "noTickets": "Este contacto no tiene tickets.",
+    "rights": {
+      "title": "Datos personales",
+      "intro": "Lo que este contacto puede pedir según la ley de protección de datos: una copia de sus datos, una corrección (usa Editar) o su eliminación.",
+      "exportTitle": "Entregarle una copia",
+      "exportHint": "Un archivo JSON con sus datos, sus tickets y la conversación pública.",
+      "includeNotes": "Incluir notas internas (léelas antes de enviarlas)",
+      "export": "Descargar datos",
+      "anonymizeTitle": "Borrar sus datos",
+      "anonymizeHint": "Elimina su nombre, su correo y todo lo escrito en sus tickets. Los tickets quedan como registros vacíos para que los reportes no cambien.",
+      "anonymize": "Anonimizar contacto…",
+      "anonymizeModalTitle": "Anonimizar este contacto",
+      "anonymizeWhat_one": "Esto borra los datos personales de este contacto y de su {{count}} ticket:",
+      "anonymizeWhat_other": "Esto borra los datos personales de este contacto y de sus {{count}} tickets:",
+      "goes1": "Su nombre y su correo.",
+      "goes2": "Cada asunto, mensaje, nota interna, adjunto, valor de campo personalizado y comentario de encuesta de sus tickets.",
+      "stays": "Los tickets quedan como registros vacíos (número, estado, fechas, SLA, calificación), así que los reportes y estadísticas no cambian.",
+      "noUndo": "No se puede deshacer.",
+      "typeEmail": "Escribe {{email}} para confirmar",
+      "anonymizeConfirm": "Anonimizar",
+      "anonymizeFailed": "No se pudo anonimizar el contacto",
+      "anonymizedNotice_one": "Contacto anonimizado, junto con {{count}} ticket.",
+      "anonymizedNotice_other": "Contacto anonimizado, junto con {{count}} tickets."
+    },
+    "retention": {
+      "title": "Retención automática",
+      "intro": "Anonimiza automáticamente a los contactos que no tienen tickets abiertos ni actividad durante una cantidad de días. Viene desactivada.",
+      "statusOn": "Activada: los contactos se anonimizan después de {{days}} días sin actividad.",
+      "statusOff": "Desactivada: los contactos se conservan hasta que alguien los anonimice.",
+      "after": "Anonimizar después de",
+      "days": "días sin actividad",
+      "daysLabel": "Días sin actividad",
+      "turnOff": "Desactivar",
+      "range": "Entre {{min}} y {{max}} días.",
+      "confirm": "Los contactos sin tickets abiertos ni actividad durante {{days}} días se anonimizarán automáticamente, a partir de las próximas horas. Para ellos no se puede deshacer. ¿Continuar?",
+      "savedOn": "Guardado. Los contactos inactivos durante {{days}} días se anonimizarán.",
+      "savedOff": "La retención automática está desactivada.",
+      "failed": "No se pudo guardar la política de retención"
+    }
   }
 }

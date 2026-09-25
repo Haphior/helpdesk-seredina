@@ -821,7 +821,9 @@ export function TicketDetail() {
           <div className="flex items-center gap-2.5">
             <Avatar name={ticket.contact.name} size={30} />
             <div className="min-w-0">
-              <p className="truncate text-[13.5px] font-semibold text-slate-800">{ticket.contact.name}</p>
+              <Link to={`/contacts/${ticket.contact.id}`} className="block truncate text-[13.5px] font-semibold text-slate-800 hover:text-indigo-700 hover:underline">
+                {ticket.contact.name}
+              </Link>
               <p className="truncate text-xs text-slate-400">{ticket.contact.email}</p>
             </div>
           </div>

@@ -102,6 +102,9 @@ model Tenant {
   // Customer portal (docs/adr/0065-customer-portal.md): contacts sign in with
   // an emailed link to follow and reply to their own tickets. Off by default.
   customerPortalEnabled Boolean @default(false) @map("customer_portal_enabled")
+  // Contacts with no open tickets and no activity for this many days are
+  // anonymized automatically by the worker. Null = off (docs/adr/0066-contact-data-rights.md).
+  contactRetentionDays Int? @map("contact_retention_days")
 }
 
 model Role {
@@ -229,6 +232,9 @@ model Contact {
   email     String
   name      String
   createdAt DateTime @default(now()) @map("created_at")
+  // Set when the contact's personal data was erased (docs/adr/0066-contact-data-rights.md):
+  // name/email replaced, their tickets' content redacted. Never cleared.
+  anonymizedAt DateTime? @map("anonymized_at")
 
   tickets Ticket[]
 

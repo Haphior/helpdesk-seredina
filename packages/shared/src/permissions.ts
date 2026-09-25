@@ -8,6 +8,7 @@ export const PERMISSIONS = [
   'assets:manage',
   'channels:manage',
   'audit:read',
+  'contacts:manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -23,6 +24,7 @@ export const DEFAULT_ROLES: Record<string, Permission[]> = {
     'assets:manage',
     'channels:manage',
     'audit:read',
+    'contacts:manage',
   ],
   team_lead: [
     'tickets:read',

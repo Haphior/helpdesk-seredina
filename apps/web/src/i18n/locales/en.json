@@ -91,7 +91,8 @@
       "auditLog": "Audit Log",
       "sso": "Single Sign-On",
       "contracts": "Contracts",
-      "customerPortal": "Customer Portal"
+      "customerPortal": "Customer Portal",
+      "contacts": "Contacts"
     }
   },
   "layout": {
@@ -978,7 +979,8 @@
       "channels:manage": "Manage channels",
       "users:manage": "Manage users",
       "roles:manage": "Manage roles",
-      "audit:read": "See the audit log"
+      "audit:read": "See the audit log",
+      "contacts:manage": "Manage contacts’ personal data"
     }
   },
   "equipment": {
@@ -1695,5 +1697,65 @@
     "noTickets": "No tickets reference this asset yet.",
     "services": "Services underpinned ({{count}})",
     "noServices": "Not linked to any business service yet — manage this from the Services page."
+  },
+  "contacts": {
+    "loadFailed": "Failed to load contacts",
+    "saveFailed": "Failed to save the contact",
+    "exportFailed": "Failed to export the contact’s data",
+    "title": "Contacts",
+    "intro": "The people who write in, by email, the portal, the widget or any other channel. Open one to see their tickets, correct their details, give them a copy of their data, or erase it.",
+    "searchPlaceholder": "Search by name or email…",
+    "empty": "No contacts found.",
+    "loadMore": "Load more",
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "tickets": "Tickets",
+      "since": "Since"
+    },
+    "anonymized": "anonymized",
+    "anonymizedOn": "Anonymized on {{date}}",
+    "edit": "Edit",
+    "editTitle": "Edit contact",
+    "ticketsHeading": "Tickets ({{count}})",
+    "noTickets": "No tickets from this contact.",
+    "rights": {
+      "title": "Personal data",
+      "intro": "What this contact can ask for under data protection law: a copy of their data, a correction (use Edit), or its deletion.",
+      "exportTitle": "Give them a copy",
+      "exportHint": "A JSON file with their details, their tickets and the public conversation.",
+      "includeNotes": "Include internal notes (read them before sending)",
+      "export": "Download data",
+      "anonymizeTitle": "Erase their data",
+      "anonymizeHint": "Removes their name, email and everything written on their tickets. The tickets stay as empty records so reports don't change.",
+      "anonymize": "Anonymize contact…",
+      "anonymizeModalTitle": "Anonymize this contact",
+      "anonymizeWhat_one": "This erases the personal data of this contact and of their {{count}} ticket:",
+      "anonymizeWhat_other": "This erases the personal data of this contact and of their {{count}} tickets:",
+      "goes1": "Their name and email.",
+      "goes2": "Every subject, message, internal note, attachment, custom field value and survey comment on their tickets.",
+      "stays": "The tickets stay as empty records (number, status, dates, SLA, rating), so reports and statistics don't change.",
+      "noUndo": "This can't be undone.",
+      "typeEmail": "Type {{email}} to confirm",
+      "anonymizeConfirm": "Anonymize",
+      "anonymizeFailed": "Failed to anonymize the contact",
+      "anonymizedNotice_one": "Contact anonymized, along with {{count}} ticket.",
+      "anonymizedNotice_other": "Contact anonymized, along with {{count}} tickets."
+    },
+    "retention": {
+      "title": "Automatic retention",
+      "intro": "Anonymize contacts automatically once they have no open ticket and no activity for a set number of days. Off by default.",
+      "statusOn": "On: contacts are anonymized after {{days}} days without activity.",
+      "statusOff": "Off: contacts are kept until someone anonymizes them.",
+      "after": "Anonymize after",
+      "days": "days without activity",
+      "daysLabel": "Days without activity",
+      "turnOff": "Turn off",
+      "range": "Between {{min}} and {{max}} days.",
+      "confirm": "Contacts with no open ticket and no activity for {{days}} days will be anonymized automatically, starting within a few hours. This can't be undone for them. Continue?",
+      "savedOn": "Saved. Contacts inactive for {{days}} days will be anonymized.",
+      "savedOff": "Automatic retention is off.",
+      "failed": "Failed to save the retention policy"
+    }
   }
 }

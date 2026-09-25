@@ -57,3 +57,4 @@ lateral de la propia consola:
 - **[Encuestas CSAT](/es/guia/encuestas-csat)**
 - **[Administración](/es/guia/administracion)** — usuarios, roles, inicio de sesión único, verificación en dos pasos, registro de auditoría, claves de API, apariencia, idioma
 - **[Portal público](/es/guia/portal-publico)** — portal de clientes, base de conocimiento pública y página de estado
+- **[Contactos y datos personales](/es/guia/contactos-y-datos-personales)** — corregir, exportar y borrar los datos de un contacto, y retención automática

@@ -55,3 +55,4 @@ sidebar:
 - **[CSAT Surveys](/guide/csat-surveys)**
 - **[Administration](/guide/administration)** — users, roles, single sign-on, two-factor sign-in, audit log, API keys, appearance, language
 - **[Public Portal](/guide/public-portal)** — the customer portal, the public knowledge base and the status page
+- **[Contacts & Personal Data](/guide/contacts-and-personal-data)** — correcting, exporting and erasing a contact's data, and automatic retention

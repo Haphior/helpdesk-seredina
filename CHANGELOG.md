@@ -9,6 +9,16 @@ contain breaking changes).
 
 ### Added
 
+- **Contacts and personal data** (`docs/adr/0066-contact-data-rights.md`): a
+  Contacts page lists everyone who writes in. On a contact, admins can
+  correct their details, download a copy of their data (JSON), or
+  **anonymize** them: the name, email and everything written on their
+  tickets are erased, while the tickets stay as empty records so reports
+  don't change. Optional **automatic retention** anonymizes contacts with no
+  open ticket and no activity for a chosen number of days. For requests under
+  data protection laws such as Chile's Ley 21.719 or GDPR. New
+  `contacts:manage` permission, which existing admin roles get automatically.
+
 - **Connect Microsoft 365 and Gmail mailboxes with OAuth**
   (`docs/adr/0057-email-oauth.md`): the Email Channels page now offers
   "Microsoft 365 / Outlook" and "Gmail / Google Workspace" next to plain
