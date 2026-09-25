@@ -187,6 +187,13 @@ model User {
   // that function.
   isActive Boolean @default(true) @map("is_active")
 
+  // Sessions issued before this are refused (docs/adr/0067-account-self-service.md):
+  // set when the password changes, so a stolen session doesn't outlive it.
+  sessionsValidAfter DateTime? @map("sessions_valid_after")
+  // Set while an emailed invitation hasn't been accepted yet; cleared when
+  // the person chooses their password.
+  invitedAt DateTime? @map("invited_at")
+
   assignedTickets      Ticket[]              @relation("TicketAssignee")
   authoredMessages     Message[]             @relation("MessageAuthorUser")
   processStepAssignments ProcessStepInstance[]

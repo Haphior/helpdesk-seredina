@@ -2,9 +2,20 @@
 
 ## Users and roles
 
-**Administration → Users** creates accounts directly (name, email,
-initial password, role) — there's no email invitation flow yet, the
-password gets shared outside the app.
+**Administration → Users** creates accounts in one of two ways:
+
+- **Email them an invitation** (needs a connected
+  [email channel](/guide/channels#email)): the person gets a link, valid
+  for 7 days, to choose their own password. Until they do, the user list
+  shows **Invitation pending**, with a **resend invitation** action.
+- Or set an **initial password** and share it with them yourself.
+
+People change their own password from **Account security** (the shield
+icon at the bottom of the sidebar), and anyone who forgot theirs can use
+**Forgot your password?** on the sign-in page to get a reset link by
+email. An admin can also **reset password** from the user list. Every
+password change, by any route, signs that person out of their other
+sessions, so a stolen session doesn't outlive the password.
 
 Three roles come predefined, and each one can be edited or you can create
 entirely new roles from **Administration → Roles**:
@@ -17,7 +28,7 @@ entirely new roles from **Administration → Roles**:
 
 Permissions are granular (`tickets:read`, `tickets:write`,
 `tickets:manage_all`, `assets:read`, `assets:manage`, `channels:manage`,
-`users:manage`, `roles:manage`) — a custom role can combine them however
+`users:manage`, `roles:manage`, `audit:read`, `contacts:manage`) — a custom role can combine them however
 you need, you're not tied to the three factory-default roles.
 
 ## Single sign-on (SSO)

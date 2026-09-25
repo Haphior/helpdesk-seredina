@@ -108,7 +108,7 @@ export function ContactDetail() {
         {canManage && (
           <Card className="!p-5">
             <h2 className="mb-1 text-[15px] font-bold text-slate-800">{t('contacts.rights.title')}</h2>
-            <p className="mb-4 text-[13px] text-slate-500">{t('contacts.rights.intro')}</p>
+            <p className="mb-4 text-[13px] text-slate-500">{anonymized ? t('contacts.rights.introAnonymized') : t('contacts.rights.intro')}</p>
 
             <h3 className="mb-1 text-[13px] font-semibold text-slate-700">{t('contacts.rights.exportTitle')}</h3>
             <p className="mb-2 text-[12.5px] text-slate-500">{t('contacts.rights.exportHint')}</p>

@@ -106,16 +106,18 @@ segundo administrador para no tener que volver a hacerlo.
   administradores siempre pueden entrar con su contraseña. Desactivá
   "exigir SSO" hasta que el proveedor vuelva.
 
-## No llegan los correos de acceso al portal de clientes
+## No llegan los enlaces del portal, las invitaciones o los restablecimientos de contraseña
 
-El portal envía sus enlaces de acceso a través de tus canales de correo,
-así que al menos uno tiene que estar **conectado** (revisá los errores en
-Canales de correo). Cada dirección recibe como máximo 3 enlaces por hora,
+Estos correos salen por tus canales de correo, así que al menos uno tiene
+que estar **conectado** (revisá los errores en Canales de correo). Las
+invitaciones no se envían sin uno; un restablecimiento o un enlace del
+portal simplemente no puede salir. Para los enlaces del portal y de restablecimiento, cada dirección recibe
+como máximo 3 por hora,
 y la página responde lo mismo conozca o no la dirección, así que un error
 de tipeo parece un éxito. Un envío que falla queda en los logs de
 `worker`. Los
 enlaces apuntan a `WEB_ORIGIN`, que tiene que ser la dirección a la que
-llegan los clientes.
+llegan las personas.
 
 ## Puerto ya en uso
 

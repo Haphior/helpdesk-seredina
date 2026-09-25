@@ -28,10 +28,10 @@ with the eye icon in the widget's corner.
 
 ## Inviting your team
 
-There's no email invitation flow yet — from **Administration → Users**,
-an admin creates the account directly (name, email, initial password,
-role) and shares the password outside the app. People can't change their
-own password yet: an admin resets it from the same page.
+From **Administration → Users**, invite people by email so they choose
+their own password (needs a connected email channel), or create the
+account with an initial password and share it yourself. See
+[Users and roles](/guide/administration#users-and-roles).
 
 With [single sign-on](/guide/administration#single-sign-on-sso) and
 automatic account creation turned on, you don't create accounts at all:

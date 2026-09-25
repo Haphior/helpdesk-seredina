@@ -34,7 +34,12 @@ real endpoint agent for hardware/software inventory). On top of that:
   on the ticket, replies sent from the mailbox the customer wrote to.
 - **Sign-in security**: two-factor sign-in (TOTP + recovery codes), single
   sign-on over OpenID Connect (Microsoft Entra ID, Google Workspace, any OIDC
-  provider), and an append-only **audit log**.
+  provider), and an append-only **audit log**. Invitations by email,
+  self-service password change and reset; a password change signs out every
+  other session.
+- **Personal data**: a Contacts page to correct, export or anonymize a
+  contact's data, and optional automatic retention, for data protection laws
+  such as Chile's Ley 21.719 or GDPR.
 - **Customer portal**: customers sign in with an emailed link to follow and
   reply to their own tickets and request catalog items.
 - **Contracts, warranties and licenses** linked to assets, with renewal

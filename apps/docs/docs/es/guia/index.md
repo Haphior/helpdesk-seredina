@@ -29,11 +29,10 @@ del widget.
 
 ## Invitar a tu equipo
 
-Todavía no existe un flujo de invitación por email — desde
-**Administración → Usuarios**, un admin crea la cuenta directamente
-(nombre, email, contraseña inicial, rol) y comparte la contraseña por
-fuera de la aplicación. Por ahora nadie puede cambiar su propia
-contraseña: un admin la restablece desde la misma página.
+Desde **Administración → Usuarios**, invitá a cada persona por correo para
+que elija su propia contraseña (necesita un canal de correo conectado), o
+creá la cuenta con una contraseña inicial y compartila vos. Ver
+[Usuarios y roles](/es/guia/administracion#usuarios-y-roles).
 
 Con el [inicio de sesión único](/es/guia/administracion#inicio-de-sesion-unico-sso)
 y la creación automática de cuentas activados, no hace falta crear

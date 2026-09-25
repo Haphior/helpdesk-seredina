@@ -2,9 +2,22 @@
 
 ## Usuarios y roles
 
-**Administración → Usuarios** crea cuentas directamente (nombre, email,
-contraseña inicial, rol) — no hay flujo de invitación por email todavía,
-la contraseña se comparte por fuera de la aplicación.
+**Administración → Usuarios** crea cuentas de dos maneras:
+
+- **Enviarle una invitación por correo** (necesita un
+  [canal de correo](/es/guia/canales#correo-electronico) conectado): la
+  persona recibe un enlace, válido por 7 días, para elegir su propia
+  contraseña. Mientras no lo use, la lista de usuarios muestra
+  **Invitación pendiente**, con la acción **reenviar invitación**.
+- O definir una **contraseña inicial** y compartírsela vos.
+
+Cada persona cambia su propia contraseña desde **Seguridad de la cuenta**
+(el ícono del escudo abajo en la barra lateral), y quien la olvidó puede
+usar **¿Olvidaste tu contraseña?** en la página de inicio de sesión para
+recibir un enlace por correo. Un admin también puede **restablecer
+contraseña** desde la lista de usuarios. Cualquier cambio de contraseña,
+por la vía que sea, cierra las demás sesiones de esa persona, así una
+sesión robada no sobrevive a la contraseña.
 
 Tres roles vienen predefinidos, y cada uno se puede editar o se pueden
 crear roles completamente nuevos desde **Administración → Roles**:
@@ -17,7 +30,7 @@ crear roles completamente nuevos desde **Administración → Roles**:
 
 Los permisos son granulares (`tickets:read`, `tickets:write`,
 `tickets:manage_all`, `assets:read`, `assets:manage`, `channels:manage`,
-`users:manage`, `roles:manage`) — un rol personalizado puede combinarlos
+`users:manage`, `roles:manage`, `audit:read`, `contacts:manage`) — un rol personalizado puede combinarlos
 como necesites, no estás atado a los tres roles de fábrica.
 
 ## Inicio de sesión único (SSO)

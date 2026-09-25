@@ -7,6 +7,7 @@ import { Input } from '../components/Input';
 import { Badge } from '../components/Badge';
 import { CodeInput, MfaEnroll, RecoveryCodes, type MfaSetupData } from '../components/MfaSetup';
 import { formatDateTime } from '../lib/format';
+import { useAuth } from '../auth/AuthContext';
 
 interface MfaStatus {
   enabled: boolean;
@@ -183,6 +184,61 @@ export function AccountSecurity() {
           )}
         </Card>
       )}
+
+      <ChangePassword />
     </div>
+  );
+}
+
+/** Changing your own password -- docs/adr/0067-account-self-service.md. */
+function ChangePassword() {
+  const { t } = useTranslation();
+  const { acceptToken } = useAuth();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setDone(false);
+    if (next !== confirm) {
+      setError(t('auth.setPassword.mismatch'));
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
+    try {
+      // Other sessions end; this one continues with the fresh token.
+      const res = await apiPost<{ token: string }>('/auth/password', { currentPassword: current, newPassword: next });
+      acceptToken(res.token);
+      setCurrent('');
+      setNext('');
+      setConfirm('');
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('accountSecurity.password.failed'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card className="mt-6 p-5">
+      <h2 className="mb-1 text-[15px] font-bold text-slate-800">{t('accountSecurity.password.title')}</h2>
+      <p className="mb-4 text-[13px] text-slate-500">{t('accountSecurity.password.intro')}</p>
+      <form onSubmit={onSubmit} className="max-w-sm space-y-3">
+        <Input label={t('accountSecurity.password.current')} type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
+        <Input label={t('accountSecurity.password.new')} type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" minLength={8} required />
+        <Input label={t('accountSecurity.password.confirm')} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" minLength={8} required />
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+        {done && <p className="text-sm text-emerald-600">{t('accountSecurity.password.done')}</p>}
+        <Button type="submit" isLoading={submitting}>
+          {t('accountSecurity.password.submit')}
+        </Button>
+      </form>
+    </Card>
   );
 }

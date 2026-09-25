@@ -61,6 +61,8 @@ export interface UserSummary {
   isActive: boolean;
   isLocked: boolean;
   mfaEnabled: boolean;
+  /** Invited by email and hasn't chosen a password yet (docs/adr/0067-account-self-service.md). */
+  invitationPending: boolean;
 }
 
 export interface Role {

@@ -9,6 +9,12 @@ contain breaking changes).
 
 ### Added
 
+- **Account self-service** (`docs/adr/0067-account-self-service.md`):
+  - people change their own password from Account security;
+  - "Forgot your password?" on the sign-in page emails a reset link;
+  - admins can invite people by email so they choose their own password,
+    with an "Invitation pending" badge and a resend action.
+
 - **Contacts and personal data** (`docs/adr/0066-contact-data-rights.md`): a
   Contacts page lists everyone who writes in. On a contact, admins can
   correct their details, download a copy of their data (JSON), or
@@ -168,6 +174,11 @@ contain breaking changes).
   both were skipped before.
 
 ### Security
+
+- **Changing a password now signs that person out of their other
+  sessions**, by any route: their own change, a reset link, an accepted
+  invitation or an admin reset. Before, a stolen session kept working until
+  it expired, up to 8 hours, even after the password was changed.
 
 - MFA recovery codes are stored with bcrypt instead of SHA-256. They have
   far less entropy than an API key, and an unsalted fast hash let one

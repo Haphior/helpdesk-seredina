@@ -18,10 +18,11 @@ export function Login() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>({ kind: 'password' });
   const [code, setCode] = useState('');
-  const [tenantSlug, setTenantSlug] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [params] = useSearchParams();
+  // Prefilled after choosing a password from an emailed link (SetPassword.tsx).
+  const [tenantSlug, setTenantSlug] = useState(params.get('org') ?? '');
+  const [email, setEmail] = useState(params.get('email') ?? '');
+  const [password, setPassword] = useState('');
   // Set by the API when a single sign-on attempt comes back with a problem.
   const [error, setError] = useState<string | null>(params.get('sso_error'));
   const [submitting, setSubmitting] = useState(false);
@@ -167,8 +168,12 @@ export function Login() {
           <Field label={t('auth.fields.orgSlug')} value={tenantSlug} onChange={setTenantSlug} placeholder="acme" />
           <Field label={t('auth.fields.email')} type="email" value={email} onChange={setEmail} placeholder="you@company.com" />
           <Field label={t('auth.fields.password')} type="password" value={password} onChange={setPassword} />
+          <Link to="/forgot-password" className="-mt-1.5 self-end text-[12.5px] font-medium text-indigo-600 hover:underline">
+            {t('auth.forgot.link')}
+          </Link>
         </div>
 
+        {params.get('passwordSet') && !error && <p className="text-sm text-emerald-600">{t('auth.setPassword.done')}</p>}
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         <button
