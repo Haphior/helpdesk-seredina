@@ -28,18 +28,50 @@ what problems each piece of equipment had.
 
 ## Devices
 
-**Devices** is where you generate the install command for Seredina's
-lightweight agent (`apps/agent`, an unsigned Node.js script with no
-dependencies). Running on a real machine, it reports hardware/software
-inventory, OS version, whether the disk is encrypted, and antivirus
-status.
+**Devices** is where you generate the install command for the
+[Seredina agent](https://github.com/Haphior/seredina-agent). It's a single
+binary for Windows, macOS and Linux (x86-64 and ARM64), and it runs as a
+service. Every hour it reports:
+
+- Hardware and software inventory, and the OS version.
+- Whether the disk is encrypted.
+- Antivirus status.
+- The devices it sees on its local network.
+
+To add a device:
+
+1. Click **Generate enrollment command**.
+2. Pick the device's operating system.
+3. Run the command there as administrator. It's valid for 15 minutes, and works once.
+
+| System | Where to run it |
+|---|---|
+| Windows | PowerShell, opened as administrator |
+| macOS / Linux | A terminal (it uses `sudo`) |
+| Already downloaded | The agent's folder, for a device without internet access |
+
+The command downloads the agent, checks its SHA-256, enrolls the device,
+and starts the service. If your server uses a private certificate, the
+command also carries its CA. The agent then trusts only that CA, and never
+turns off certificate verification.
+
+If your devices can't reach GitHub, copy a release's files (`install.sh`,
+`install.ps1`, the archives and `SHA256SUMS`) to an internal web server.
+Set `AGENT_DOWNLOAD_URL` in `.env` to that folder's address. The commands
+then download from there.
+
+`seredina-agent status` shows whether a device is enrolled and whether the
+service is running. `seredina-agent uninstall --purge` removes the agent.
+To update the agent, run a new enrollment command: the device keeps its
+record.
 
 ::: warning Inventory-only, by permanent design
 The agent **never executes anything remotely** — no scripts, no software
 deployment. This isn't a temporary limitation of this version: remote
-execution and signed installers require ongoing costs (a code-signing
-certificate, an Apple Developer membership) that this unfunded
-open-source project has no way to responsibly absorb. See the
+execution needs an audited, signed delivery path this unfunded
+open-source project has no way to responsibly maintain. Agent releases
+aren't code-signed yet, either: SmartScreen or Gatekeeper may warn if you
+open the binary by hand, but the install commands aren't affected. See the
 [MVP tour](https://github.com/Haphior/helpdesk-seredina) for the full
 reasoning.
 :::

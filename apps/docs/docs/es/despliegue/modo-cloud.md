@@ -28,7 +28,7 @@ El modo cloud también desactiva los **escaneos de red desde el servidor**
 (Activos → "Scan a network range"). En modo self-hosted el worker está en
 tu propia red, así que escanearla es útil; en modo cloud estaría en la red
 del proveedor, así que la opción se oculta y la API la rechaza. Los tenants
-en cloud descubren equipos con el [agente](https://github.com/Haphior/helpdesk-seredina/tree/main/apps/agent):
+en cloud descubren equipos con el [agente](https://github.com/Haphior/seredina-agent):
 cada agente enrolado informa su propio inventario y los dispositivos que ve
 en su tabla ARP, sin escanear nada.
 

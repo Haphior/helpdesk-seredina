@@ -90,6 +90,9 @@ services:
       # (the Devices page puts it in the enrollment command). configure-address.sh sets it
       # for the `internal` and `custom` TLS modes; empty = publicly trusted.
       TLS_CA_FILE: ${TLS_CA_FILE:-}
+      # An internal mirror of the agent's release files, for devices that can't
+      # reach GitHub; empty = download from GitHub.
+      AGENT_DOWNLOAD_URL: ${AGENT_DOWNLOAD_URL:-}
     volumes:
       # Read-only: only to hand agents the CA certificate above, never keys --
       # see modules/devices/agentSetup.ts.

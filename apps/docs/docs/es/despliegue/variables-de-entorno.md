@@ -68,6 +68,7 @@ del despliegue.
 | `ACME_EMAIL` | Con `TLS_MODE=acme` | Recibe avisos de vencimiento si la renovación llegara a fallar. |
 | `HTTP_PORT` / `HTTPS_PORT` | No | Puertos del proxy (`80` / `443`). |
 | `TLS_CA_FILE` | No | Certificado de CA que fijan los agentes, para un certificado que no es de confianza pública. El script la define en `internal` y `custom`; la página Dispositivos la incluye en el comando de enrolamiento. Un archivo que contenga una clave privada se rechaza. |
+| `AGENT_DOWNLOAD_URL` | No | Una carpeta web interna con una copia de los archivos de una [versión del agente](https://github.com/Haphior/seredina-agent/releases), para equipos que no llegan a GitHub. Los comandos de instalación de la página Dispositivos descargan desde ahí. |
 | `WEB_BIND` / `API_BIND` | No | En qué interfaz escuchan los puertos de la web y la API (`0.0.0.0`). El script pone `127.0.0.1` cuando el proxy está delante, para que desde la red solo se entre por HTTPS. |
 | `DB_BIND` | No | Postgres y Redis escuchan solo en `127.0.0.1`. Redis no tiene contraseña: no lo expongas. |
 | `TRUST_PROXY` | No | Qué saltos pueden fijar `X-Forwarded-For`, para que los límites por IP vean al cliente real detrás de los proxies. Compose usa `loopback,uniquelocal`. |

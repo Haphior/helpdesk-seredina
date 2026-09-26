@@ -33,7 +33,11 @@ describe.skipIf(!hasDb)('Agent setup: server address and CA pinning', () => {
   let adminToken: string;
   let agentToken: string;
   const dir = mkdtempSync(join(tmpdir(), 'seredina-ca-'));
-  const ORIGINAL = { TLS_CA_FILE: process.env.TLS_CA_FILE, API_PUBLIC_URL: process.env.API_PUBLIC_URL };
+  const ORIGINAL = {
+    TLS_CA_FILE: process.env.TLS_CA_FILE,
+    API_PUBLIC_URL: process.env.API_PUBLIC_URL,
+    AGENT_DOWNLOAD_URL: process.env.AGENT_DOWNLOAD_URL,
+  };
 
   beforeAll(async () => {
     process.env.JWT_SECRET ??= 'test-jwt-secret';
@@ -73,7 +77,16 @@ describe.skipIf(!hasDb)('Agent setup: server address and CA pinning', () => {
   it('with no custom CA: no CA and no fingerprint', async () => {
     delete process.env.TLS_CA_FILE;
     delete process.env.API_PUBLIC_URL;
-    expect((await setup()).json()).toEqual({ serverUrl: null, caCertPem: null, caCertSha256: null });
+    delete process.env.AGENT_DOWNLOAD_URL;
+    expect((await setup()).json()).toEqual({ serverUrl: null, caCertPem: null, caCertSha256: null, agentDownloadUrl: null });
+  });
+
+  it('points agents at an internal download mirror when one is configured', async () => {
+    process.env.AGENT_DOWNLOAD_URL = 'https://files.corp.example/seredina-agent/v0.1.0/';
+    expect((await setup()).json().agentDownloadUrl).toBe('https://files.corp.example/seredina-agent/v0.1.0');
+    process.env.AGENT_DOWNLOAD_URL = 'files.corp.example/agent';
+    expect((await setup()).json().agentDownloadUrl).toBeNull();
+    delete process.env.AGENT_DOWNLOAD_URL;
   });
 
   it('returns the configured address, the CA for the enrollment command, and its fingerprint', async () => {
