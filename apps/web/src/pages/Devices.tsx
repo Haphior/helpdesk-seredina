@@ -14,7 +14,14 @@ interface AgentSetup {
   serverUrl: string | null;
   caCertPem: string | null;
   caCertSha256: string | null;
+  agentDownloadUrl: string | null;
 }
+
+/** The agent lives in its own repository; its releases carry the install scripts. */
+const AGENT_RELEASES = 'https://github.com/Haphior/seredina-agent/releases/latest/download';
+
+type AgentPlatform = 'windows' | 'unix' | 'manual';
+const AGENT_PLATFORMS: AgentPlatform[] = ['windows', 'unix', 'manual'];
 
 /**
  * docs/adr/0054-server-address-and-tls.md: the address is whatever the
@@ -22,11 +29,36 @@ interface AgentSetup {
  * reaches the server some other way (a VPN address, an internal DNS name).
  * With a non-public certificate, the command carries the server's CA itself
  * (base64, so it survives any shell), so the device trusts exactly that CA
- * and never has to fetch it from a server it can't verify yet.
+ * and never has to fetch it from a server it can't verify yet. The install
+ * scripts download the agent (from GitHub, or AGENT_DOWNLOAD_URL's mirror),
+ * check its SHA-256, enroll, and start the service.
  */
-function buildEnrollCommand(serverUrl: string, token: string, caCertPem: string | null): string {
+function buildEnrollCommand(
+  platform: AgentPlatform,
+  serverUrl: string,
+  token: string,
+  caCertPem: string | null,
+  mirror: string | null,
+): string {
   const url = serverUrl.trim().replace(/\/$/, '');
-  return `node src/index.mjs enroll --url ${url} --token ${token}${caCertPem ? ` --ca-pem ${btoa(caCertPem)}` : ''}`;
+  const ca = caCertPem ? btoa(caCertPem) : null;
+  const base = mirror ?? AGENT_RELEASES;
+  switch (platform) {
+    case 'windows':
+      return (
+        `& ([scriptblock]::Create((irm ${base}/install.ps1))) -Url ${url} -Token ${token}` +
+        (ca ? ` -CaPem ${ca}` : '') +
+        (mirror ? ` -DownloadBase ${mirror}` : '')
+      );
+    case 'unix':
+      return (
+        `curl -fsSL ${base}/install.sh | sudo sh -s -- --url ${url} --token ${token}` +
+        (ca ? ` --ca-pem ${ca}` : '') +
+        (mirror ? ` --download-base ${mirror}` : '')
+      );
+    case 'manual':
+      return `seredina-agent enroll --url ${url} --token ${token}${ca ? ` --ca-pem ${ca}` : ''} --install`;
+  }
 }
 
 export function Devices() {
@@ -37,6 +69,9 @@ export function Devices() {
   const [generating, setGenerating] = useState(false);
   const [agentSetup, setAgentSetup] = useState<AgentSetup | null>(null);
   const [serverUrl, setServerUrl] = useState(API_URL);
+  const [platform, setPlatform] = useState<AgentPlatform>(() =>
+    /Windows/i.test(navigator.userAgent) ? 'windows' : 'unix',
+  );
 
   useEffect(() => {
     apiGet<AgentSetup>('/devices/agent-setup')
@@ -49,7 +84,15 @@ export function Devices() {
 
   const serverUrlValid = /^https?:\/\/[^\s/]+/i.test(serverUrl.trim());
   const enrollCommand =
-    enrollToken && serverUrlValid ? buildEnrollCommand(serverUrl, enrollToken, agentSetup?.caCertPem ?? null) : null;
+    enrollToken && serverUrlValid
+      ? buildEnrollCommand(
+          platform,
+          serverUrl,
+          enrollToken,
+          agentSetup?.caCertPem ?? null,
+          agentSetup?.agentDownloadUrl ?? null,
+        )
+      : null;
 
   function load() {
     apiGet<{ devices: DeviceListItem[] }>('/devices')
@@ -125,8 +168,39 @@ export function Devices() {
         {enrollCommand ? (
           <>
             <h2 className="mb-1 text-[15px] font-bold text-slate-800">{t('devices.runThis')}</h2>
-            <p className="mb-3 text-[12.5px] text-slate-500">
-              {t('devices.validity')}
+            <p className="mb-3 text-[12.5px] text-slate-500">{t('devices.validity')}</p>
+            <div role="radiogroup" aria-label={t('devices.platformChoice')} className="mb-3 flex flex-wrap gap-1.5">
+              {AGENT_PLATFORMS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  role="radio"
+                  aria-checked={platform === p}
+                  onClick={() => setPlatform(p)}
+                  className={`rounded-md border px-2.5 py-1 text-[12.5px] font-semibold ${
+                    platform === p
+                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {t(`devices.platforms.${p}`)}
+                </button>
+              ))}
+            </div>
+            <p className="mb-2 text-[12.5px] text-slate-500">
+              <Trans
+                i18nKey={`devices.platformHints.${platform}`}
+                components={{
+                  releases: (
+                    <a
+                      href="https://github.com/Haphior/seredina-agent/releases/latest"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-indigo-700 hover:underline"
+                    />
+                  ),
+                }}
+              />
             </p>
             <CopyableCodeBlock label={t('devices.command')} value={enrollCommand} />
           </>

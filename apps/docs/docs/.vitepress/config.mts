@@ -46,6 +46,7 @@ export default defineConfig({
               text: 'Deployment & Hosting',
               items: [
                 { text: 'Installing with Docker', link: '/deployment/' },
+                { text: 'Production on a company server', link: '/deployment/internal-server' },
                 { text: 'Environment Variables', link: '/deployment/environment-variables' },
                 { text: 'Cloud mode (multi-tenant)', link: '/deployment/cloud-mode' },
                 { text: 'Updates & Backups', link: '/deployment/updates-and-backups' },
@@ -114,6 +115,7 @@ export default defineConfig({
               text: 'Despliegue y hosting',
               items: [
                 { text: 'Instalación con Docker', link: '/es/despliegue/' },
+                { text: 'Producción en un servidor de la empresa', link: '/es/despliegue/servidor-interno' },
                 { text: 'Variables de entorno', link: '/es/despliegue/variables-de-entorno' },
                 { text: 'Modo cloud (multi-tenant)', link: '/es/despliegue/modo-cloud' },
                 { text: 'Actualizaciones y backups', link: '/es/despliegue/actualizaciones-y-backups' },

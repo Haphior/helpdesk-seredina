@@ -9,6 +9,17 @@ contain breaking changes).
 
 ### Added
 
+- **New endpoint agent for Windows, macOS and Linux**
+  (`docs/adr/0068-go-endpoint-agent.md`). The agent is now a single binary
+  in its own repository,
+  [Haphior/seredina-agent](https://github.com/Haphior/seredina-agent), and
+  runs as a service.
+  - The Devices page gives a ready-made install command per operating system.
+    It downloads the agent, checks its SHA-256, enrolls the device and starts
+    the service.
+  - `AGENT_DOWNLOAD_URL` points those commands at an internal mirror.
+  - Enrolled devices keep their records.
+
 - **Account self-service** (`docs/adr/0067-account-self-service.md`):
   - people change their own password from Account security;
   - "Forgot your password?" on the sign-in page emails a reset link;
@@ -172,6 +183,11 @@ contain breaking changes).
 - Tickets created from **email** now get their SLA due dates and fire the
   `ticket.created` webhook (so Slack/Teams notifications include them);
   both were skipped before.
+
+### Removed
+
+- `apps/agent`, the Node.js agent. It is replaced by
+  [Haphior/seredina-agent](https://github.com/Haphior/seredina-agent).
 
 ### Security
 

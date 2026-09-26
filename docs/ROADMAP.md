@@ -1538,6 +1538,11 @@ new inventory columns directly on the existing `Asset` model (a new
 column shape agentless discovery's `snmpSysDescr` already established). See
 `docs/adr/0047-endpoint-agents-v1.md`.
 
+**Later: the agent moved to Go**, in its own repository
+([Haphior/seredina-agent](https://github.com/Haphior/seredina-agent)). It's a
+single binary for Windows, macOS and Linux that installs as a service, and it
+replaces `apps/agent`. See `docs/adr/0068-go-endpoint-agent.md`.
+
 **Remote execution/deployment (tiers 2/3) and a signed installer are deliberately
 NOT planned, not just "not yet built."** Both carry real, ongoing costs an
 unfunded open-source project has no way to absorb responsibly: a code-signing

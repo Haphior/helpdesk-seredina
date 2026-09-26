@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted, implemented.
+Accepted, implemented. The Node.js `apps/agent` described here was later
+replaced by a Go agent in its own repository: see
+`docs/adr/0068-go-endpoint-agent.md`.
 
 ## Context
 

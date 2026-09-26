@@ -1179,8 +1179,19 @@
     "httpWarning": "Sin https://, la credencial y el inventario de cada equipo viajan sin cifrar.",
     "ownCa": "Este servidor usa su propia autoridad certificadora. El comando de abajo la incluye, así el agente confía exactamente en esa CA. Huella:",
     "runThis": "Ejecuta esto en el equipo",
-    "validity": "Válido por 15 minutos y funciona una sola vez. Requiere Node.js en el equipo; ejecútalo desde la carpeta del agente.",
+    "validity": "Válido por 15 minutos y funciona una sola vez.",
     "command": "Comando de inscripción",
+    "platformChoice": "Sistema operativo del equipo",
+    "platforms": {
+      "windows": "Windows",
+      "unix": "macOS / Linux",
+      "manual": "Ya descargado"
+    },
+    "platformHints": {
+      "windows": "En PowerShell abierto como administrador. Descarga el agente, verifica su SHA-256, inscribe el equipo y deja el agente corriendo como servicio.",
+      "unix": "En una terminal (te pedirá tu contraseña, por sudo). Descarga el agente, verifica su SHA-256, inscribe el equipo y deja el agente corriendo como servicio.",
+      "manual": "Para equipos sin acceso a internet: copia el agente desde <releases>sus versiones</releases> y ejecuta esto como administrador desde su carpeta (./seredina-agent en macOS/Linux, .\\seredina-agent.exe en Windows)."
+    },
     "generateHint": "Genera un comando de inscripción para agregar un equipo.",
     "empty": "Todavía no hay equipos inscritos.",
     "hostname": "Nombre de host",

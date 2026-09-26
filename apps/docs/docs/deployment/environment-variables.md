@@ -66,6 +66,7 @@ used *exclusively*, never falling back to the deployment's global config.
 | `ACME_EMAIL` | With `TLS_MODE=acme` | Gets certificate expiry warnings if renewal ever fails. |
 | `HTTP_PORT` / `HTTPS_PORT` | No | The proxy's ports (`80` / `443`). |
 | `TLS_CA_FILE` | No | A CA certificate agents pin, for a certificate that isn't publicly trusted. Set by the script for `internal` and `custom`; the Devices page puts it in the enrollment command. A file that contains a private key is refused. |
+| `AGENT_DOWNLOAD_URL` | No | An internal web folder holding a copy of an [agent release](https://github.com/Haphior/seredina-agent/releases)'s files, for devices that can't reach GitHub. The Devices page's install commands then download from there. |
 | `WEB_BIND` / `API_BIND` | No | Which interface the web and API ports listen on (`0.0.0.0`). The script sets `127.0.0.1` once the proxy is in front, so the network only gets in over HTTPS. |
 | `DB_BIND` | No | Postgres and Redis listen on `127.0.0.1` only. Redis has no password: don't expose it. |
 | `TRUST_PROXY` | No | Which hops may set `X-Forwarded-For`, so per-IP rate limits see the real client behind the proxies. Compose sets `loopback,uniquelocal`. |

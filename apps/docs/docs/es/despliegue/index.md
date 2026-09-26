@@ -101,6 +101,10 @@ docker compose -f infra/docker-compose.yml cp proxy:/data/caddy/pki/authorities/
 Los certificados y la CA interna viven en el volumen `caddy_data`: respáldalo
 junto con lo demás, o habrá que reenrolar los agentes con una CA nueva.
 
+::: tip ¿Vas a producción en tu propia red?
+[Producción en un servidor de la empresa](/es/despliegue/servidor-interno) recorre el DNS, los certificados, el firewall, los agentes, los backups y una lista de salida a producción.
+:::
+
 ## Qué levanta el `docker compose`
 
 | Servicio | Qué hace |

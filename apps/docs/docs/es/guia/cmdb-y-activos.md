@@ -28,18 +28,51 @@ de qué problemas tuvo cada equipo.
 
 ## Dispositivos
 
-**Dispositivos** es donde generás el comando de instalación del agente
-liviano de Seredina (`apps/agent`, un script de Node.js sin firmar, sin
-dependencias). Corriendo en un equipo real, reporta inventario de
-hardware/software, versión de sistema operativo, si el disco está cifrado,
-y estado del antivirus.
+**Dispositivos** es donde generás el comando de instalación del
+[agente de Seredina](https://github.com/Haphior/seredina-agent). Es un solo
+ejecutable para Windows, macOS y Linux (x86-64 y ARM64), y corre como
+servicio. Cada hora reporta:
+
+- Inventario de hardware y software, y la versión del sistema operativo.
+- Si el disco está cifrado.
+- El estado del antivirus.
+- Los equipos que ve en su red local.
+
+Para agregar un equipo:
+
+1. Hacé clic en **Generar comando de inscripción**.
+2. Elegí el sistema operativo del equipo.
+3. Ejecutá el comando ahí como administrador. Vale 15 minutos y funciona una sola vez.
+
+| Sistema | Dónde ejecutarlo |
+|---|---|
+| Windows | PowerShell abierto como administrador |
+| macOS / Linux | Una terminal (usa `sudo`) |
+| Ya descargado | La carpeta del agente, para un equipo sin acceso a internet |
+
+El comando descarga el agente, verifica su SHA-256, inscribe el equipo y
+deja el servicio corriendo. Si tu servidor usa un certificado privado, el
+comando además lleva su CA. El agente confía solo en esa CA y nunca
+desactiva la verificación del certificado.
+
+Si tus equipos no llegan a GitHub, copiá los archivos de una versión
+(`install.sh`, `install.ps1`, los archivos comprimidos y `SHA256SUMS`) a un
+servidor web interno. Poné la dirección de esa carpeta en
+`AGENT_DOWNLOAD_URL`, en el `.env`. Los comandos van a descargar de ahí.
+
+`seredina-agent status` muestra si el equipo está inscrito y si el servicio
+corre. `seredina-agent uninstall --purge` quita el agente. Para
+actualizarlo, ejecutá un comando de inscripción nuevo: el equipo conserva
+su registro.
 
 ::: warning Solo inventario, por diseño permanente
 El agente **nunca ejecuta nada remotamente** — ni scripts, ni despliegue
 de software. No es una limitación temporal de esta versión: ejecución
-remota e instaladores firmados exigen costos recurrentes (certificado de
-firma de código, membresía de Apple Developer) que este proyecto de
-código abierto sin financiamiento no puede sostener con responsabilidad.
+remota necesita un canal de entrega firmado y auditado que este proyecto
+de código abierto sin financiamiento no puede mantener con
+responsabilidad. Las versiones del agente tampoco están firmadas todavía:
+SmartScreen o Gatekeeper pueden advertir si abrís el ejecutable a mano,
+pero los comandos de instalación no se ven afectados.
 Ver el [tour del MVP](https://github.com/Haphior/helpdesk-seredina) para
 el razonamiento completo.
 :::

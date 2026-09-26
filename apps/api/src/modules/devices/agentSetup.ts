@@ -41,6 +41,17 @@ export interface AgentSetup {
   caCertPem: string | null;
   /** sha256 of caCertPem, shown so an admin can compare it with what they expect. */
   caCertSha256: string | null;
+  /**
+   * AGENT_DOWNLOAD_URL: an internal mirror of the agent's release files
+   * (install.sh, install.ps1, the archives and SHA256SUMS), for devices that
+   * can't reach GitHub; null = download from the agent's GitHub releases.
+   */
+  agentDownloadUrl: string | null;
+}
+
+function agentDownloadUrl(): string | null {
+  const value = process.env.AGENT_DOWNLOAD_URL?.trim().replace(/\/+$/, '');
+  return value && /^https?:\/\/[^\s/]+\S*$/i.test(value) ? value : null;
 }
 
 export async function getAgentSetup(): Promise<AgentSetup> {
@@ -49,5 +60,6 @@ export async function getAgentSetup(): Promise<AgentSetup> {
     serverUrl: process.env.API_PUBLIC_URL?.replace(/\/$/, '') || null,
     caCertPem: ca,
     caCertSha256: ca ? sha256Hex(ca) : null,
+    agentDownloadUrl: agentDownloadUrl(),
   };
 }

@@ -1179,8 +1179,19 @@
     "httpWarning": "Without https://, each device's credential and inventory travel unencrypted.",
     "ownCa": "This server uses its own certificate authority. The command below includes it, so the agent trusts exactly that CA. Fingerprint:",
     "runThis": "Run this on the device",
-    "validity": "Valid for 15 minutes, and works once. Requires Node.js on the device; run it from the agent's folder.",
+    "validity": "Valid for 15 minutes, and works once.",
     "command": "Enrollment command",
+    "platformChoice": "Device operating system",
+    "platforms": {
+      "windows": "Windows",
+      "unix": "macOS / Linux",
+      "manual": "Already downloaded"
+    },
+    "platformHints": {
+      "windows": "In PowerShell opened as administrator. It downloads the agent, checks its SHA-256, enrolls this device and starts the agent as a service.",
+      "unix": "In a terminal (it asks for your password, for sudo). It downloads the agent, checks its SHA-256, enrolls this device and starts the agent as a service.",
+      "manual": "For devices without internet access: copy the agent from <releases>its releases</releases>, then run this as administrator from its folder (./seredina-agent on macOS/Linux, .\\seredina-agent.exe on Windows)."
+    },
     "generateHint": "Generate an enrollment command to add a device.",
     "empty": "No devices enrolled yet.",
     "hostname": "Hostname",
