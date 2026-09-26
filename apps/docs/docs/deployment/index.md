@@ -102,6 +102,10 @@ docker compose -f infra/docker-compose.yml cp proxy:/data/caddy/pki/authorities/
 The certificates and the internal CA live in the `caddy_data` volume — back
 it up with the rest, or agents will need re-enrolling after a new CA.
 
+::: tip Going to production on your own network?
+[Production on a company server](/deployment/internal-server) walks through DNS, certificates, the firewall, agents, backups and a go-live checklist.
+:::
+
 ## What `docker compose` brings up
 
 | Service | What it does |
